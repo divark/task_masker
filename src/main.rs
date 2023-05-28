@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
+use entities::streamer::{spawn_player, animate_sprite};
+use map::path_finding::create_fly_graph;
 
 mod map;
+mod entities;
 
 fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2dBundle::default());
@@ -17,8 +20,6 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
 fn main() {
     App::new()
         .insert_resource(TilemapRenderSettings {
-            // Map size is 12x12 so we'll have render chunks that are:
-            // 12 tiles wide and 1 tile tall.
             render_chunk_size: UVec2::new(20, 1),
         })
         .add_plugins(
@@ -38,7 +39,10 @@ fn main() {
         )
         .add_plugin(TilemapPlugin)
         .add_plugin(map::tiled::TiledMapPlugin)
-        .add_startup_system(startup)
+        // TODO: Incorporate a Loading state to make this line behave as intended:
+        // https://github.com/NiklasEi/bevy_asset_loader
+        .add_startup_systems((startup, spawn_player).before(create_fly_graph))
         .add_system(map::camera::movement)
+        .add_system(animate_sprite)
         .run();
 }
