@@ -57,6 +57,10 @@ pub struct TiledLayersStorage {
     pub storage: HashMap<u32, Entity>,
 }
 
+// Stores the Layer number for some associated Tile.
+#[derive(Component, Copy, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LayerNumber(pub usize);
+
 #[derive(Default, Bundle)]
 pub struct TiledMapBundle {
     pub tiled_map: Handle<TiledMap>,
@@ -311,17 +315,20 @@ pub fn process_loaded_maps(
 
                                 let tile_pos = TilePos { x, y };
                                 let tile_entity = commands
-                                    .spawn(TileBundle {
-                                        position: tile_pos,
-                                        tilemap_id: TilemapId(layer_entity),
-                                        texture_index: TileTextureIndex(texture_index),
-                                        flip: TileFlip {
-                                            x: layer_tile_data.flip_h,
-                                            y: layer_tile_data.flip_v,
-                                            d: layer_tile_data.flip_d,
+                                    .spawn((
+                                        TileBundle {
+                                            position: tile_pos,
+                                            tilemap_id: TilemapId(layer_entity),
+                                            texture_index: TileTextureIndex(texture_index),
+                                            flip: TileFlip {
+                                                x: layer_tile_data.flip_h,
+                                                y: layer_tile_data.flip_v,
+                                                d: layer_tile_data.flip_d,
+                                            },
+                                            ..Default::default()
                                         },
-                                        ..Default::default()
-                                    })
+                                        LayerNumber(layer_index),
+                                    ))
                                     .id();
                                 tile_storage.set(&tile_pos, tile_entity);
                             }

@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
-use entities::streamer::{spawn_player, animate_sprite};
-use map::path_finding::create_fly_graph;
+use entities::streamer::{animate_sprite, spawn_player};
+use map::path_finding::create_ground_graph;
 
-mod map;
 mod entities;
+mod map;
 
 fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2dBundle::default());
@@ -39,9 +39,8 @@ fn main() {
         )
         .add_plugin(TilemapPlugin)
         .add_plugin(map::tiled::TiledMapPlugin)
-        // TODO: Incorporate a Loading state to make this line behave as intended:
-        // https://github.com/NiklasEi/bevy_asset_loader
-        .add_startup_systems((startup, spawn_player).before(create_fly_graph))
+        .add_startup_systems((startup, spawn_player))
+        .add_system(create_ground_graph)
         .add_system(map::camera::movement)
         .add_system(animate_sprite)
         .run();
