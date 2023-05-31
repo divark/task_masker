@@ -208,6 +208,29 @@ pub mod tests {
     }
 
     #[test]
+    fn only_one_ground_graph() {
+        let layer = LayerNumber(1);
+        let map_size = TilemapSize { x: 2, y: 2 };
+
+        let grid_size = TilemapGridSize {
+            x: TILE_LENGTH_PX,
+            y: TILE_WIDTH_PX,
+        };
+
+        let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
+
+        let mut app = App::new();
+        spawn_tiles(&mut app, map_size.x, map_size.y, &layer);
+        spawn_map_information(&mut app, map_size, grid_size, map_type);
+        app.add_system(create_ground_graph);
+        app.update();
+        app.update();
+
+        let mut graph_query = app.world.query::<(&NodeEdges, &Ground)>();
+        assert_eq!(graph_query.iter(&app.world).count(), 1);
+    }
+
+    #[test]
     fn two_by_two_no_ground_tiles() {
         let layer = LayerNumber(0);
         let map_size = TilemapSize { x: 2, y: 2 };
