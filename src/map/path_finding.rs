@@ -3,13 +3,13 @@ use bevy_ecs_tilemap::prelude::*;
 
 use super::tiled::LayerNumber;
 
-#[derive(Component)]
+#[derive(Component, PartialEq, Debug)]
 pub struct Ground;
 
 #[derive(Component)]
 pub struct NodeData(Vec<Vec2>);
 
-#[derive(Component)]
+#[derive(Component, PartialEq, Debug)]
 pub struct NodeEdges(Vec<Vec<usize>>);
 
 #[derive(Bundle)]
@@ -151,4 +151,178 @@ pub fn create_ground_graph(
         },
         Ground,
     ));
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    const TILE_WIDTH_PX: f32 = 32.0;
+    const TILE_LENGTH_PX: f32 = 32.0;
+
+    fn spawn_tiles(app: &mut App, length: u32, width: u32, layer: &LayerNumber) {
+        for i in 0..length {
+            for j in 0..width {
+                app.world.spawn_empty().insert((TilePos::new(i, j), *layer));
+            }
+        }
+    }
+
+    fn spawn_map_information(
+        app: &mut App,
+        map_size: TilemapSize,
+        grid_size: TilemapGridSize,
+        map_type: TilemapType,
+    ) {
+        app.world
+            .spawn_empty()
+            .insert((map_size, grid_size, map_type));
+    }
+
+    #[test]
+    fn two_by_two_ground_tiles() {
+        let layer = LayerNumber(1);
+        let map_size = TilemapSize { x: 2, y: 2 };
+
+        let grid_size = TilemapGridSize {
+            x: TILE_LENGTH_PX,
+            y: TILE_WIDTH_PX,
+        };
+
+        let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
+
+        let mut app = App::new();
+        spawn_tiles(&mut app, map_size.x, map_size.y, &layer);
+        spawn_map_information(&mut app, map_size, grid_size, map_type);
+        app.add_system(create_ground_graph);
+        app.update();
+
+        let expected_node_edges = NodeEdges(vec![vec![1, 2], vec![0, 3], vec![0, 3], vec![1, 2]]);
+        let expected_graph_type = Ground;
+
+        let mut graph_query = app.world.query::<(&NodeEdges, &Ground)>();
+        let (actual_node_edges, actual_graph_type) = graph_query.single(&app.world);
+
+        assert_eq!(expected_node_edges, *actual_node_edges);
+        assert_eq!(expected_graph_type, *actual_graph_type);
+    }
+
+    #[test]
+    fn two_by_two_no_ground_tiles() {
+        let layer = LayerNumber(0);
+        let map_size = TilemapSize { x: 2, y: 2 };
+
+        let grid_size = TilemapGridSize {
+            x: TILE_LENGTH_PX,
+            y: TILE_WIDTH_PX,
+        };
+
+        let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
+
+        let mut app = App::new();
+        spawn_tiles(&mut app, map_size.x, map_size.y, &layer);
+        spawn_map_information(&mut app, map_size, grid_size, map_type);
+        app.add_system(create_ground_graph);
+        app.update();
+
+        let expected_node_edges = NodeEdges(vec![vec![], vec![], vec![], vec![]]);
+        let expected_graph_type = Ground;
+
+        let mut graph_query = app.world.query::<(&NodeEdges, &Ground)>();
+        let (actual_node_edges, actual_graph_type) = graph_query.single(&app.world);
+
+        assert_eq!(expected_node_edges, *actual_node_edges);
+        assert_eq!(expected_graph_type, *actual_graph_type);
+    }
+
+    #[test]
+    fn two_by_two_ground_tiles_all_raised() {
+        let layer = LayerNumber(1);
+        let map_size = TilemapSize { x: 2, y: 2 };
+
+        let grid_size = TilemapGridSize {
+            x: TILE_LENGTH_PX,
+            y: TILE_WIDTH_PX,
+        };
+
+        let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
+
+        let mut app = App::new();
+        spawn_tiles(&mut app, map_size.x, map_size.y, &layer);
+        spawn_tiles(&mut app, map_size.x, map_size.y, &LayerNumber(2));
+        spawn_map_information(&mut app, map_size, grid_size, map_type);
+        app.add_system(create_ground_graph);
+        app.update();
+
+        let expected_node_edges = NodeEdges(vec![vec![1, 2], vec![0, 3], vec![0, 3], vec![1, 2]]);
+        let expected_graph_type = Ground;
+
+        let mut graph_query = app.world.query::<(&NodeEdges, &Ground)>();
+        let (actual_node_edges, actual_graph_type) = graph_query.single(&app.world);
+
+        assert_eq!(expected_node_edges, *actual_node_edges);
+        assert_eq!(expected_graph_type, *actual_graph_type);
+    }
+
+    #[test]
+    fn two_by_two_ground_tiles_right_corner_raised() {
+        let layer = LayerNumber(1);
+        let map_size = TilemapSize { x: 2, y: 2 };
+
+        let grid_size = TilemapGridSize {
+            x: TILE_LENGTH_PX,
+            y: TILE_WIDTH_PX,
+        };
+
+        let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
+
+        let mut app = App::new();
+        spawn_tiles(&mut app, map_size.x, map_size.y, &layer);
+        app.world
+            .spawn_empty()
+            .insert((TilePos::new(1, 1), LayerNumber(2)));
+        spawn_map_information(&mut app, map_size, grid_size, map_type);
+        app.add_system(create_ground_graph);
+        app.update();
+
+        let expected_node_edges = NodeEdges(vec![vec![1, 2], vec![0, 3], vec![0, 3], vec![1, 2]]);
+        let expected_graph_type = Ground;
+
+        let mut graph_query = app.world.query::<(&NodeEdges, &Ground)>();
+        let (actual_node_edges, actual_graph_type) = graph_query.single(&app.world);
+
+        assert_eq!(expected_node_edges, *actual_node_edges);
+        assert_eq!(expected_graph_type, *actual_graph_type);
+    }
+
+    #[test]
+    fn two_by_two_ground_tiles_left_corner_raised() {
+        let layer = LayerNumber(1);
+        let map_size = TilemapSize { x: 2, y: 2 };
+
+        let grid_size = TilemapGridSize {
+            x: TILE_LENGTH_PX,
+            y: TILE_WIDTH_PX,
+        };
+
+        let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
+
+        let mut app = App::new();
+        spawn_tiles(&mut app, map_size.x, map_size.y, &layer);
+        app.world
+            .spawn_empty()
+            .insert((TilePos::new(0, 0), LayerNumber(2)));
+        spawn_map_information(&mut app, map_size, grid_size, map_type);
+        app.add_system(create_ground_graph);
+        app.update();
+
+        let expected_node_edges = NodeEdges(vec![vec![1, 2], vec![0, 3], vec![0, 3], vec![1, 2]]);
+        let expected_graph_type = Ground;
+
+        let mut graph_query = app.world.query::<(&NodeEdges, &Ground)>();
+        let (actual_node_edges, actual_graph_type) = graph_query.single(&app.world);
+
+        assert_eq!(expected_node_edges, *actual_node_edges);
+        assert_eq!(expected_graph_type, *actual_graph_type);
+    }
 }
