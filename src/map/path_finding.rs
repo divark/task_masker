@@ -153,6 +153,97 @@ pub fn create_ground_graph(
     ));
 }
 
+#[derive(Component)]
+pub struct PathDistance(Vec<i32>);
+
+#[derive(Component)]
+pub struct PathParent(Vec<i32>);
+
+/// Attaches the distances and parent nodes for all shortest paths to a recently added
+/// Undirected Graph using the Floyd-Warshall All-Pairs Shortest Path algorithm.
+/// https://en.wikipedia.org/wiki/Floyd%E2%80%93Warshall_algorithm
+pub fn create_shortest_paths_all_pairs(added_graph: Query<(Entity, &NodeEdges), Added<NodeEdges>>, mut spawner: Commands) {
+    for (entity, graph_edges) in added_graph.iter() {
+        let node_edges = &graph_edges.0;
+        let num_nodes = graph_edges.0.len();
+
+        let mut parent_of = vec![-1; num_nodes * num_nodes];
+        let mut distance = vec![i32::MAX; num_nodes * num_nodes];
+
+        for node_idx in 0..num_nodes {
+            let mapped_1d_idx = tilepos_to_idx(node_idx as u32, node_idx as u32, num_nodes as u32);
+
+            distance[mapped_1d_idx] = 0;
+            parent_of[mapped_1d_idx] = node_idx as i32;
+        }
+
+        for node_idx in 0..num_nodes {
+            for edge_idx in &node_edges[node_idx] {
+                let mapped_1d_idx = tilepos_to_idx(node_idx as u32, *edge_idx as u32, num_nodes as u32);
+
+                distance[mapped_1d_idx] = 1;
+                parent_of[mapped_1d_idx] = node_idx as i32;
+            }
+        }
+
+        for num_nodes_to_consider in 0..num_nodes {
+            for first_node in 0..num_nodes {
+                for second_node in 0..num_nodes {
+                    let mapped_first_to_second_idx = tilepos_to_idx(first_node as u32, second_node as u32, num_nodes as u32);
+                    let mapped_first_to_middle_idx = tilepos_to_idx(first_node as u32, num_nodes_to_consider as u32, num_nodes as u32);
+                    let mapped_middle_to_second_idx = tilepos_to_idx(num_nodes_to_consider as u32, second_node as u32, num_nodes as u32);
+
+                    if distance[mapped_first_to_second_idx] > distance[mapped_first_to_middle_idx] + distance[mapped_middle_to_second_idx] {
+                        distance[mapped_first_to_second_idx] = distance[mapped_first_to_middle_idx] + distance[mapped_middle_to_second_idx];
+                        parent_of[mapped_first_to_second_idx] = parent_of[mapped_middle_to_second_idx];
+                    }
+                }
+            }
+        }
+
+        spawner.entity(entity)
+            .insert(
+                (
+                    PathDistance(distance),
+                    PathParent(parent_of)
+                )
+            );
+    }
+}
+
+#[derive(Component)]
+pub struct Target(Option<Vec2>);
+
+#[derive(Component)]
+pub struct Path(Vec<Vec2>);
+
+pub fn get_path(source: TilePos, destination: TilePos, map_size: &TilemapSize, graph_path_distances: &PathDistance, graph_path_parents: &PathParent) -> Path {
+    let num_edges = graph_path_distances.0.len();
+
+    let mapped_source_idx = tilepos_to_idx(source.x, source.y, map_size.y);
+    let mapped_destination_idx = tilepos_to_idx(destination.x, destination.y, map_size.y);
+
+    let mapped_path_idx = tilepos_to_idx(mapped_source_idx as u32, mapped_destination_idx as u32, num_edges as u32);
+    
+    let parent_of = &graph_path_parents.0;
+    if parent_of[mapped_path_idx] == -1 {
+        return Path(Vec::new());
+    }
+
+    let mut path = Vec::new();
+
+    Path(path)
+}
+
+pub fn update_movement_target(mut moving_entity: Query<(&mut Target, &mut Path)>) {
+    for (mut target, mut path) in moving_entity.iter_mut() {
+        if target.0.is_none() && !path.0.is_empty() {
+            let new_target = path.0.pop().expect("The path was not supposed to be empty by here.");
+            target.0 = Some(new_target);
+        }
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
     use super::*;
