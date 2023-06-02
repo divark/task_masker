@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
@@ -162,7 +164,10 @@ pub struct PathParent(Vec<i32>);
 /// Attaches the distances and parent nodes for all shortest paths to a recently added
 /// Undirected Graph using the Floyd-Warshall All-Pairs Shortest Path algorithm.
 /// https://en.wikipedia.org/wiki/Floyd%E2%80%93Warshall_algorithm
-pub fn create_shortest_paths_all_pairs(added_graph: Query<(Entity, &NodeEdges), Added<NodeEdges>>, mut spawner: Commands) {
+pub fn create_shortest_paths_all_pairs(
+    added_graph: Query<(Entity, &NodeEdges), Added<NodeEdges>>,
+    mut spawner: Commands,
+) {
     for (entity, graph_edges) in added_graph.iter() {
         let node_edges = &graph_edges.0;
         let num_nodes = graph_edges.0.len();
@@ -179,7 +184,8 @@ pub fn create_shortest_paths_all_pairs(added_graph: Query<(Entity, &NodeEdges), 
 
         for node_idx in 0..num_nodes {
             for edge_idx in &node_edges[node_idx] {
-                let mapped_1d_idx = tilepos_to_idx(node_idx as u32, *edge_idx as u32, num_nodes as u32);
+                let mapped_1d_idx =
+                    tilepos_to_idx(node_idx as u32, *edge_idx as u32, num_nodes as u32);
 
                 distance[mapped_1d_idx] = 1;
                 parent_of[mapped_1d_idx] = node_idx as i32;
@@ -189,33 +195,41 @@ pub fn create_shortest_paths_all_pairs(added_graph: Query<(Entity, &NodeEdges), 
         for num_nodes_to_consider in 0..num_nodes {
             for first_node in 0..num_nodes {
                 for second_node in 0..num_nodes {
-                    let mapped_first_to_second_idx = tilepos_to_idx(first_node as u32, second_node as u32, num_nodes as u32);
-                    let mapped_first_to_middle_idx = tilepos_to_idx(first_node as u32, num_nodes_to_consider as u32, num_nodes as u32);
-                    let mapped_middle_to_second_idx = tilepos_to_idx(num_nodes_to_consider as u32, second_node as u32, num_nodes as u32);
+                    let mapped_first_to_second_idx =
+                        tilepos_to_idx(first_node as u32, second_node as u32, num_nodes as u32);
+                    let mapped_first_to_middle_idx = tilepos_to_idx(
+                        first_node as u32,
+                        num_nodes_to_consider as u32,
+                        num_nodes as u32,
+                    );
+                    let mapped_middle_to_second_idx = tilepos_to_idx(
+                        num_nodes_to_consider as u32,
+                        second_node as u32,
+                        num_nodes as u32,
+                    );
 
                     let direct_distance = distance[mapped_first_to_second_idx];
                     let first_to_middle_distance = distance[mapped_first_to_middle_idx];
                     let middle_to_second_distance = distance[mapped_middle_to_second_idx];
 
-                    if first_to_middle_distance == i32::MAX || middle_to_second_distance == i32::MAX {
+                    if first_to_middle_distance == i32::MAX || middle_to_second_distance == i32::MAX
+                    {
                         continue;
                     }
 
                     if direct_distance > first_to_middle_distance + middle_to_second_distance {
-                        distance[mapped_first_to_second_idx] = distance[mapped_first_to_middle_idx] + distance[mapped_middle_to_second_idx];
-                        parent_of[mapped_first_to_second_idx] = parent_of[mapped_middle_to_second_idx];
+                        distance[mapped_first_to_second_idx] = distance[mapped_first_to_middle_idx]
+                            + distance[mapped_middle_to_second_idx];
+                        parent_of[mapped_first_to_second_idx] =
+                            parent_of[mapped_middle_to_second_idx];
                     }
                 }
             }
         }
 
-        spawner.entity(entity)
-            .insert(
-                (
-                    PathDistance(distance),
-                    PathParent(parent_of)
-                )
-            );
+        spawner
+            .entity(entity)
+            .insert((PathDistance(distance), PathParent(parent_of)));
     }
 }
 
@@ -223,41 +237,55 @@ pub fn create_shortest_paths_all_pairs(added_graph: Query<(Entity, &NodeEdges), 
 pub struct Target(Option<Vec2>);
 
 #[derive(Component)]
-pub struct Path(Vec<Vec2>);
+pub struct Path(VecDeque<usize>);
 
-pub fn get_path(source: &TilePos, destination: &TilePos, map_size: &TilemapSize, graph_path_distances: &PathDistance, graph_path_parents: &PathParent, graph_node_data: &NodeData) -> Path {
+pub fn get_path(
+    source: &TilePos,
+    destination: &TilePos,
+    map_size: &TilemapSize,
+    graph_path_distances: &PathDistance,
+    graph_path_parents: &PathParent,
+) -> Path {
     let num_edges = graph_path_distances.0.len();
     let num_nodes = f64::sqrt(num_edges as f64) as usize;
 
     let mapped_source_idx = tilepos_to_idx(source.x, source.y, map_size.y);
     let mut mapped_destination_idx = tilepos_to_idx(destination.x, destination.y, map_size.y);
 
-    let mut mapped_path_idx = tilepos_to_idx(mapped_source_idx as u32, mapped_destination_idx as u32, num_nodes as u32);
-    
+    let mut mapped_path_idx = tilepos_to_idx(
+        mapped_source_idx as u32,
+        mapped_destination_idx as u32,
+        num_nodes as u32,
+    );
+
     let parent_of = &graph_path_parents.0;
     if parent_of[mapped_path_idx] == -1 {
-        return Path(Vec::new());
+        return Path(VecDeque::new());
     }
 
-    let nodes = &graph_node_data.0;
-    let mut path = vec![nodes[mapped_destination_idx]];
+    let mut path = VecDeque::from([mapped_destination_idx]);
     while mapped_source_idx != mapped_destination_idx {
-        mapped_path_idx = tilepos_to_idx(mapped_source_idx as u32, mapped_destination_idx as u32, num_nodes as u32);
+        mapped_path_idx = tilepos_to_idx(
+            mapped_source_idx as u32,
+            mapped_destination_idx as u32,
+            num_nodes as u32,
+        );
         mapped_destination_idx = parent_of[mapped_path_idx] as usize;
 
-        path.push(nodes[mapped_destination_idx]);
+        path.push_front(mapped_destination_idx);
     }
-
-    path.reverse();
 
     Path(path)
 }
 
-pub fn update_movement_target(mut moving_entity: Query<(&mut Target, &mut Path)>) {
-    for (mut target, mut path) in moving_entity.iter_mut() {
+pub fn update_movement_target(mut moving_entity: Query<(&mut Target, &mut Path, &NodeData)>) {
+    for (mut target, mut path, nodes) in moving_entity.iter_mut() {
         if target.0.is_none() && !path.0.is_empty() {
-            let new_target = path.0.pop().expect("The path was not supposed to be empty by here.");
-            target.0 = Some(new_target);
+            let new_target = path
+                .0
+                .pop_front()
+                .expect("The path was not supposed to be empty by here.");
+            target.0 = Some(nodes.0[new_target]);
         }
     }
 }
@@ -459,14 +487,8 @@ pub mod tests {
     }
 
     #[test]
-    fn triangle_cycle_graph_pathfinding() {
-        let node_edges = NodeEdges(
-            vec![
-                vec![1, 2],
-                vec![0, 2],
-                vec![0, 1]
-            ]
-        );
+    fn triangle_cycle_graph_pathfinding_details() {
+        let node_edges = NodeEdges(vec![vec![1, 2], vec![0, 2], vec![0, 1]]);
 
         let num_nodes = node_edges.0.len();
 
@@ -477,33 +499,32 @@ pub mod tests {
 
         let (path_distances, path_parents) = app
             .world
-            .query::<(&PathDistance, &PathParent)>().get_single(&app.world)
+            .query::<(&PathDistance, &PathParent)>()
+            .get_single(&app.world)
             .expect("Could not find path distances and parents");
 
         for i in 0..num_nodes {
             for j in 0..num_nodes {
                 let mapped_idx = tilepos_to_idx(i as u32, j as u32, num_nodes as u32);
-                let expected_distance = if i == j {
-                    0
-                } else {
-                    1
-                };
+                let expected_distance = if i == j { 0 } else { 1 };
 
-                assert_eq!(expected_distance, path_distances.0[mapped_idx], "Nodes {} and {}", i, j);
-                assert_eq!(i, path_parents.0[mapped_idx] as usize, "Nodes {} and {}", i, j);
+                assert_eq!(
+                    expected_distance, path_distances.0[mapped_idx],
+                    "Nodes {} and {}",
+                    i, j
+                );
+                assert_eq!(
+                    i, path_parents.0[mapped_idx] as usize,
+                    "Nodes {} and {}",
+                    i, j
+                );
             }
         }
     }
 
     #[test]
-    fn triangle_graph_pathfinding() {
-        let node_edges = NodeEdges(
-            vec![
-                vec![1],
-                vec![0, 2],
-                vec![1]
-            ]
-        );
+    fn triangle_graph_pathfinding_details() {
+        let node_edges = NodeEdges(vec![vec![1], vec![0, 2], vec![1]]);
 
         let num_nodes = node_edges.0.len();
 
@@ -514,7 +535,8 @@ pub mod tests {
 
         let (path_distances, path_parents) = app
             .world
-            .query::<(&PathDistance, &PathParent)>().get_single(&app.world)
+            .query::<(&PathDistance, &PathParent)>()
+            .get_single(&app.world)
             .expect("Could not find path distances and parents");
 
         let mut expected_parents = vec![vec![-1; num_nodes]; num_nodes];
@@ -544,8 +566,73 @@ pub mod tests {
                     1
                 };
 
-                assert_eq!(expected_distance, path_distances.0[mapped_idx], "Nodes {} and {}", i, j);
-                assert_eq!(expected_parents[i][j], path_parents.0[mapped_idx], "Nodes {} and {}", i, j);
+                assert_eq!(
+                    expected_distance, path_distances.0[mapped_idx],
+                    "Nodes {} and {}",
+                    i, j
+                );
+                assert_eq!(
+                    expected_parents[i][j], path_parents.0[mapped_idx],
+                    "Nodes {} and {}",
+                    i, j
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn triangle_graph_pathfinding_paths() {
+        let node_edges = NodeEdges(vec![vec![1], vec![0, 2], vec![1]]);
+
+        let node_positions = vec![TilePos::new(0, 0), TilePos::new(0, 1), TilePos::new(0, 2)];
+
+        let world_size = TilemapSize { x: 1, y: 3 };
+
+        let num_nodes = node_edges.0.len();
+
+        let mut app = App::new();
+        app.add_system(create_shortest_paths_all_pairs);
+        app.world.spawn_empty().insert(node_edges);
+        app.update();
+
+        let (path_distances, path_parents) = app
+            .world
+            .query::<(&PathDistance, &PathParent)>()
+            .get_single(&app.world)
+            .expect("Could not find path distances and parents");
+
+        let mut expected_paths = vec![vec![vec![]; num_nodes]; num_nodes];
+        expected_paths[0][0] = vec![0];
+        expected_paths[1][1] = vec![1];
+        expected_paths[2][2] = vec![2];
+
+        expected_paths[0][1] = vec![0, 1];
+        expected_paths[1][0] = vec![1, 0];
+        expected_paths[1][2] = vec![1, 2];
+        expected_paths[2][1] = vec![2, 1];
+
+        expected_paths[0][2] = vec![0, 1, 2];
+        expected_paths[2][0] = vec![2, 1, 0];
+
+        for start_pos in &node_positions {
+            let mapped_start_idx = tilepos_to_idx(start_pos.x, start_pos.y, world_size.y);
+            for end_pos in &node_positions {
+                let mapped_end_idx = tilepos_to_idx(end_pos.x, end_pos.y, world_size.y);
+
+                assert_eq!(
+                    VecDeque::from(expected_paths[mapped_start_idx][mapped_end_idx].clone()),
+                    get_path(
+                        start_pos,
+                        end_pos,
+                        &world_size,
+                        path_distances,
+                        path_parents
+                    )
+                    .0,
+                    "Nodes {} and {}",
+                    mapped_start_idx,
+                    mapped_end_idx
+                );
             }
         }
     }
