@@ -158,6 +158,12 @@ impl AssetLoader for TiledLoader {
     }
 }
 
+pub fn tiledpos_to_tilepos(x: u32, y: u32, map_size: &TilemapSize) -> TilePos {
+    let mapped_y = map_size.y - 1 - y;
+
+    TilePos::new(x, mapped_y)
+}
+
 pub fn process_loaded_maps(
     mut commands: Commands,
     mut map_events: EventReader<AssetEvent<TiledMap>>,

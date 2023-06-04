@@ -1,15 +1,19 @@
 use bevy::prelude::*;
+use bevy_ecs_tilemap::{tiles::TilePos, prelude::{TilemapGridSize, TilemapType, IsoCoordSystem, TilemapSize}};
+
+use crate::map::tiled::tiledpos_to_tilepos;
+
+use super::MovementType;
+
+#[derive(Component)]
+pub struct StreamerLabel;
 
 #[derive(Bundle)]
 pub struct Streamer {
     #[bundle]
-    top_left_animations: SpriteSheetBundle,
-    #[bundle]
-    top_right_animations: SpriteSheetBundle,
-    #[bundle]
-    bottom_left_animations: SpriteSheetBundle,
-    #[bundle]
-    bottom_right_animations: SpriteSheetBundle,
+    label: StreamerLabel,
+    sprites: SpriteSheetBundle,
+    movement_type: MovementType,
 }
 
 #[derive(Component)]
@@ -45,19 +49,40 @@ pub fn spawn_player(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    map_information: Query<(&Transform, &TilemapType, &TilemapGridSize, &TilemapSize), (Added<TilemapType>, Added<TilemapGridSize>)>,
+    streamer_query: Query<(), With<StreamerLabel>>
 ) {
+    if !streamer_query.is_empty() {
+        return;
+    }
+
     let texture_handle = asset_server.load("entities/caveman-walk-down-left.png");
     let texture_atlas =
         TextureAtlas::from_grid(texture_handle, Vec2::new(15.0, 16.0), 4, 1, None, None);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
     // Use only the subset of sprites in the sheet that make up the run animation
     let animation_indices = AnimationIndices { first: 0, last: 3 };
+
+    if map_information.is_empty() {
+        return;
+    }
+
+    let (map_transform, map_type, grid_size, map_size) = map_information.iter().next().expect("Could not load map information. Is world loaded?");
+
+    let streamer_location = tiledpos_to_tilepos(1, 1, map_size);
+    let streamer_location = streamer_location.center_in_world(grid_size, map_type).extend(25.0);
+    let streamer_transform = *map_transform * Transform::from_translation(streamer_location);
+
     commands.spawn((
-        SpriteSheetBundle {
-            texture_atlas: texture_atlas_handle,
-            sprite: TextureAtlasSprite::new(animation_indices.first),
-            transform: Transform::from_xyz(48.0, 40.0, 32.0),
-            ..default()
+        Streamer {
+            label: StreamerLabel,
+            sprites: SpriteSheetBundle {
+                texture_atlas: texture_atlas_handle,
+                sprite: TextureAtlasSprite::new(animation_indices.first),
+                transform: streamer_transform,
+                ..default()
+            },
+            movement_type: MovementType::Walk,
         },
         animation_indices,
         AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),

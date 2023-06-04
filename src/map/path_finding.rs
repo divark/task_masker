@@ -3,7 +3,9 @@ use std::collections::VecDeque;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
-use super::tiled::LayerNumber;
+use crate::entities::{streamer::StreamerLabel, MovementType};
+
+use super::tiled::{LayerNumber, tiledpos_to_tilepos};
 
 #[derive(Component, PartialEq, Debug)]
 pub struct Ground;
@@ -156,84 +158,6 @@ pub fn create_ground_graph(
 }
 
 #[derive(Component)]
-pub struct PathDistance(Vec<i32>);
-
-#[derive(Component)]
-pub struct PathParent(Vec<i32>);
-
-/// Attaches the distances and parent nodes for all shortest paths to a recently added
-/// Undirected Graph using the Floyd-Warshall All-Pairs Shortest Path algorithm.
-/// https://en.wikipedia.org/wiki/Floyd%E2%80%93Warshall_algorithm
-pub fn create_shortest_paths_all_pairs(
-    added_graph: Query<(Entity, &NodeEdges), Added<NodeEdges>>,
-    mut spawner: Commands,
-) {
-    for (entity, graph_edges) in added_graph.iter() {
-        let node_edges = &graph_edges.0;
-        let num_nodes = graph_edges.0.len();
-
-        let mut parent_of = vec![-1; num_nodes * num_nodes];
-        let mut distance = vec![i32::MAX; num_nodes * num_nodes];
-
-        for node_idx in 0..num_nodes {
-            let mapped_1d_idx = tilepos_to_idx(node_idx as u32, node_idx as u32, num_nodes as u32);
-
-            distance[mapped_1d_idx] = 0;
-            parent_of[mapped_1d_idx] = node_idx as i32;
-        }
-
-        for node_idx in 0..num_nodes {
-            for edge_idx in &node_edges[node_idx] {
-                let mapped_1d_idx =
-                    tilepos_to_idx(node_idx as u32, *edge_idx as u32, num_nodes as u32);
-
-                distance[mapped_1d_idx] = 1;
-                parent_of[mapped_1d_idx] = node_idx as i32;
-            }
-        }
-
-        for num_nodes_to_consider in 0..num_nodes {
-            for first_node in 0..num_nodes {
-                for second_node in 0..num_nodes {
-                    let mapped_first_to_second_idx =
-                        tilepos_to_idx(first_node as u32, second_node as u32, num_nodes as u32);
-                    let mapped_first_to_middle_idx = tilepos_to_idx(
-                        first_node as u32,
-                        num_nodes_to_consider as u32,
-                        num_nodes as u32,
-                    );
-                    let mapped_middle_to_second_idx = tilepos_to_idx(
-                        num_nodes_to_consider as u32,
-                        second_node as u32,
-                        num_nodes as u32,
-                    );
-
-                    let direct_distance = distance[mapped_first_to_second_idx];
-                    let first_to_middle_distance = distance[mapped_first_to_middle_idx];
-                    let middle_to_second_distance = distance[mapped_middle_to_second_idx];
-
-                    if first_to_middle_distance == i32::MAX || middle_to_second_distance == i32::MAX
-                    {
-                        continue;
-                    }
-
-                    if direct_distance > first_to_middle_distance + middle_to_second_distance {
-                        distance[mapped_first_to_second_idx] = distance[mapped_first_to_middle_idx]
-                            + distance[mapped_middle_to_second_idx];
-                        parent_of[mapped_first_to_second_idx] =
-                            parent_of[mapped_middle_to_second_idx];
-                    }
-                }
-            }
-        }
-
-        spawner
-            .entity(entity)
-            .insert((PathDistance(distance), PathParent(parent_of)));
-    }
-}
-
-#[derive(Component)]
 pub struct Target(Option<Vec2>);
 
 #[derive(Component)]
@@ -243,34 +167,44 @@ pub fn get_path(
     source: &TilePos,
     destination: &TilePos,
     map_size: &TilemapSize,
-    graph_path_distances: &PathDistance,
-    graph_path_parents: &PathParent,
+    graph_node_edges: &NodeEdges,
 ) -> Path {
-    let num_edges = graph_path_distances.0.len();
-    let num_nodes = f64::sqrt(num_edges as f64) as usize;
+    let mut node_distances = vec![0; graph_node_edges.0.len()];
+    let mut node_parents = vec![-1; graph_node_edges.0.len()];
+    let mut node_visited = vec![false; graph_node_edges.0.len()];
 
     let mapped_source_idx = tilepos_to_idx(source.x, source.y, map_size.y);
     let mut mapped_destination_idx = tilepos_to_idx(destination.x, destination.y, map_size.y);
 
-    let mut mapped_path_idx = tilepos_to_idx(
-        mapped_source_idx as u32,
-        mapped_destination_idx as u32,
-        num_nodes as u32,
-    );
+    let mut bfs_queue = VecDeque::from([mapped_source_idx]);
+    while !bfs_queue.is_empty() {
+        let current_node_idx = bfs_queue.pop_front().unwrap();
+        if current_node_idx == mapped_destination_idx {
+            break;
+        }
 
-    let parent_of = &graph_path_parents.0;
-    if parent_of[mapped_path_idx] == -1 {
-        return Path(VecDeque::new());
+        if node_visited[current_node_idx] {
+            continue;
+        }
+
+        node_visited[current_node_idx] = true;
+
+        for node_edge in &graph_node_edges.0[current_node_idx] {
+            node_parents[*node_edge] = current_node_idx as i32;
+            node_distances[*node_edge] = node_distances[current_node_idx] + 1;
+
+            bfs_queue.push_front(*node_edge);
+        }
     }
 
     let mut path = VecDeque::from([mapped_destination_idx]);
     while mapped_source_idx != mapped_destination_idx {
-        mapped_path_idx = tilepos_to_idx(
-            mapped_source_idx as u32,
-            mapped_destination_idx as u32,
-            num_nodes as u32,
-        );
-        mapped_destination_idx = parent_of[mapped_path_idx] as usize;
+        let node_parent = node_parents[mapped_destination_idx];
+        if node_parent == -1 {
+            break;
+        }
+
+        mapped_destination_idx = node_parent as usize;
 
         path.push_front(mapped_destination_idx);
     }
@@ -278,8 +212,47 @@ pub fn get_path(
     Path(path)
 }
 
-pub fn update_movement_target(mut moving_entity: Query<(&mut Target, &mut Path, &NodeData)>) {
-    for (mut target, mut path, nodes) in moving_entity.iter_mut() {
+#[derive(Component)]
+pub enum Direction {
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+}
+
+#[derive(Component, Deref, DerefMut)]
+pub struct MovementTimer(Timer);
+
+pub fn insert_pathing_information(
+    moving_entities: Query<
+        Entity,
+        (
+            With<MovementType>,
+            Without<Path>,
+            Without<Target>,
+            Without<Direction>,
+            Without<MovementTimer>,
+        ),
+    >,
+    mut spawner: Commands,
+) {
+    for moving_entity in &moving_entities {
+        spawner.entity(moving_entity).insert((
+            Path(VecDeque::new()),
+            Target(None),
+            Direction::TopRight,
+            MovementTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
+        ));
+    }
+}
+
+pub fn update_movement_target(mut moving_entity: Query<(&mut Target, &mut Path)>, ground_graph_query: Query<&NodeData, With<Ground>>) {
+    if ground_graph_query.is_empty() {
+        return;
+    }
+
+    let nodes = ground_graph_query.get_single().unwrap();
+    for (mut target, mut path) in moving_entity.iter_mut() {
         if target.0.is_none() && !path.0.is_empty() {
             let new_target = path
                 .0
@@ -287,6 +260,139 @@ pub fn update_movement_target(mut moving_entity: Query<(&mut Target, &mut Path, 
                 .expect("The path was not supposed to be empty by here.");
             target.0 = Some(nodes.0[new_target]);
         }
+    }
+}
+
+fn get_direction(current_pos: Transform, target_pos: Transform) -> Direction {
+    let current_translation = &current_pos.translation;
+    let target_translation = &target_pos.translation;
+
+    let x_direction = target_translation.x > current_translation.x;
+    let y_direction = target_translation.y > current_translation.y;
+
+    match (
+        x_direction,
+        y_direction,
+    ) {
+        (true, true) => Direction::TopRight,
+        (true, false) => Direction::BottomRight,
+        (false, true) => Direction::TopLeft,
+        (false, false) => Direction::BottomLeft,
+    }
+}
+
+pub fn move_entities(
+    mut moving_entity: Query<
+        (
+            &mut Transform,
+            &mut Target,
+            &mut Direction,
+            &mut MovementTimer,
+        ),
+        With<MovementType>,
+    >,
+    time: Res<Time>,
+) {
+    for (mut current_pos, mut target, mut target_direction, mut movement_timer) in
+        &mut moving_entity
+    {
+        if let Some(target_vec) = target.0 {
+            let target_pos =
+                Transform::from_xyz(target_vec.x, target_vec.y, current_pos.translation.z);
+            if *current_pos == target_pos {
+                target.0 = None;
+                continue;
+            }
+
+            *target_direction = get_direction(*current_pos, target_pos);
+            movement_timer.tick(time.delta());
+
+            if !movement_timer.just_finished() {
+                continue;
+            }
+
+            match *target_direction {
+                Direction::TopLeft => current_pos.translation += Vec3::new(-1.0, 1.0, 0.0),
+                Direction::TopRight => current_pos.translation += Vec3::new(1.0, 1.0, 0.0),
+                Direction::BottomLeft => current_pos.translation += Vec3::new(-1.0, -1.0, 0.0),
+                Direction::BottomRight => current_pos.translation += Vec3::new(1.0, -1.0, 0.0),
+            }
+        }
+    }
+}
+
+pub fn move_streamer(
+    mut destination_request_listener: EventReader<TilePos>,
+    mut streamer_entity: Query<(&mut Path, &Transform), With<StreamerLabel>>,
+    ground_graph: Query<&NodeEdges, With<Ground>>,
+    map_information: Query<(&TilemapSize, &TilemapGridSize, &TilemapType, &Transform)>,
+) {
+    if streamer_entity.is_empty() {
+        return;
+    }
+
+    if ground_graph.is_empty() {
+        return;
+    }
+
+    let edges = ground_graph
+        .get_single()
+        .expect("Ground graph should be loaded.");
+    // Each Tile Layer has its own World and Grid size should someone decide
+    // to change tilesets for the layer. However, I will not do that, so
+    // both the world size and grid size should be the same.
+    let map_size = map_information
+        .iter()
+        .map(|sizes| sizes.0)
+        .max_by(|&x, &y| {
+            let x_world_area = x.x * x.y;
+            let y_world_area = y.x * y.y;
+
+            x_world_area.cmp(&y_world_area)
+        })
+        .expect("Could not find largest world size. Is the map loaded?");
+
+    let grid_size = map_information
+        .iter()
+        .map(|sizes| sizes.1)
+        .max_by(|&x, &y| {
+            let x_grid_area = x.x * x.y;
+            let y_grid_area = y.x * y.y;
+
+            x_grid_area.partial_cmp(&y_grid_area).unwrap()
+        })
+        .expect("Could not find largest grid size. Is the map loaded?");
+
+    // I'm not sure how a map type could change based on the layer, but
+    // the Tiled loader insists it could happen, but I won't do that for
+    // my own maps, so they should all be equal.
+    let map_type = map_information
+        .iter()
+        .next()
+        .map(|x| x.2)
+        .expect("Could not get map type. Is the map loaded?");
+
+    let map_transform = map_information.iter().next().map(|x| x.3).expect("Could not load map transform.");
+
+    for destination_request in destination_request_listener.iter() {
+        let (mut streamer_path, streamer_pos) = streamer_entity
+            .get_single_mut()
+            .expect("The streamer should be loaded.");
+        //let streamer_tile_pos_vec = map_transform.translation / Vec3::new(streamer_pos.translation.x, streamer_pos.translation.y, map_transform.translation.z);
+        let streamer_tile_pos = tiledpos_to_tilepos(1, 1, map_size);
+
+        *streamer_path = get_path(
+            &streamer_tile_pos,
+            destination_request,
+            map_size,
+            edges,
+        );
+    }
+}
+
+pub fn move_streamer_on_spacebar(keyboard_input: Res<Input<KeyCode>>, mut destination_request_writer: EventWriter<TilePos>) {
+    if keyboard_input.just_pressed(KeyCode::Space) {
+        destination_request_writer.send(tiledpos_to_tilepos(0, 0, &TilemapSize { x: 4, y: 4}));
     }
 }
 
@@ -487,100 +593,6 @@ pub mod tests {
     }
 
     #[test]
-    fn triangle_cycle_graph_pathfinding_details() {
-        let node_edges = NodeEdges(vec![vec![1, 2], vec![0, 2], vec![0, 1]]);
-
-        let num_nodes = node_edges.0.len();
-
-        let mut app = App::new();
-        app.add_system(create_shortest_paths_all_pairs);
-        app.world.spawn_empty().insert(node_edges);
-        app.update();
-
-        let (path_distances, path_parents) = app
-            .world
-            .query::<(&PathDistance, &PathParent)>()
-            .get_single(&app.world)
-            .expect("Could not find path distances and parents");
-
-        for i in 0..num_nodes {
-            for j in 0..num_nodes {
-                let mapped_idx = tilepos_to_idx(i as u32, j as u32, num_nodes as u32);
-                let expected_distance = if i == j { 0 } else { 1 };
-
-                assert_eq!(
-                    expected_distance, path_distances.0[mapped_idx],
-                    "Nodes {} and {}",
-                    i, j
-                );
-                assert_eq!(
-                    i, path_parents.0[mapped_idx] as usize,
-                    "Nodes {} and {}",
-                    i, j
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn triangle_graph_pathfinding_details() {
-        let node_edges = NodeEdges(vec![vec![1], vec![0, 2], vec![1]]);
-
-        let num_nodes = node_edges.0.len();
-
-        let mut app = App::new();
-        app.add_system(create_shortest_paths_all_pairs);
-        app.world.spawn_empty().insert(node_edges);
-        app.update();
-
-        let (path_distances, path_parents) = app
-            .world
-            .query::<(&PathDistance, &PathParent)>()
-            .get_single(&app.world)
-            .expect("Could not find path distances and parents");
-
-        let mut expected_parents = vec![vec![-1; num_nodes]; num_nodes];
-        // Direct Edges
-        expected_parents[0][0] = 0;
-        expected_parents[0][1] = 0;
-        expected_parents[1][0] = 1;
-
-        expected_parents[1][1] = 1;
-        expected_parents[1][2] = 1;
-
-        expected_parents[2][1] = 2;
-        expected_parents[2][2] = 2;
-
-        // Paths
-        expected_parents[0][2] = 1;
-        expected_parents[2][0] = 1;
-
-        for i in 0..num_nodes {
-            for j in 0..num_nodes {
-                let mapped_idx = tilepos_to_idx(i as u32, j as u32, num_nodes as u32);
-                let expected_distance = if i == j {
-                    0
-                } else if (i == 0 && j == 2) || (i == 2 && j == 0) {
-                    2
-                } else {
-                    1
-                };
-
-                assert_eq!(
-                    expected_distance, path_distances.0[mapped_idx],
-                    "Nodes {} and {}",
-                    i, j
-                );
-                assert_eq!(
-                    expected_parents[i][j], path_parents.0[mapped_idx],
-                    "Nodes {} and {}",
-                    i, j
-                );
-            }
-        }
-    }
-
-    #[test]
     fn triangle_graph_pathfinding_paths() {
         let node_edges = NodeEdges(vec![vec![1], vec![0, 2], vec![1]]);
 
@@ -589,17 +601,6 @@ pub mod tests {
         let world_size = TilemapSize { x: 1, y: 3 };
 
         let num_nodes = node_edges.0.len();
-
-        let mut app = App::new();
-        app.add_system(create_shortest_paths_all_pairs);
-        app.world.spawn_empty().insert(node_edges);
-        app.update();
-
-        let (path_distances, path_parents) = app
-            .world
-            .query::<(&PathDistance, &PathParent)>()
-            .get_single(&app.world)
-            .expect("Could not find path distances and parents");
 
         let mut expected_paths = vec![vec![vec![]; num_nodes]; num_nodes];
         expected_paths[0][0] = vec![0];
@@ -625,8 +626,7 @@ pub mod tests {
                         start_pos,
                         end_pos,
                         &world_size,
-                        path_distances,
-                        path_parents
+                        &node_edges,
                     )
                     .0,
                     "Nodes {} and {}",
