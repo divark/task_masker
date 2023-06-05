@@ -212,7 +212,7 @@ pub fn get_path(
     Path(path)
 }
 
-#[derive(Component)]
+#[derive(Component, PartialEq, PartialOrd, Debug)]
 pub enum Direction {
     TopLeft,
     TopRight,
@@ -274,10 +274,10 @@ fn get_direction(current_pos: Transform, target_pos: Transform) -> Direction {
         x_direction,
         y_direction,
     ) {
-        (true, true) => Direction::TopRight,
+        (true, true) => Direction::BottomLeft,
         (true, false) => Direction::BottomRight,
         (false, true) => Direction::TopLeft,
-        (false, false) => Direction::BottomLeft,
+        (false, false) => Direction::TopRight,
     }
 }
 
@@ -313,8 +313,8 @@ pub fn move_entities(
 
             match *target_direction {
                 Direction::TopLeft => current_pos.translation += Vec3::new(-1.0, 1.0, 0.0),
-                Direction::TopRight => current_pos.translation += Vec3::new(1.0, 1.0, 0.0),
-                Direction::BottomLeft => current_pos.translation += Vec3::new(-1.0, -1.0, 0.0),
+                Direction::TopRight => current_pos.translation += Vec3::new(-1.0, -1.0, 0.0),
+                Direction::BottomLeft => current_pos.translation += Vec3::new(1.0, 1.0, 0.0),
                 Direction::BottomRight => current_pos.translation += Vec3::new(1.0, -1.0, 0.0),
             }
         }
@@ -378,8 +378,7 @@ pub fn move_streamer(
         let (mut streamer_path, streamer_pos) = streamer_entity
             .get_single_mut()
             .expect("The streamer should be loaded.");
-        //let streamer_tile_pos_vec = map_transform.translation / Vec3::new(streamer_pos.translation.x, streamer_pos.translation.y, map_transform.translation.z);
-        let streamer_tile_pos = tiledpos_to_tilepos(1, 1, map_size);
+        let streamer_tile_pos = TilePos::from_world_pos(&streamer_pos.translation.truncate(), map_size, grid_size, map_type).expect("Unable to translate streamer transform into TilePos");
 
         *streamer_path = get_path(
             &streamer_tile_pos,
@@ -392,13 +391,13 @@ pub fn move_streamer(
 
 pub fn move_streamer_on_spacebar(keyboard_input: Res<Input<KeyCode>>, mut destination_request_writer: EventWriter<TilePos>) {
     if keyboard_input.just_pressed(KeyCode::Space) {
-        destination_request_writer.send(tiledpos_to_tilepos(0, 0, &TilemapSize { x: 4, y: 4}));
+        destination_request_writer.send(TilePos { x: 2, y: 2 });
     }
 }
 
 #[cfg(test)]
 pub mod tests {
-    use super::*;
+    use super::{*, Direction};
 
     const TILE_WIDTH_PX: f32 = 32.0;
     const TILE_LENGTH_PX: f32 = 32.0;
@@ -635,5 +634,130 @@ pub mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn tilepos_to_world_transform_and_back() {
+        let map_size = TilemapSize {
+            x: 4,
+            y: 4
+        };
+
+        let grid_size = TilemapGridSize {
+            x: 32.0,
+            y: 16.0
+        };
+
+        let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
+
+        let tilepos = TilePos { x: 1, y: 1 };
+        let tile_transform = Transform::from_translation(tilepos.center_in_world(&grid_size, &map_type).extend(1.0));
+
+        let tilepos_from_transform = TilePos::from_world_pos(&tile_transform.translation.truncate(), &map_size, &grid_size, &map_type);
+
+        assert!(tilepos_from_transform.is_some());
+        let actual_tilepos = tilepos_from_transform.unwrap();
+
+        assert_eq!(tilepos, actual_tilepos);
+    }
+
+    #[test]
+    fn bottom_left_direction_and_coordinate_system() {
+        let map_size = TilemapSize {
+            x: 4,
+            y: 4
+        };
+
+        let grid_size = TilemapGridSize {
+            x: 32.0,
+            y: 16.0
+        };
+
+        let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
+
+        let source_tilepos = TilePos {x: 0, y: 0 };
+        let source_transform = Transform::from_translation(source_tilepos.center_in_world(&grid_size, &map_type).extend(1.0));
+        let destination_tilepos = TilePos { x: 0, y: 1 };
+        let destination_transform = Transform::from_translation(destination_tilepos.center_in_world(&grid_size, &map_type).extend(1.0));
+
+        let expected_direction = Direction::BottomLeft;
+        let actual_direction = get_direction(source_transform, destination_transform);
+
+        assert_eq!(expected_direction, actual_direction);
+    }
+
+    #[test]
+    fn bottom_right_direction_and_coordinate_system() {
+        let map_size = TilemapSize {
+            x: 4,
+            y: 4
+        };
+
+        let grid_size = TilemapGridSize {
+            x: 32.0,
+            y: 16.0
+        };
+
+        let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
+
+        let source_tilepos = TilePos {x: 0, y: 0 };
+        let source_transform = Transform::from_translation(source_tilepos.center_in_world(&grid_size, &map_type).extend(1.0));
+        let destination_tilepos = TilePos { x: 1, y: 0 };
+        let destination_transform = Transform::from_translation(destination_tilepos.center_in_world(&grid_size, &map_type).extend(1.0));
+
+        let expected_direction = Direction::BottomRight;
+        let actual_direction = get_direction(source_transform, destination_transform);
+
+        assert_eq!(expected_direction, actual_direction);
+    }
+
+    #[test]
+    fn top_left_direction_and_coordinate_system() {
+        let map_size = TilemapSize {
+            x: 4,
+            y: 4
+        };
+
+        let grid_size = TilemapGridSize {
+            x: 32.0,
+            y: 16.0
+        };
+
+        let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
+
+        let source_tilepos = TilePos {x: 1, y: 0 };
+        let source_transform = Transform::from_translation(source_tilepos.center_in_world(&grid_size, &map_type).extend(1.0));
+        let destination_tilepos = TilePos { x: 0, y: 0 };
+        let destination_transform = Transform::from_translation(destination_tilepos.center_in_world(&grid_size, &map_type).extend(1.0));
+
+        let expected_direction = Direction::TopLeft;
+        let actual_direction = get_direction(source_transform, destination_transform);
+
+        assert_eq!(expected_direction, actual_direction);
+    }
+
+    #[test]
+    fn top_right_direction_and_coordinate_system() {
+        let map_size = TilemapSize {
+            x: 4,
+            y: 4
+        };
+
+        let grid_size = TilemapGridSize {
+            x: 32.0,
+            y: 16.0
+        };
+
+        let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
+
+        let source_tilepos = TilePos {x: 0, y: 1 };
+        let source_transform = Transform::from_translation(source_tilepos.center_in_world(&grid_size, &map_type).extend(1.0));
+        let destination_tilepos = TilePos { x: 0, y: 0 };
+        let destination_transform = Transform::from_translation(destination_tilepos.center_in_world(&grid_size, &map_type).extend(1.0));
+
+        let expected_direction = Direction::TopRight;
+        let actual_direction = get_direction(source_transform, destination_transform);
+
+        assert_eq!(expected_direction, actual_direction);
     }
 }
