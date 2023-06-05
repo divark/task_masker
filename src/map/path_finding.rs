@@ -31,7 +31,7 @@ fn tilepos_to_idx(x: u32, y: u32, world_size: u32) -> usize {
 /// indicate an at most 1 tile offset between two tiles.
 pub fn create_ground_graph(
     tile_positions: Query<(&TilePos, &LayerNumber)>,
-    map_information: Query<(&TilemapSize, &TilemapGridSize, &TilemapType)>,
+    map_information: Query<(&TilemapSize, &TilemapGridSize, &TilemapType, &Transform)>,
     ground_graph_query: Query<(&NodeEdges, &NodeData), With<Ground>>,
     mut spawner: Commands,
 ) {
@@ -123,12 +123,15 @@ pub fn create_ground_graph(
         let tile_idx = tilepos_to_idx(tile_position.x, tile_position.y, world_size.x);
         let tile_height = height_map[tile_idx];
 
-        let node_data = tile_position.center_in_world(grid_size, map_type);
+        let tiled_pos = TilePos { x: tile_position. x, y: world_size.y - 1 - tile_position.y };
+        let map_transform = map_information.iter().nth(tile_height).expect("Tile should be on this layer.").3;
+        let tiled_transform = Transform::from_translation(tiled_pos.center_in_world(grid_size, map_type).extend(tile_height as f32));
+        let node_data = (*map_transform * tiled_transform).translation.truncate();
         let mut node_edges = Vec::new();
 
         if tile_position.x > 0 && tile_height > 0 {
             let top_node_idx = tilepos_to_idx(tile_position.x - 1, tile_position.y, world_size.x);
-            let height_difference: i32 = height_map[top_node_idx] - tile_height;
+            let height_difference: i32 = height_map[top_node_idx] as i32 - tile_height as i32;
             if height_difference.abs() <= 1 {
                 node_edges.push(top_node_idx);
                 directed_graph_edges[top_node_idx].push(tile_idx);
@@ -137,7 +140,7 @@ pub fn create_ground_graph(
 
         if tile_position.y > 0 && tile_height > 0 {
             let left_node_idx = tilepos_to_idx(tile_position.x, tile_position.y - 1, world_size.x);
-            let height_difference: i32 = height_map[left_node_idx] - tile_height;
+            let height_difference: i32 = height_map[left_node_idx] as i32 - tile_height as i32;
             if height_difference.abs() <= 1 {
                 node_edges.push(left_node_idx);
                 directed_graph_edges[left_node_idx].push(tile_idx);
@@ -372,16 +375,16 @@ pub fn move_streamer(
         .map(|x| x.2)
         .expect("Could not get map type. Is the map loaded?");
 
-    let map_transform = map_information.iter().next().map(|x| x.3).expect("Could not load map transform.");
+    let map_transform = map_information.iter().nth(1).map(|x| x.3).expect("Could not load map transform.");
 
     for destination_request in destination_request_listener.iter() {
         let (mut streamer_path, streamer_pos) = streamer_entity
             .get_single_mut()
             .expect("The streamer should be loaded.");
-        let streamer_tile_pos = TilePos::from_world_pos(&streamer_pos.translation.truncate(), map_size, grid_size, map_type).expect("Unable to translate streamer transform into TilePos");
+        let streamer_tile_pos = TilePos::from_world_pos(&(streamer_pos.translation.truncate() / map_transform.translation.truncate()), map_size, grid_size, map_type).expect("Unable to translate streamer transform into TilePos");
 
         *streamer_path = get_path(
-            &streamer_tile_pos,
+            &TilePos { x: 1, y: 1},
             destination_request,
             map_size,
             edges,
