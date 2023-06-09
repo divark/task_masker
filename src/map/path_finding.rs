@@ -51,7 +51,7 @@ fn tilepos_to_idx(x: u32, y: u32, world_size: u32) -> usize {
 /// indicate an at most 1 tile offset between two tiles.
 pub fn create_ground_graph(
     tile_positions: Query<(&TilePos, &LayerNumber)>,
-    map_information: Query<(&TilemapSize, &TilemapGridSize, &TilemapType, &Transform)>,
+    map_information: Query<&TilemapSize>,
     ground_graph_query: Query<(&NodeEdges, &NodeData), With<Ground>>,
     mut spawner: Commands,
 ) {
@@ -68,7 +68,6 @@ pub fn create_ground_graph(
     // both the world size and grid size should be the same.
     let world_size = map_information
         .iter()
-        .map(|sizes| sizes.0)
         .max_by(|&x, &y| {
             let x_world_area = x.x * x.y;
             let y_world_area = y.x * y.y;
@@ -76,26 +75,6 @@ pub fn create_ground_graph(
             x_world_area.cmp(&y_world_area)
         })
         .expect("Could not find largest world size. Is the map loaded?");
-
-    let grid_size = map_information
-        .iter()
-        .map(|sizes| sizes.1)
-        .max_by(|&x, &y| {
-            let x_grid_area = x.x * x.y;
-            let y_grid_area = y.x * y.y;
-
-            x_grid_area.partial_cmp(&y_grid_area).unwrap()
-        })
-        .expect("Could not find largest grid size. Is the map loaded?");
-
-    // I'm not sure how a map type could change based on the layer, but
-    // the Tiled loader insists it could happen, but I won't do that for
-    // my own maps, so they should all be equal.
-    let map_type = map_information
-        .iter()
-        .next()
-        .map(|x| x.2)
-        .expect("Could not get map type. Is the map loaded?");
 
     let mut height_map = vec![0; (world_size.x * world_size.y) as usize];
 
