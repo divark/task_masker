@@ -1,5 +1,8 @@
 use bevy::prelude::*;
-use bevy_ecs_tilemap::{tiles::TilePos, prelude::{TilemapGridSize, TilemapType, IsoCoordSystem, TilemapSize}};
+use bevy_ecs_tilemap::{
+    prelude::{IsoCoordSystem, TilemapGridSize, TilemapSize, TilemapType},
+    tiles::TilePos,
+};
 
 use crate::map::tiled::tiledpos_to_tilepos;
 
@@ -49,8 +52,11 @@ pub fn spawn_player(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-    map_information: Query<(&Transform, &TilemapType, &TilemapGridSize, &TilemapSize), (Added<TilemapType>, Added<TilemapGridSize>)>,
-    streamer_query: Query<(), With<StreamerLabel>>
+    map_information: Query<
+        (&Transform, &TilemapType, &TilemapGridSize, &TilemapSize),
+        (Added<TilemapType>, Added<TilemapGridSize>),
+    >,
+    streamer_query: Query<(), With<StreamerLabel>>,
 ) {
     if !streamer_query.is_empty() {
         return;
@@ -67,10 +73,15 @@ pub fn spawn_player(
         return;
     }
 
-    let (map_transform, map_type, grid_size, map_size) = map_information.iter().nth(1).expect("Could not load map information. Is world loaded?");
+    let (map_transform, map_type, grid_size, map_size) = map_information
+        .iter()
+        .nth(1)
+        .expect("Could not load map information. Is world loaded?");
 
-    let streamer_location = TilePos {x: 1, y: 2 };
-    let streamer_location = streamer_location.center_in_world(grid_size, map_type).extend(25.0);
+    let streamer_location = TilePos { x: 1, y: 2 };
+    let streamer_location = streamer_location
+        .center_in_world(grid_size, map_type)
+        .extend(25.0);
     let streamer_transform = *map_transform * Transform::from_translation(streamer_location);
 
     commands.spawn((

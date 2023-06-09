@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use entities::streamer::{animate_sprite, spawn_player};
-use map::path_finding::{create_ground_graph, insert_pathing_information, update_movement_target, move_entities, move_streamer, move_streamer_on_spacebar};
+use map::path_finding::{create_ground_graph, move_streamer};
 
 mod entities;
 mod map;
@@ -44,11 +44,11 @@ fn main() {
         .add_systems((
             spawn_player,
             create_ground_graph,
-            insert_pathing_information,
-            update_movement_target,
-            move_entities,
+            //insert_pathing_information,
+            //update_movement_target,
+            //move_entities,
             move_streamer,
-            move_streamer_on_spacebar,
+            //move_streamer_on_spacebar,
         ))
         //.add_system(create_ground_graph)
         .add_system(map::camera::movement)
