@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use entities::streamer::{animate_sprite, spawn_player};
-use map::path_finding::{create_ground_graph, move_streamer};
+use map::path_finding::{
+    create_ground_graph, insert_pathing_information, move_entities, move_streamer,
+    move_streamer_on_spacebar, update_movement_target,
+};
 
 mod entities;
 mod map;
@@ -9,7 +12,7 @@ mod map;
 fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2dBundle::default());
 
-    let map_handle: Handle<map::tiled::TiledMap> = asset_server.load("map2.tmx");
+    let map_handle: Handle<map::tiled::TiledMap> = asset_server.load("TM_v2.tmx");
 
     commands.spawn(map::tiled::TiledMapBundle {
         tiled_map: map_handle,
@@ -20,7 +23,7 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
 fn main() {
     App::new()
         .insert_resource(TilemapRenderSettings {
-            render_chunk_size: UVec2::new(20, 1),
+            render_chunk_size: UVec2::new(1280, 1),
         })
         .add_plugins(
             DefaultPlugins
@@ -44,11 +47,11 @@ fn main() {
         .add_systems((
             spawn_player,
             create_ground_graph,
-            //insert_pathing_information,
-            //update_movement_target,
-            //move_entities,
+            insert_pathing_information,
+            update_movement_target,
+            move_entities,
             move_streamer,
-            //move_streamer_on_spacebar,
+            move_streamer_on_spacebar,
         ))
         //.add_system(create_ground_graph)
         .add_system(map::camera::movement)

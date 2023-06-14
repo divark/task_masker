@@ -78,11 +78,13 @@ pub fn spawn_player(
         .nth(1)
         .expect("Could not load map information. Is world loaded?");
 
-    let streamer_location = TilePos { x: 1, y: 2 };
-    let streamer_location = streamer_location
+    let streamer_location = TilePos { x: 41, y: 58 };
+    let tiled_to_bevy_pos = tiledpos_to_tilepos(streamer_location.x, streamer_location.y, map_size);
+
+    let streamer_translation = tiled_to_bevy_pos
         .center_in_world(grid_size, map_type)
         .extend(25.0);
-    let streamer_transform = *map_transform * Transform::from_translation(streamer_location);
+    let streamer_transform = *map_transform * Transform::from_translation(streamer_translation);
 
     commands.spawn((
         Streamer {
@@ -97,5 +99,6 @@ pub fn spawn_player(
         },
         animation_indices,
         AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
+        streamer_location,
     ));
 }

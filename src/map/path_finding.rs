@@ -1,11 +1,3 @@
-//! In Path-Finding, there are two components that are important:
-//! 1. Mapping the Map into an Undirected Graph
-//! 2. Returning the Shortest Path for some Start and End Node.
-//!
-//! With these two ideas, the first thing to do is to consider
-//! how we're going to represent an Undirected Graph, and then
-//! how we'll translate whatever 2D map we have to it.
-
 use std::collections::VecDeque;
 
 use bevy::prelude::*;
@@ -15,27 +7,15 @@ use crate::entities::{streamer::StreamerLabel, MovementType};
 
 use super::tiled::{tiledpos_to_tilepos, LayerNumber};
 
-/// Labels a Graph to be processed for entities
-/// that walk, such as the Streamer in this case.
 #[derive(Component, PartialEq, Debug)]
 pub struct Ground;
 
-/// Holds a Destination Tile Position morphed from
-/// Tiled coordinates to Bevy Coordinates for each
-/// node.
 #[derive(Component)]
-pub struct NodeData(Vec<TilePos>);
+pub struct NodeData(Vec<Vec2>);
 
-/// Contains a list of Nodes adjacent to some
-/// source node in terms of indices. Identical
-/// to the Adjacency List pattern for graphs.
 #[derive(Component, PartialEq, Debug)]
 pub struct NodeEdges(Vec<Vec<usize>>);
 
-/// A Directed Graph implementation constructed
-/// in a Data-Oriented Fashion, consisting of just two
-/// 1 dimensional arrays, where a Node is just some
-/// index (Entity).
 #[derive(Bundle)]
 pub struct Graph {
     node_data: NodeData,
@@ -47,11 +27,22 @@ fn tilepos_to_idx(x: u32, y: u32, world_size: u32) -> usize {
     ((world_size * x) + y) as usize
 }
 
+/// Transforms a 1D array index into its associated 2-dimensional Tilepos index.
+fn idx_to_tilepos(mapped_idx: usize, world_size: u32) -> TilePos {
+    let x = mapped_idx / world_size as usize;
+    let y = mapped_idx - (world_size as usize * x);
+
+    TilePos {
+        x: x as u32,
+        y: y as u32,
+    }
+}
+
 /// Spawns an Undirected Graph representing all land titles where the edges
 /// indicate an at most 1 tile offset between two tiles.
 pub fn create_ground_graph(
     tile_positions: Query<(&TilePos, &LayerNumber)>,
-    map_information: Query<&TilemapSize>,
+    map_information: Query<(&TilemapSize, &TilemapGridSize, &TilemapType, &Transform)>,
     ground_graph_query: Query<(&NodeEdges, &NodeData), With<Ground>>,
     mut spawner: Commands,
 ) {
@@ -68,6 +59,7 @@ pub fn create_ground_graph(
     // both the world size and grid size should be the same.
     let world_size = map_information
         .iter()
+        .map(|sizes| sizes.0)
         .max_by(|&x, &y| {
             let x_world_area = x.x * x.y;
             let y_world_area = y.x * y.y;
@@ -76,7 +68,27 @@ pub fn create_ground_graph(
         })
         .expect("Could not find largest world size. Is the map loaded?");
 
-    let mut height_map = vec![0; (world_size.x * world_size.y) as usize];
+    let grid_size = map_information
+        .iter()
+        .map(|sizes| sizes.1)
+        .max_by(|&x, &y| {
+            let x_grid_area = x.x * x.y;
+            let y_grid_area = y.x * y.y;
+
+            x_grid_area.partial_cmp(&y_grid_area).unwrap()
+        })
+        .expect("Could not find largest grid size. Is the map loaded?");
+
+    // I'm not sure how a map type could change based on the layer, but
+    // the Tiled loader insists it could happen, but I won't do that for
+    // my own maps, so they should all be equal.
+    let map_type = map_information
+        .iter()
+        .next()
+        .map(|x| x.2)
+        .expect("Could not get map type. Is the map loaded?");
+
+    let mut height_map: Vec<usize> = vec![0; (world_size.x * world_size.y) as usize];
 
     // Sorting by Tile Position and Layer number ensures that we won't add
     // a previous node, whether above or to the left, that does not exist
@@ -104,12 +116,12 @@ pub fn create_ground_graph(
         // connected to the ground to be ignored. Think scenery
         // that obscures the vision from the camera that the
         // player can pass through.
-        if layer_number.0 - (height_entry as usize) == 1 {
+        if layer_number.0 - height_entry == 1 {
             height_map[height_idx] += 1;
         }
     }
 
-    let mut directed_graph_data: Vec<TilePos> = Vec::new();
+    let mut directed_graph_data: Vec<Vec2> = Vec::new();
     let mut directed_graph_edges: Vec<Vec<usize>> = Vec::new();
 
     let mut tile_positions_no_layers = tile_positions_sorted
@@ -122,7 +134,18 @@ pub fn create_ground_graph(
         let tile_idx = tilepos_to_idx(tile_position.x, tile_position.y, world_size.x);
         let tile_height = height_map[tile_idx];
 
-        let tiled_pos = tiledpos_to_tilepos(tile_position.x, tile_position.y, &world_size);
+        let tiled_to_bevy_pos = tiledpos_to_tilepos(tile_position.x, tile_position.y, world_size);
+        let map_transform = map_information
+            .iter()
+            .nth(tile_height)
+            .expect("Tile should be on this layer.")
+            .3;
+        let tiled_transform = Transform::from_translation(
+            tiled_to_bevy_pos
+                .center_in_world(grid_size, map_type)
+                .extend(tile_height as f32),
+        );
+        let node_data = (*map_transform * tiled_transform).translation.truncate();
         let mut node_edges = Vec::new();
 
         if tile_position.x > 0 && tile_height > 0 {
@@ -143,7 +166,7 @@ pub fn create_ground_graph(
             }
         }
 
-        directed_graph_data.push(tiled_pos);
+        directed_graph_data.push(node_data);
         directed_graph_edges.push(node_edges);
     }
 
@@ -156,13 +179,12 @@ pub fn create_ground_graph(
     ));
 }
 
-/// Holds a Queue of Node indices (Entities) as the result
-/// of some Shortest Path computation.
+#[derive(Component)]
+pub struct Target(Option<(Vec2, TilePos)>);
+
 #[derive(Component)]
 pub struct Path(VecDeque<usize>);
 
-/// Returns a Path found for some Source and Destination Tiled-based
-/// Tile Positions.
 pub fn get_path(
     source: &TilePos,
     destination: &TilePos,
@@ -180,6 +202,7 @@ pub fn get_path(
     while !bfs_queue.is_empty() {
         let current_node_idx = bfs_queue.pop_front().unwrap();
         if current_node_idx == mapped_destination_idx {
+            node_visited[current_node_idx] = true;
             break;
         }
 
@@ -190,11 +213,19 @@ pub fn get_path(
         node_visited[current_node_idx] = true;
 
         for node_edge in &graph_node_edges.0[current_node_idx] {
+            if node_visited[*node_edge] {
+                continue;
+            }
+
             node_parents[*node_edge] = current_node_idx as i32;
             node_distances[*node_edge] = node_distances[current_node_idx] + 1;
 
-            bfs_queue.push_front(*node_edge);
+            bfs_queue.push_back(*node_edge);
         }
+    }
+
+    if !node_visited[mapped_destination_idx] {
+        return Path(VecDeque::new());
     }
 
     let mut path = VecDeque::from([mapped_destination_idx]);
@@ -212,151 +243,176 @@ pub fn get_path(
     Path(path)
 }
 
-/*
-* Okay, so now comes the fun part: Actually moving entities
-* from some Path we've computed.
- */
-// TODO: Should this be a message?
-#[derive(Component)]
-pub struct TileTarget(Option<TilePos>);
-
-/// Holds a World Position (Transform) as a destination
-/// for some on-going move request for some Entity.
-#[derive(Component)]
-pub struct TransformTarget(Option<Vec2>);
-
-/// Holds the number of pixels that should be moved on
-/// the x and y axis for some timer interval.
-#[derive(Component)]
-pub struct PixelsPerTime {
-    timer: Timer,
-    x_rate: f32,
-    y_rate: f32,
+#[derive(Component, PartialEq, PartialOrd, Debug)]
+pub enum Direction {
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
 }
 
-/// Sets up any moving-based entities to have the information necessary
-/// for Path-Finding to work.
-pub fn attach_pathing_info(
+#[derive(Component, Deref, DerefMut)]
+pub struct MovementTimer(Timer);
+
+pub fn insert_pathing_information(
     moving_entities: Query<Entity, (With<MovementType>, Without<Path>)>,
     mut spawner: Commands,
 ) {
     for moving_entity in &moving_entities {
         spawner.entity(moving_entity).insert((
             Path(VecDeque::new()),
-            TileTarget(None),
-            TransformTarget(None),
+            Target(None),
+            Direction::TopRight,
+            MovementTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
         ));
     }
 }
 
-/// Populates Shortest Path based off of Streamer's Tile Position (or current Target)
-/// to some Destination Tile Position.
-pub fn move_streamer(
-    mut destination_requests: EventReader<TilePos>,
-    mut streamer_entity: Query<(&TilePos, &TileTarget, &mut Path), With<MovementType>>,
-    map_size_query: Query<&TilemapSize>,
-    ground_graph: Query<&NodeEdges, With<Ground>>,
+pub fn update_movement_target(
+    mut moving_entity: Query<(&mut Target, &mut Path)>,
+    map_information: Query<&TilemapSize>,
+    ground_graph_query: Query<&NodeData, With<Ground>>,
 ) {
-    if ground_graph.is_empty() {
+    if ground_graph_query.is_empty() {
         return;
     }
 
-    if map_size_query.is_empty() {
+    if map_information.is_empty() {
         return;
     }
 
-    if streamer_entity.is_empty() {
-        return;
-    }
-
-    let map_size = map_size_query
+    // Each Tile Layer has its own World and Grid size should someone decide
+    // to change tilesets for the layer. However, I will not do that, so
+    // both the world size and grid size should be the same.
+    let world_size = map_information
         .iter()
-        .nth(1)
-        .expect("Tiled map information should be loaded by now.");
+        .max_by(|&x, &y| {
+            let x_world_area = x.x * x.y;
+            let y_world_area = y.x * y.y;
 
-    let (streamer_tile_pos, streamer_tile_target, mut streamer_path) = streamer_entity
-        .get_single_mut()
-        .expect("There should be one Streamer spawned.");
+            x_world_area.cmp(&y_world_area)
+        })
+        .expect("Could not find largest world size. Is the map loaded?");
 
-    let ground_node_edges = ground_graph
-        .get_single()
-        .expect("There should be one Ground Graph spawned by this point.");
-
-    for destination_tile_pos in destination_requests.iter() {
-        if let Some(past_target_tile_pos) = &streamer_tile_target.0 {
-            *streamer_path = get_path(
-                past_target_tile_pos,
-                destination_tile_pos,
-                map_size,
-                ground_node_edges,
-            );
-        } else {
-            *streamer_path = get_path(
-                streamer_tile_pos,
-                destination_tile_pos,
-                map_size,
-                ground_node_edges,
-            );
+    let nodes = ground_graph_query.get_single().unwrap();
+    for (mut target, mut path) in moving_entity.iter_mut() {
+        if target.0.is_none() && !path.0.is_empty() {
+            let new_target = path
+                .0
+                .pop_front()
+                .expect("The path was not supposed to be empty by here.");
+            let target_tile_pos = idx_to_tilepos(new_target, world_size.y);
+            target.0 = Some((nodes.0[new_target], target_tile_pos));
         }
     }
 }
 
-pub fn set_new_target(
-    mut moving_entities: Query<
-        (&TilePos, &mut TransformTarget, &mut TileTarget, &mut Path),
-        Without<PixelsPerTime>,
-    >,
-    node_data: Query<&NodeData>,
-    map_information: Query<
-        (&Transform, &TilemapType, &TilemapGridSize, &TilemapSize),
-        (Added<TilemapType>, Added<TilemapGridSize>),
-    >,
-) {
-    if node_data.is_empty() {
-        return;
-    }
+fn get_direction(current_pos: Transform, target_pos: Transform) -> Direction {
+    let current_translation = &current_pos.translation;
+    let target_translation = &target_pos.translation;
 
-    if moving_entities.is_empty() {
-        return;
-    }
+    let x_direction = target_translation.x > current_translation.x;
+    let y_direction = target_translation.y > current_translation.y;
 
-    let (map_transform, map_type, grid_size, map_size) = map_information
-        .iter()
-        .nth(1)
-        .expect("Could not load map information. Is world loaded?");
-
-    for (entity_tile_pos, mut entity_transform, mut entity_target_tile_pos, mut entity_path) in
-        &mut moving_entities
-    {
-        let streamer_translation = entity_tile_pos
-            .center_in_world(grid_size, map_type)
-            .extend(20.0);
-        let streamer_transform = *map_transform * Transform::from_translation(streamer_translation);
+    match (x_direction, y_direction) {
+        (true, true) => Direction::BottomLeft,
+        (true, false) => Direction::BottomRight,
+        (false, true) => Direction::TopLeft,
+        (false, false) => Direction::TopRight,
     }
 }
 
-// #[derive(Component, PartialEq, PartialOrd, Debug)]
-// pub enum Direction {
-//     TopLeft,
-//     TopRight,
-//     BottomLeft,
-//     BottomRight,
-// }
+pub fn move_entities(
+    mut moving_entity: Query<
+        (
+            &mut Transform,
+            &mut Target,
+            &mut Direction,
+            &mut MovementTimer,
+            &mut TilePos,
+        ),
+        With<MovementType>,
+    >,
+    time: Res<Time>,
+) {
+    for (mut current_pos, mut target, mut target_direction, mut movement_timer, mut tile_pos) in
+        &mut moving_entity
+    {
+        if let Some((target_vec, target_tile_pos)) = target.0 {
+            let target_pos =
+                Transform::from_xyz(target_vec.x, target_vec.y, current_pos.translation.z);
+            if *current_pos == target_pos {
+                target.0 = None;
+                *tile_pos = target_tile_pos;
+                continue;
+            }
 
-// fn get_direction(current_pos: Transform, target_pos: Transform) -> Direction {
-//     let current_translation = &current_pos.translation;
-//     let target_translation = &target_pos.translation;
+            *target_direction = get_direction(*current_pos, target_pos);
+            movement_timer.tick(time.delta());
 
-//     let x_direction = target_translation.x > current_translation.x;
-//     let y_direction = target_translation.y > current_translation.y;
+            if !movement_timer.just_finished() {
+                continue;
+            }
 
-//     match (x_direction, y_direction) {
-//         (true, true) => Direction::BottomLeft,
-//         (true, false) => Direction::BottomRight,
-//         (false, true) => Direction::TopLeft,
-//         (false, false) => Direction::TopRight,
-//     }
-// }
+            *current_pos = target_pos;
+            // match *target_direction {
+            //     Direction::TopLeft => current_pos.translation += Vec3::new(-1.0, 1.0, 0.0),
+            //     Direction::TopRight => current_pos.translation += Vec3::new(-1.0, -1.0, 0.0),
+            //     Direction::BottomLeft => current_pos.translation += Vec3::new(1.0, 1.0, 0.0),
+            //     Direction::BottomRight => current_pos.translation += Vec3::new(1.0, -1.0, 0.0),
+            // }
+        }
+    }
+}
+
+pub fn move_streamer(
+    mut destination_request_listener: EventReader<TilePos>,
+    mut streamer_entity: Query<(&mut Path, &TilePos), With<StreamerLabel>>,
+    ground_graph: Query<&NodeEdges, With<Ground>>,
+    map_information: Query<(&TilemapSize, &Transform)>,
+) {
+    if streamer_entity.is_empty() {
+        return;
+    }
+
+    if ground_graph.is_empty() {
+        return;
+    }
+
+    let edges = ground_graph
+        .get_single()
+        .expect("Ground graph should be loaded.");
+    // Each Tile Layer has its own World and Grid size should someone decide
+    // to change tilesets for the layer. However, I will not do that, so
+    // both the world size and grid size should be the same.
+    let map_size = map_information
+        .iter()
+        .map(|sizes| sizes.0)
+        .max_by(|&x, &y| {
+            let x_world_area = x.x * x.y;
+            let y_world_area = y.x * y.y;
+
+            x_world_area.cmp(&y_world_area)
+        })
+        .expect("Could not find largest world size. Is the map loaded?");
+
+    for destination_request in destination_request_listener.iter() {
+        let (mut streamer_path, streamer_tile_pos) = streamer_entity
+            .get_single_mut()
+            .expect("The streamer should be loaded.");
+
+        *streamer_path = get_path(streamer_tile_pos, destination_request, map_size, edges);
+    }
+}
+
+pub fn move_streamer_on_spacebar(
+    keyboard_input: Res<Input<KeyCode>>,
+    mut destination_request_writer: EventWriter<TilePos>,
+) {
+    if keyboard_input.just_pressed(KeyCode::Space) {
+        destination_request_writer.send(TilePos { x: 61, y: 52 });
+    }
+}
 
 #[cfg(test)]
 pub mod tests {
@@ -616,5 +672,113 @@ pub mod tests {
         let actual_tilepos = tilepos_from_transform.unwrap();
 
         assert_eq!(tilepos, actual_tilepos);
+    }
+
+    #[test]
+    fn bottom_left_direction_and_coordinate_system() {
+        let map_size = TilemapSize { x: 4, y: 4 };
+
+        let grid_size = TilemapGridSize { x: 32.0, y: 16.0 };
+
+        let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
+
+        let source_tilepos = TilePos { x: 0, y: 0 };
+        let source_transform = Transform::from_translation(
+            source_tilepos
+                .center_in_world(&grid_size, &map_type)
+                .extend(1.0),
+        );
+        let destination_tilepos = TilePos { x: 0, y: 1 };
+        let destination_transform = Transform::from_translation(
+            destination_tilepos
+                .center_in_world(&grid_size, &map_type)
+                .extend(1.0),
+        );
+
+        let expected_direction = Direction::BottomLeft;
+        let actual_direction = get_direction(source_transform, destination_transform);
+
+        assert_eq!(expected_direction, actual_direction);
+    }
+
+    #[test]
+    fn bottom_right_direction_and_coordinate_system() {
+        let map_size = TilemapSize { x: 4, y: 4 };
+
+        let grid_size = TilemapGridSize { x: 32.0, y: 16.0 };
+
+        let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
+
+        let source_tilepos = TilePos { x: 0, y: 0 };
+        let source_transform = Transform::from_translation(
+            source_tilepos
+                .center_in_world(&grid_size, &map_type)
+                .extend(1.0),
+        );
+        let destination_tilepos = TilePos { x: 1, y: 0 };
+        let destination_transform = Transform::from_translation(
+            destination_tilepos
+                .center_in_world(&grid_size, &map_type)
+                .extend(1.0),
+        );
+
+        let expected_direction = Direction::BottomRight;
+        let actual_direction = get_direction(source_transform, destination_transform);
+
+        assert_eq!(expected_direction, actual_direction);
+    }
+
+    #[test]
+    fn top_left_direction_and_coordinate_system() {
+        let map_size = TilemapSize { x: 4, y: 4 };
+
+        let grid_size = TilemapGridSize { x: 32.0, y: 16.0 };
+
+        let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
+
+        let source_tilepos = TilePos { x: 1, y: 0 };
+        let source_transform = Transform::from_translation(
+            source_tilepos
+                .center_in_world(&grid_size, &map_type)
+                .extend(1.0),
+        );
+        let destination_tilepos = TilePos { x: 0, y: 0 };
+        let destination_transform = Transform::from_translation(
+            destination_tilepos
+                .center_in_world(&grid_size, &map_type)
+                .extend(1.0),
+        );
+
+        let expected_direction = Direction::TopLeft;
+        let actual_direction = get_direction(source_transform, destination_transform);
+
+        assert_eq!(expected_direction, actual_direction);
+    }
+
+    #[test]
+    fn top_right_direction_and_coordinate_system() {
+        let map_size = TilemapSize { x: 4, y: 4 };
+
+        let grid_size = TilemapGridSize { x: 32.0, y: 16.0 };
+
+        let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
+
+        let source_tilepos = TilePos { x: 0, y: 1 };
+        let source_transform = Transform::from_translation(
+            source_tilepos
+                .center_in_world(&grid_size, &map_type)
+                .extend(1.0),
+        );
+        let destination_tilepos = TilePos { x: 0, y: 0 };
+        let destination_transform = Transform::from_translation(
+            destination_tilepos
+                .center_in_world(&grid_size, &map_type)
+                .extend(1.0),
+        );
+
+        let expected_direction = Direction::TopRight;
+        let actual_direction = get_direction(source_transform, destination_transform);
+
+        assert_eq!(expected_direction, actual_direction);
     }
 }
