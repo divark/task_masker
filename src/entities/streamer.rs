@@ -78,7 +78,7 @@ pub fn spawn_player(
         .nth(1)
         .expect("Could not load map information. Is world loaded?");
 
-    let streamer_location = TilePos { x: 41, y: 58 };
+    let streamer_location = TilePos { x: 64, y: 52 }; //{ x: 42, y: 59 };
     let tiled_to_bevy_pos = tiledpos_to_tilepos(streamer_location.x, streamer_location.y, map_size);
 
     let streamer_translation = tiled_to_bevy_pos

@@ -95,7 +95,13 @@ pub fn create_ground_graph(
     // yet.
     let mut tile_positions_sorted = tile_positions
         .iter()
-        .collect::<Vec<(&TilePos, &LayerNumber)>>();
+        .map(|tile_pair| {
+            (
+                tiledpos_to_tilepos(tile_pair.0.x, tile_pair.0.y, world_size),
+                tile_pair.1,
+            )
+        })
+        .collect::<Vec<(TilePos, &LayerNumber)>>();
     tile_positions_sorted.sort_by(|&pos1, &pos2| {
         let pos1_converted = tilepos_to_idx(pos1.0.x, pos1.0.y, world_size.x);
         let pos2_converted = tilepos_to_idx(pos2.0.x, pos2.0.y, world_size.x);
@@ -108,7 +114,7 @@ pub fn create_ground_graph(
             .then(pos1_layer.cmp(pos2_layer))
     });
 
-    for (&tile_position, &layer_number) in tile_positions_sorted.iter() {
+    for (tile_position, &layer_number) in tile_positions_sorted.iter() {
         let height_idx = tilepos_to_idx(tile_position.x, tile_position.y, world_size.x);
         let height_entry = height_map[height_idx];
 
@@ -127,7 +133,7 @@ pub fn create_ground_graph(
     let mut tile_positions_no_layers = tile_positions_sorted
         .iter()
         .map(|x| x.0)
-        .collect::<Vec<&TilePos>>();
+        .collect::<Vec<TilePos>>();
     tile_positions_no_layers.dedup();
 
     for tile_position in tile_positions_no_layers {
@@ -410,7 +416,7 @@ pub fn move_streamer_on_spacebar(
     mut destination_request_writer: EventWriter<TilePos>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
-        destination_request_writer.send(TilePos { x: 61, y: 52 });
+        destination_request_writer.send(TilePos { x: 42, y: 59 }); //{ x: 64, y: 52 });
     }
 }
 
@@ -435,9 +441,12 @@ pub mod tests {
         grid_size: TilemapGridSize,
         map_type: TilemapType,
     ) {
-        app.world
-            .spawn_empty()
-            .insert((map_size, grid_size, map_type));
+        app.world.spawn_empty().insert((
+            map_size,
+            grid_size,
+            map_type,
+            Transform::from_xyz(0.0, 0.0, 0.0),
+        ));
     }
 
     #[test]
