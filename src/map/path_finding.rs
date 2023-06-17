@@ -440,13 +440,16 @@ pub mod tests {
         map_size: TilemapSize,
         grid_size: TilemapGridSize,
         map_type: TilemapType,
+        layers: LayerNumber,
     ) {
-        app.world.spawn_empty().insert((
-            map_size,
-            grid_size,
-            map_type,
-            Transform::from_xyz(0.0, 0.0, 0.0),
-        ));
+        for _layer_num in 0..=layers.0 {
+            app.world.spawn_empty().insert((
+                map_size,
+                grid_size,
+                map_type,
+                Transform::from_xyz(0.0, 0.0, 0.0),
+            ));
+        }
     }
 
     #[test]
@@ -463,7 +466,7 @@ pub mod tests {
 
         let mut app = App::new();
         spawn_tiles(&mut app, map_size.x, map_size.y, &layer);
-        spawn_map_information(&mut app, map_size, grid_size, map_type);
+        spawn_map_information(&mut app, map_size, grid_size, map_type, layer);
         app.add_system(create_ground_graph);
         app.update();
 
@@ -491,7 +494,7 @@ pub mod tests {
 
         let mut app = App::new();
         spawn_tiles(&mut app, map_size.x, map_size.y, &layer);
-        spawn_map_information(&mut app, map_size, grid_size, map_type);
+        spawn_map_information(&mut app, map_size, grid_size, map_type, layer);
         app.add_system(create_ground_graph);
         app.update();
         app.update();
@@ -514,7 +517,7 @@ pub mod tests {
 
         let mut app = App::new();
         spawn_tiles(&mut app, map_size.x, map_size.y, &layer);
-        spawn_map_information(&mut app, map_size, grid_size, map_type);
+        spawn_map_information(&mut app, map_size, grid_size, map_type, layer);
         app.add_system(create_ground_graph);
         app.update();
 
@@ -543,7 +546,7 @@ pub mod tests {
         let mut app = App::new();
         spawn_tiles(&mut app, map_size.x, map_size.y, &layer);
         spawn_tiles(&mut app, map_size.x, map_size.y, &LayerNumber(2));
-        spawn_map_information(&mut app, map_size, grid_size, map_type);
+        spawn_map_information(&mut app, map_size, grid_size, map_type, LayerNumber(2));
         app.add_system(create_ground_graph);
         app.update();
 
@@ -574,7 +577,7 @@ pub mod tests {
         app.world
             .spawn_empty()
             .insert((TilePos::new(1, 1), LayerNumber(2)));
-        spawn_map_information(&mut app, map_size, grid_size, map_type);
+        spawn_map_information(&mut app, map_size, grid_size, map_type, LayerNumber(2));
         app.add_system(create_ground_graph);
         app.update();
 
@@ -605,7 +608,7 @@ pub mod tests {
         app.world
             .spawn_empty()
             .insert((TilePos::new(0, 0), LayerNumber(2)));
-        spawn_map_information(&mut app, map_size, grid_size, map_type);
+        spawn_map_information(&mut app, map_size, grid_size, map_type, LayerNumber(2));
         app.add_system(create_ground_graph);
         app.update();
 
@@ -685,8 +688,6 @@ pub mod tests {
 
     #[test]
     fn bottom_left_direction_and_coordinate_system() {
-        let map_size = TilemapSize { x: 4, y: 4 };
-
         let grid_size = TilemapGridSize { x: 32.0, y: 16.0 };
 
         let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
@@ -712,8 +713,6 @@ pub mod tests {
 
     #[test]
     fn bottom_right_direction_and_coordinate_system() {
-        let map_size = TilemapSize { x: 4, y: 4 };
-
         let grid_size = TilemapGridSize { x: 32.0, y: 16.0 };
 
         let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
@@ -739,8 +738,6 @@ pub mod tests {
 
     #[test]
     fn top_left_direction_and_coordinate_system() {
-        let map_size = TilemapSize { x: 4, y: 4 };
-
         let grid_size = TilemapGridSize { x: 32.0, y: 16.0 };
 
         let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
@@ -766,8 +763,6 @@ pub mod tests {
 
     #[test]
     fn top_right_direction_and_coordinate_system() {
-        let map_size = TilemapSize { x: 4, y: 4 };
-
         let grid_size = TilemapGridSize { x: 32.0, y: 16.0 };
 
         let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
