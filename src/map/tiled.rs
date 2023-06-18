@@ -18,8 +18,8 @@ use bevy::{
     asset::{AssetLoader, AssetPath, LoadedAsset},
     log,
     prelude::{
-        AddAsset, Added, AssetEvent, Assets, Bundle, Commands, Component, DespawnRecursiveExt,
-        Entity, EventReader, GlobalTransform, Handle, Image, Plugin, Query, Res, Transform,
+        Added, AssetEvent, Assets, Bundle, Commands, Component, DespawnRecursiveExt, Entity,
+        EventReader, GlobalTransform, Handle, Image, Query, Res, Transform,
     },
     reflect::TypeUuid,
     utils::HashMap,
@@ -27,17 +27,6 @@ use bevy::{
 use bevy_ecs_tilemap::prelude::*;
 
 use anyhow::Result;
-
-#[derive(Default)]
-pub struct TiledMapPlugin;
-
-impl Plugin for TiledMapPlugin {
-    fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_asset::<TiledMap>()
-            .add_asset_loader(TiledLoader)
-            .add_system(process_loaded_maps);
-    }
-}
 
 #[derive(TypeUuid)]
 #[uuid = "e51081d0-6168-4881-a1c6-4249b2000d7f"]

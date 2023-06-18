@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::{
-    prelude::{IsoCoordSystem, TilemapGridSize, TilemapSize, TilemapType},
+    prelude::{TilemapGridSize, TilemapSize, TilemapType},
     tiles::TilePos,
 };
 

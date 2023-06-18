@@ -1,10 +1,6 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use entities::streamer::{animate_sprite, spawn_player};
-use map::path_finding::{
-    create_ground_graph, insert_pathing_information, move_entities, move_streamer,
-    move_streamer_on_spacebar, update_movement_target,
-};
 
 mod entities;
 mod map;
@@ -41,19 +37,10 @@ fn main() {
                 }),
         )
         .add_plugin(TilemapPlugin)
-        .add_plugin(map::tiled::TiledMapPlugin)
-        .add_event::<TilePos>()
+        .add_plugin(map::plugins::TiledMapPlugin)
+        .add_plugin(map::plugins::PathFindingPlugin)
         .add_startup_system(startup)
-        .add_systems((
-            spawn_player,
-            create_ground_graph,
-            insert_pathing_information,
-            update_movement_target,
-            move_entities,
-            move_streamer,
-            move_streamer_on_spacebar,
-        ))
-        //.add_system(create_ground_graph)
+        .add_system(spawn_player)
         .add_system(map::camera::movement)
         .add_system(animate_sprite)
         .run();
