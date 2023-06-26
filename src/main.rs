@@ -1,11 +1,19 @@
 use bevy::{prelude::*, window::WindowResolution};
 use bevy_ecs_tilemap::prelude::*;
 use entities::streamer::{animate_sprite, spawn_player};
-use ui::plugins::StartupScreenPlugin;
+use ui::{plugins::StartupScreenPlugin};
 
 mod entities;
 mod map;
 mod ui;
+
+#[derive(Default, Debug, Hash, PartialEq, Eq, Clone, Copy, States)]
+pub enum GameState {
+    #[default]
+    Start,
+    InGame,
+    End
+}
 
 fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>) {
     let map_handle: Handle<map::tiled::TiledMap> = asset_server.load("TM_v2.tmx");
@@ -41,12 +49,14 @@ fn main() {
                     ..default()
                 }),
         )
-        //.add_plugin(TilemapPlugin)
-        //.add_plugin(map::plugins::TiledMapPlugin)
-        //.add_plugin(map::plugins::PathFindingPlugin)
+        .add_state::<GameState>()
+        .add_plugin(TilemapPlugin)
+        .add_plugin(map::plugins::TiledMapPlugin)
+        .add_plugin(map::plugins::PathFindingPlugin)
         .add_plugin(StartupScreenPlugin)
         .add_startup_system(spawn_camera)
-        //.add_startup_system(spawn_map)
+        .add_system(spawn_map.in_schedule(OnEnter(GameState::InGame)))
+        .add_systems((spawn_player, map::camera::movement, animate_sprite).in_set(OnUpdate(GameState::InGame)))
         //.add_system(spawn_player)
         //.add_system(map::camera::movement)
         //.add_system(animate_sprite)

@@ -19,10 +19,7 @@ use std::sync::Arc;
 use bevy::{
     asset::{AssetLoader, AssetPath, LoadedAsset},
     log,
-    prelude::{
-        Added, AssetEvent, Assets, Bundle, Commands, Component, DespawnRecursiveExt, Entity,
-        EventReader, GlobalTransform, Handle, Image, Query, Res, Transform,
-    },
+    prelude::*,
     reflect::TypeUuid,
     utils::HashMap,
 };
@@ -99,8 +96,8 @@ impl AssetLoader for TiledLoader {
                 .expect("The asset load context was empty.");
 
             let mut loader = tiled::Loader::with_cache_and_reader(
-                    tiled::DefaultResourceCache::new(),
-                    BytesResourceReader::new(bytes),
+                tiled::DefaultResourceCache::new(),
+                BytesResourceReader::new(bytes),
             );
             let map = loader
                 .load_tmx_map(load_context.path())
@@ -380,5 +377,11 @@ pub fn process_loaded_maps(
                 }
             }
         }
+    }
+}
+
+pub fn despawn_map(mut commands: Commands, mut assets: ResMut<Assets<TiledMap>>, map_items: Query<(Entity, &mut Handle<TiledMap>)>) {
+    for (map_item, handle) in &map_items {
+        commands.entity(map_item).despawn_recursive();
     }
 }
