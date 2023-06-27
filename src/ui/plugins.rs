@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-use crate::GameState;
 use super::screens::*;
+use crate::GameState;
 
 #[derive(Default)]
 pub struct StartupScreenPlugin;

@@ -1,7 +1,8 @@
 use bevy::{prelude::*, window::WindowResolution};
 use bevy_ecs_tilemap::prelude::*;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use entities::streamer::{animate_sprite, spawn_player};
-use ui::{plugins::StartupScreenPlugin};
+use ui::plugins::StartupScreenPlugin;
 
 mod entities;
 mod map;
@@ -12,7 +13,7 @@ pub enum GameState {
     #[default]
     Start,
     InGame,
-    End
+    End,
 }
 
 fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -54,9 +55,13 @@ fn main() {
         .add_plugin(map::plugins::TiledMapPlugin)
         .add_plugin(map::plugins::PathFindingPlugin)
         .add_plugin(StartupScreenPlugin)
+        //.add_plugin(WorldInspectorPlugin::new())
         .add_startup_system(spawn_camera)
         .add_system(spawn_map.in_schedule(OnEnter(GameState::InGame)))
-        .add_systems((spawn_player, map::camera::movement, animate_sprite).in_set(OnUpdate(GameState::InGame)))
+        .add_systems(
+            (spawn_player, map::camera::movement, animate_sprite)
+                .in_set(OnUpdate(GameState::InGame)),
+        )
         //.add_system(spawn_player)
         //.add_system(map::camera::movement)
         //.add_system(animate_sprite)

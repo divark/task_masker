@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use crate::GameState;
+use bevy::prelude::*;
 
 #[derive(Component)]
 pub enum ScreenLabel {
@@ -82,36 +82,41 @@ pub fn spawn_start_screen(mut commands: Commands, asset_server: Res<AssetServer>
         },
     );
 
-    commands.spawn((background, ScreenLabel::StartScreen)).with_children(|background| {
-        background
-            .spawn(title_section)
-            .with_children(|title_section| {
-                title_section.spawn(title_text);
-            });
+    commands
+        .spawn((background, ScreenLabel::StartScreen))
+        .with_children(|background| {
+            background
+                .spawn(title_section)
+                .with_children(|title_section| {
+                    title_section.spawn(title_text);
+                });
 
-        for _i in 0..3 {
-            background.spawn(NodeBundle {
-                style: Style {
-                    size: Size {
-                        width: Val::Percent(100.0),
-                        height: Val::Percent(25.0),
+            for _i in 0..3 {
+                background.spawn(NodeBundle {
+                    style: Style {
+                        size: Size {
+                            width: Val::Percent(100.0),
+                            height: Val::Percent(25.0),
+                        },
+                        ..default()
                     },
                     ..default()
-                },
-                ..default()
-            });
-        }
-        background
-            .spawn(button_section)
-            .with_children(|button_section| {
-                button_section.spawn(button).with_children(|button| {
-                    button.spawn(button_text);
                 });
-            });
-    });
+            }
+            background
+                .spawn(button_section)
+                .with_children(|button_section| {
+                    button_section.spawn(button).with_children(|button| {
+                        button.spawn(button_text);
+                    });
+                });
+        });
 }
 
-pub fn despawn_start_screen(mut commands: Commands, start_screen_items: Query<(Entity, &ScreenLabel)>) {
+pub fn despawn_start_screen(
+    mut commands: Commands,
+    start_screen_items: Query<(Entity, &ScreenLabel)>,
+) {
     for (start_screen_item, label) in start_screen_items.iter() {
         if let ScreenLabel::StartScreen = label {
             commands.entity(start_screen_item).despawn_recursive();
@@ -158,13 +163,15 @@ pub fn spawn_end_screen(mut commands: Commands, asset_server: Res<AssetServer>) 
         },
     );
 
-    commands.spawn((background, ScreenLabel::EndScreen)).with_children(|background| {
-        background
-            .spawn(title_section)
-            .with_children(|title_section| {
-                title_section.spawn(title_text);
-            });
-    });
+    commands
+        .spawn((background, ScreenLabel::EndScreen))
+        .with_children(|background| {
+            background
+                .spawn(title_section)
+                .with_children(|title_section| {
+                    title_section.spawn(title_text);
+                });
+        });
 }
 
 pub fn despawn_end_screen(mut commands: Commands, end_screen_items: Query<(Entity, &ScreenLabel)>) {
@@ -175,7 +182,11 @@ pub fn despawn_end_screen(mut commands: Commands, end_screen_items: Query<(Entit
     }
 }
 
-pub fn cycle_screens(keyboard_input: Res<Input<KeyCode>>, game_state: Res<State<GameState>>, mut next_state: ResMut<NextState<GameState>>) {
+pub fn cycle_screens(
+    keyboard_input: Res<Input<KeyCode>>,
+    game_state: Res<State<GameState>>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
     if !keyboard_input.just_pressed(KeyCode::Space) {
         return;
     }

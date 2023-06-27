@@ -185,6 +185,12 @@ pub fn create_ground_graph(
     ));
 }
 
+pub fn despawn_ground_graph(mut commands: Commands, graphs: Query<Entity, With<Ground>>) {
+    for graph in &graphs {
+        commands.entity(graph).despawn_recursive();
+    }
+}
+
 #[derive(Component)]
 pub struct Target(Option<(Vec2, TilePos)>);
 
