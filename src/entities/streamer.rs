@@ -54,7 +54,7 @@ pub fn spawn_player(
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     map_information: Query<
         (&Transform, &TilemapType, &TilemapGridSize, &TilemapSize),
-        (Added<TilemapType>, Added<TilemapGridSize>),
+        Added<TilemapType>,
     >,
     streamer_query: Query<(), With<StreamerLabel>>,
 ) {
@@ -75,15 +75,15 @@ pub fn spawn_player(
 
     let (map_transform, map_type, grid_size, map_size) = map_information
         .iter()
-        .nth(1)
+        .nth(6)
         .expect("Could not load map information. Is world loaded?");
 
-    let streamer_location = TilePos { x: 64, y: 52 }; //{ x: 42, y: 59 };
+    let streamer_location = TilePos { x: 38, y: 59 }; //{ x: 42, y: 59 };
     let tiled_to_bevy_pos = tiledpos_to_tilepos(streamer_location.x, streamer_location.y, map_size);
 
     let streamer_translation = tiled_to_bevy_pos
         .center_in_world(grid_size, map_type)
-        .extend(25.0);
+        .extend(map_transform.translation.z);
     let streamer_transform = *map_transform * Transform::from_translation(streamer_translation);
 
     commands.spawn((

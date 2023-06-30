@@ -379,22 +379,3 @@ pub fn process_loaded_maps(
         }
     }
 }
-
-pub fn despawn_map(
-    mut commands: Commands,
-    tiles: Query<Entity, With<TilePos>>,
-    layers: Query<Entity, With<TilemapType>>,
-    tiled_information: Query<Entity, With<Handle<TiledMap>>>,
-) {
-    for tile in &tiles {
-        commands.entity(tile).despawn_recursive();
-    }
-
-    for layer in &layers {
-        commands.entity(layer).despawn_recursive();
-    }
-
-    for tiled_information in &tiled_information {
-        commands.entity(tiled_information).despawn_recursive();
-    }
-}

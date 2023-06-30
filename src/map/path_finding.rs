@@ -11,7 +11,7 @@ use super::tiled::{tiledpos_to_tilepos, LayerNumber};
 pub struct Ground;
 
 #[derive(Component)]
-pub struct NodeData(Vec<Vec2>);
+pub struct NodeData(Vec<Vec3>);
 
 #[derive(Component, PartialEq, Debug)]
 pub struct NodeEdges(Vec<Vec<usize>>);
@@ -127,7 +127,7 @@ pub fn create_ground_graph(
         }
     }
 
-    let mut directed_graph_data: Vec<Vec2> = Vec::new();
+    let mut directed_graph_data: Vec<Vec3> = Vec::new();
     let mut directed_graph_edges: Vec<Vec<usize>> = Vec::new();
 
     let mut tile_positions_no_layers = tile_positions_sorted
@@ -151,7 +151,7 @@ pub fn create_ground_graph(
                 .center_in_world(grid_size, map_type)
                 .extend(tile_height as f32),
         );
-        let node_data = (*map_transform * tiled_transform).translation.truncate();
+        let node_data = (*map_transform * tiled_transform).translation;
         let mut node_edges = Vec::new();
 
         if tile_position.x > 0 && tile_height > 0 {
@@ -185,14 +185,8 @@ pub fn create_ground_graph(
     ));
 }
 
-pub fn despawn_ground_graph(mut commands: Commands, graphs: Query<Entity, With<Ground>>) {
-    for graph in &graphs {
-        commands.entity(graph).despawn_recursive();
-    }
-}
-
 #[derive(Component)]
-pub struct Target(Option<(Vec2, TilePos)>);
+pub struct Target(Option<(Vec3, TilePos)>);
 
 #[derive(Component)]
 pub struct Path(VecDeque<usize>);
@@ -275,7 +269,7 @@ pub fn insert_pathing_information(
             Path(VecDeque::new()),
             Target(None),
             Direction::TopRight,
-            MovementTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
+            MovementTimer(Timer::from_seconds(1.0, TimerMode::Repeating)),
         ));
     }
 }
@@ -422,7 +416,7 @@ pub fn move_streamer_on_spacebar(
     mut destination_request_writer: EventWriter<TilePos>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
-        destination_request_writer.send(TilePos { x: 42, y: 59 }); //{ x: 64, y: 52 });
+        destination_request_writer.send(TilePos { x: 46, y: 59 }); //{ x: 64, y: 52 });
     }
 }
 

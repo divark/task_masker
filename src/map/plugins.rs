@@ -3,12 +3,12 @@ use bevy_ecs_tilemap::tiles::TilePos;
 
 use super::{
     path_finding::{
-        create_ground_graph, despawn_ground_graph, insert_pathing_information, move_entities,
+        create_ground_graph, insert_pathing_information, move_entities,
         move_streamer, move_streamer_on_spacebar, update_movement_target,
     },
-    tiled::{despawn_map, process_loaded_maps, TiledLoader, TiledMap},
+    tiled::{process_loaded_maps, TiledLoader, TiledMap},
 };
-use crate::GameState;
+use crate::{spawn_map, GameState};
 
 #[derive(Default)]
 pub struct PathFindingPlugin;
@@ -23,12 +23,10 @@ impl Plugin for PathFindingPlugin {
                     update_movement_target,
                     move_entities,
                     move_streamer,
-                    //move_streamer_on_spacebar,
+                    move_streamer_on_spacebar,
                 )
                     .in_set(OnUpdate(GameState::InGame)),
-            )
-            .add_system(despawn_map.in_schedule(OnExit(GameState::InGame)))
-            .add_system(despawn_ground_graph.in_schedule(OnExit(GameState::InGame)));
+            );
     }
 }
 
@@ -39,6 +37,7 @@ impl Plugin for TiledMapPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_asset::<TiledMap>()
             .add_asset_loader(TiledLoader)
-            .add_system(process_loaded_maps.in_set(OnUpdate(GameState::InGame)));
+            .add_startup_system(spawn_map)
+            .add_system(process_loaded_maps);
     }
 }

@@ -18,7 +18,7 @@ pub fn spawn_start_screen(mut commands: Commands, asset_server: Res<AssetServer>
             align_items: AlignItems::Center,
             ..default()
         },
-        background_color: Color::rgb_u8(50, 153, 204).into(),
+        //background_color: Color::rgb_u8(50, 153, 204).into(),
         ..default()
     };
 
@@ -59,6 +59,8 @@ pub fn spawn_start_screen(mut commands: Commands, asset_server: Res<AssetServer>
         ..default()
     };
 
+    let button_image = asset_server.load("ui/flat_button_start.png");
+
     let button = ButtonBundle {
         style: Style {
             size: Size {
@@ -69,12 +71,12 @@ pub fn spawn_start_screen(mut commands: Commands, asset_server: Res<AssetServer>
             justify_content: JustifyContent::Center,
             ..default()
         },
-        //image: todo!(),
+        image: UiImage::new(button_image),
         ..default()
     };
 
     let button_text = TextBundle::from_section(
-        "Press Start",
+        "Press Enter",
         TextStyle {
             font: default_font,
             font_size: 32.0,
@@ -135,7 +137,7 @@ pub fn spawn_end_screen(mut commands: Commands, asset_server: Res<AssetServer>) 
             align_items: AlignItems::Center,
             ..default()
         },
-        background_color: Color::rgb_u8(50, 153, 204).into(),
+        //background_color: Color::rgb_u8(50, 153, 204).into(),
         ..default()
     };
 
@@ -187,7 +189,7 @@ pub fn cycle_screens(
     game_state: Res<State<GameState>>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
-    if !keyboard_input.just_pressed(KeyCode::Space) {
+    if !keyboard_input.just_pressed(KeyCode::Return) {
         return;
     }
 
