@@ -1,0 +1,39 @@
+# Based on https://github.com/actions-rs/meta/blob/master/recipes/quickstart.md
+
+on: [push]
+
+name: Continuous Integration
+
+jobs:
+  check:
+    name: Check Code
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+        
+      # Used the following as reference to install dependencies for Bevy:
+      # https://github.com/bevyengine/bevy/blob/main/docs/linux_dependencies.md#ubuntu
+      - name: Install Bevy Dependencies for Linux
+        run: |
+             if [ "$RUNNER_OS" == "Linux" ]; then
+                  sudo apt update && sudo apt-get install g++ pkg-config libx11-dev libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev
+             fi
+        shell: bash
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Run cargo check
+        run: cargo check
+
+      - name: Run cargo test
+        run: cargo test
+
+
