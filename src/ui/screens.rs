@@ -3,8 +3,9 @@ use bevy::prelude::*;
 
 #[derive(Component)]
 pub enum ScreenLabel {
-    StartScreen,
-    EndScreen,
+    Start,
+    InGame,
+    End,
 }
 
 pub fn spawn_start_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -85,7 +86,7 @@ pub fn spawn_start_screen(mut commands: Commands, asset_server: Res<AssetServer>
     );
 
     commands
-        .spawn((background, ScreenLabel::StartScreen))
+        .spawn((background, ScreenLabel::Start))
         .with_children(|background| {
             background
                 .spawn(title_section)
@@ -120,8 +121,131 @@ pub fn despawn_start_screen(
     start_screen_items: Query<(Entity, &ScreenLabel)>,
 ) {
     for (start_screen_item, label) in start_screen_items.iter() {
-        if let ScreenLabel::StartScreen = label {
+        if let ScreenLabel::Start = label {
             commands.entity(start_screen_item).despawn_recursive();
+        }
+    }
+}
+
+pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let background = NodeBundle {
+        style: Style {
+            size: Size {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+            },
+            flex_direction: FlexDirection::ColumnReverse,
+            align_items: AlignItems::Start,
+            ..default()
+        },
+        //background_color: Color::rgb_u8(50, 153, 204).into(),
+        ..default()
+    };
+
+    let default_font = asset_server.load("font/FiraSans-Bold.ttf");
+
+    let title_section = NodeBundle {
+        style: Style {
+            size: Size {
+                width: Val::Percent(50.0),
+                height: Val::Percent(8.3),
+            },
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            ..default()
+        },
+        background_color: Color::GREEN.into(),
+        ..default()
+    };
+
+    let title_text = TextBundle::from_section(
+        "12345/12345",
+        TextStyle {
+            font_size: 32.0,
+            font: default_font,
+            color: Color::BLACK,
+        },
+    );
+
+    let speaker_section = NodeBundle {
+        style: Style {
+            size: Size {
+                width: Val::Percent(50.0),
+                height: Val::Percent((120.0 / 720.0) * 100.0),
+            },
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            ..default()
+        },
+        ..default()
+    };
+
+    let speaker_portrait_section = NodeBundle {
+        style: Style {
+            size: Size {
+                width: Val::Percent((120.0 / 640.0) * 100.0),
+                height: Val::Percent(100.0),
+            },
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            ..default()
+        },
+        ..default()
+    };
+
+    let speaker_portrait = ImageBundle {
+        style: Style {
+            size: Size {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+            },
+            ..default()
+        },
+        image: UiImage::new(asset_server.load("caveman/portrait.png")),
+        ..default()
+    };
+
+    let dialogue_section = NodeBundle {
+        style: Style {
+            size: Size {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+            },
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            ..default()
+        },
+        background_color: Color::WHITE.into(),
+        ..default()
+    };
+
+    commands
+        .spawn((background, ScreenLabel::InGame))
+        .with_children(|background| {
+            background
+                .spawn(title_section)
+                .with_children(|title_section| {
+                    title_section.spawn(title_text);
+                });
+
+            background
+                .spawn(speaker_section)
+                .with_children(|speaker_section| {
+                    speaker_section
+                        .spawn(speaker_portrait_section)
+                        .with_children(|speaker_portrait_section| {
+                            speaker_portrait_section.spawn(speaker_portrait);
+                        });
+
+                    speaker_section.spawn(dialogue_section);
+                });
+        });
+}
+
+pub fn despawn_ingame_screen(mut commands: Commands, ingame_screen_items: Query<(Entity, &ScreenLabel)>) {
+    for (ingame_screen_item, label) in ingame_screen_items.iter() {
+        if let ScreenLabel::InGame = label {
+            commands.entity(ingame_screen_item).despawn_recursive();
         }
     }
 }
@@ -166,7 +290,7 @@ pub fn spawn_end_screen(mut commands: Commands, asset_server: Res<AssetServer>) 
     );
 
     commands
-        .spawn((background, ScreenLabel::EndScreen))
+        .spawn((background, ScreenLabel::End))
         .with_children(|background| {
             background
                 .spawn(title_section)
@@ -178,7 +302,7 @@ pub fn spawn_end_screen(mut commands: Commands, asset_server: Res<AssetServer>) 
 
 pub fn despawn_end_screen(mut commands: Commands, end_screen_items: Query<(Entity, &ScreenLabel)>) {
     for (end_screen_item, label) in end_screen_items.iter() {
-        if let ScreenLabel::EndScreen = label {
+        if let ScreenLabel::End = label {
             commands.entity(end_screen_item).despawn_recursive();
         }
     }
