@@ -28,13 +28,27 @@ pub fn spawn_start_screen(mut commands: Commands, asset_server: Res<AssetServer>
     let title_section = NodeBundle {
         style: Style {
             size: Size {
-                width: Val::Percent(100.0),
-                height: Val::Percent(25.0),
+                width: Val::Percent(40.0),
+                height: Val::Percent(20.0),
             },
             align_items: AlignItems::Center,
             justify_content: JustifyContent::Center,
             ..default()
         },
+        ..default()
+    };
+
+    let title_background = ImageBundle {
+        style: Style {
+            size: Size {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+            },
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            ..default()
+        },
+        image: UiImage::new(asset_server.load("ui/UI_Paper_Frame_01_Horizontal.png")),
         ..default()
     };
 
@@ -91,7 +105,11 @@ pub fn spawn_start_screen(mut commands: Commands, asset_server: Res<AssetServer>
             background
                 .spawn(title_section)
                 .with_children(|title_section| {
-                    title_section.spawn(title_text);
+                    title_section
+                        .spawn(title_background)
+                        .with_children(|title_background| {
+                            title_background.spawn(title_text);
+                        });
                 });
 
             for _i in 0..3 {
@@ -215,7 +233,18 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
             justify_content: JustifyContent::Center,
             ..default()
         },
-        background_color: Color::WHITE.into(),
+        ..default()
+    };
+
+    let dialogue_background = ImageBundle {
+        style: Style {
+            size: Size {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+            },
+            ..default()
+        },
+        image: UiImage::new(asset_server.load("ui/UI_Paper_Textfield.png")),
         ..default()
     };
 
@@ -237,12 +266,19 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
                             speaker_portrait_section.spawn(speaker_portrait);
                         });
 
-                    speaker_section.spawn(dialogue_section);
+                    speaker_section
+                        .spawn(dialogue_section)
+                        .with_children(|dialogue_section| {
+                            dialogue_section.spawn(dialogue_background);
+                        });
                 });
         });
 }
 
-pub fn despawn_ingame_screen(mut commands: Commands, ingame_screen_items: Query<(Entity, &ScreenLabel)>) {
+pub fn despawn_ingame_screen(
+    mut commands: Commands,
+    ingame_screen_items: Query<(Entity, &ScreenLabel)>,
+) {
     for (ingame_screen_item, label) in ingame_screen_items.iter() {
         if let ScreenLabel::InGame = label {
             commands.entity(ingame_screen_item).despawn_recursive();
