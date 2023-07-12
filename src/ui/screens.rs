@@ -8,6 +8,15 @@ pub enum ScreenLabel {
     End,
 }
 
+#[derive(Component)]
+pub struct HealthProgress {
+    pub current: u32,
+    pub total: u32,
+}
+
+#[derive(Component, Deref, DerefMut)]
+pub struct HealthTimer(Timer);
+
 pub fn spawn_start_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
     let background = NodeBundle {
         style: Style {
@@ -162,7 +171,7 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
 
     let default_font = asset_server.load("font/FiraSans-Bold.ttf");
 
-    let title_section = NodeBundle {
+    let health_section = NodeBundle {
         style: Style {
             size: Size {
                 width: Val::Percent(50.0),
@@ -176,7 +185,7 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
         ..default()
     };
 
-    let title_text = TextBundle::from_section(
+    let health_text = TextBundle::from_section(
         "12345/12345",
         TextStyle {
             font_size: 32.0,
@@ -252,9 +261,9 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
         .spawn((background, ScreenLabel::InGame))
         .with_children(|background| {
             background
-                .spawn(title_section)
+                .spawn(health_section)
                 .with_children(|title_section| {
-                    title_section.spawn(title_text);
+                    title_section.spawn(health_text);
                 });
 
             background
@@ -273,6 +282,76 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
                         });
                 });
         });
+}
+
+pub fn insert_counting_information(
+    health_text: Query<Entity, (With<Text>, Without<HealthProgress>)>,
+    mut commands: Commands,
+) {
+    if health_text.is_empty() {
+        return;
+    }
+
+    let hours_total = 2;
+    let minutes_total = hours_total * 60;
+    let seconds_total = minutes_total * 60;
+
+    let health_text_entry = health_text
+        .get_single()
+        .expect("Healthbar text should exist by now.");
+
+    commands.entity(health_text_entry).insert((
+        HealthProgress {
+            current: 0,
+            total: seconds_total,
+        },
+        HealthTimer(Timer::from_seconds(1.0, TimerMode::Repeating)),
+    ));
+}
+
+pub fn decrement_health_timer(
+    mut health_information: Query<(&mut HealthTimer, &mut HealthProgress)>,
+    time: Res<Time>,
+) {
+    for (mut health_timer, mut health_progress) in &mut health_information {
+        if health_progress.current == health_progress.total {
+            return;
+        }
+
+        health_timer.tick(time.delta());
+        if !health_timer.just_finished() {
+            return;
+        }
+
+        health_progress.current += 1;
+    }
+}
+
+pub fn update_healthbar_progress(
+    mut health_information: Query<(&mut Text, &HealthProgress), Changed<HealthProgress>>,
+) {
+    for (mut healthbar_text, health_progress) in health_information.iter_mut() {
+        let health_progress_text = format!(
+            "{} / {}",
+            health_progress.total - health_progress.current,
+            health_progress.total
+        );
+
+        healthbar_text.sections[0].value = health_progress_text;
+    }
+}
+
+pub fn end_ingame_on_no_health(
+    health_information: Query<&HealthProgress, Changed<HealthProgress>>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    for health_progress in &health_information {
+        if health_progress.current != health_progress.total {
+            continue;
+        }
+
+        next_state.set(GameState::End);
+    }
 }
 
 pub fn despawn_ingame_screen(
