@@ -20,14 +20,14 @@ use bevy::{
     asset::{AssetLoader, AssetPath, LoadedAsset},
     log,
     prelude::*,
-    reflect::TypeUuid,
+    reflect::{TypePath, TypeUuid},
     utils::HashMap,
 };
 use bevy_ecs_tilemap::prelude::*;
 
 use anyhow::Result;
 
-#[derive(TypeUuid)]
+#[derive(TypeUuid, TypePath)]
 #[uuid = "e51081d0-6168-4881-a1c6-4249b2000d7f"]
 pub struct TiledMap {
     pub map: tiled::Map,

@@ -13,7 +13,6 @@ pub struct StreamerLabel;
 
 #[derive(Bundle)]
 pub struct Streamer {
-    #[bundle]
     label: StreamerLabel,
     sprites: SpriteSheetBundle,
     movement_type: MovementType,

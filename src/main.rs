@@ -33,6 +33,7 @@ fn main() {
     App::new()
         .insert_resource(TilemapRenderSettings {
             render_chunk_size: UVec2::new(1280, 1),
+            y_sort: true,
         })
         .add_plugins(
             DefaultPlugins
@@ -46,18 +47,21 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest())
                 .set(AssetPlugin {
-                    watch_for_changes: true,
+                    //watch_for_changes: true,
                     ..default()
                 }),
         )
         .add_state::<GameState>()
-        .add_plugin(TilemapPlugin)
-        .add_plugin(map::plugins::TiledMapPlugin)
-        .add_plugin(map::plugins::PathFindingPlugin)
-        .add_plugin(StartupScreenPlugin)
+        .add_plugins(TilemapPlugin)
+        .add_plugins(map::plugins::TiledMapPlugin)
+        .add_plugins(map::plugins::PathFindingPlugin)
+        .add_plugins(StartupScreenPlugin)
         //.add_plugin(WorldInspectorPlugin::new())
-        .add_startup_system(spawn_camera)
-        .add_system(animate_sprite)
-        .add_systems((spawn_player, map::camera::movement).in_set(OnUpdate(GameState::InGame)))
+        .add_systems(Startup, spawn_camera)
+        .add_systems(Update, animate_sprite)
+        .add_systems(
+            Update,
+            (spawn_player, map::camera::movement).run_if(in_state(GameState::InGame)),
+        )
         .run();
 }

@@ -20,10 +20,9 @@ pub struct HealthTimer(Timer);
 pub fn spawn_start_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
     let background = NodeBundle {
         style: Style {
-            size: Size {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-            },
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+
             flex_direction: FlexDirection::Column,
             align_items: AlignItems::Center,
             ..default()
@@ -36,10 +35,9 @@ pub fn spawn_start_screen(mut commands: Commands, asset_server: Res<AssetServer>
 
     let title_section = NodeBundle {
         style: Style {
-            size: Size {
-                width: Val::Percent(40.0),
-                height: Val::Percent(20.0),
-            },
+            width: Val::Percent(40.0),
+            height: Val::Percent(20.0),
+
             align_items: AlignItems::Center,
             justify_content: JustifyContent::Center,
             ..default()
@@ -49,10 +47,9 @@ pub fn spawn_start_screen(mut commands: Commands, asset_server: Res<AssetServer>
 
     let title_background = ImageBundle {
         style: Style {
-            size: Size {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-            },
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+
             align_items: AlignItems::Center,
             justify_content: JustifyContent::Center,
             ..default()
@@ -72,10 +69,9 @@ pub fn spawn_start_screen(mut commands: Commands, asset_server: Res<AssetServer>
 
     let button_section = NodeBundle {
         style: Style {
-            size: Size {
-                width: Val::Percent(100.0),
-                height: Val::Percent(25.0),
-            },
+            width: Val::Percent(100.0),
+            height: Val::Percent(25.0),
+
             align_items: AlignItems::Center,
             justify_content: JustifyContent::Center,
             ..default()
@@ -87,10 +83,9 @@ pub fn spawn_start_screen(mut commands: Commands, asset_server: Res<AssetServer>
 
     let button = ButtonBundle {
         style: Style {
-            size: Size {
-                width: Val::Percent(21.1),
-                height: Val::Percent(50.0),
-            },
+            width: Val::Percent(21.1),
+            height: Val::Percent(50.0),
+
             align_items: AlignItems::Center,
             justify_content: JustifyContent::Center,
             ..default()
@@ -124,10 +119,9 @@ pub fn spawn_start_screen(mut commands: Commands, asset_server: Res<AssetServer>
             for _i in 0..3 {
                 background.spawn(NodeBundle {
                     style: Style {
-                        size: Size {
-                            width: Val::Percent(100.0),
-                            height: Val::Percent(25.0),
-                        },
+                        width: Val::Percent(100.0),
+                        height: Val::Percent(25.0),
+
                         ..default()
                     },
                     ..default()
@@ -157,10 +151,9 @@ pub fn despawn_start_screen(
 pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
     let background = NodeBundle {
         style: Style {
-            size: Size {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-            },
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+
             flex_direction: FlexDirection::ColumnReverse,
             align_items: AlignItems::Start,
             ..default()
@@ -173,10 +166,9 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
 
     let health_section = NodeBundle {
         style: Style {
-            size: Size {
-                width: Val::Percent(50.0),
-                height: Val::Percent(8.3),
-            },
+            width: Val::Percent(50.0),
+            height: Val::Percent(8.3),
+
             align_items: AlignItems::Center,
             justify_content: JustifyContent::Center,
             ..default()
@@ -196,10 +188,9 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
 
     let speaker_section = NodeBundle {
         style: Style {
-            size: Size {
-                width: Val::Percent(50.0),
-                height: Val::Percent((120.0 / 720.0) * 100.0),
-            },
+            width: Val::Percent(50.0),
+            height: Val::Percent((120.0 / 720.0) * 100.0),
+
             align_items: AlignItems::Center,
             justify_content: JustifyContent::Center,
             ..default()
@@ -209,10 +200,9 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
 
     let speaker_portrait_section = NodeBundle {
         style: Style {
-            size: Size {
-                width: Val::Percent((120.0 / 640.0) * 100.0),
-                height: Val::Percent(100.0),
-            },
+            width: Val::Percent((120.0 / 640.0) * 100.0),
+            height: Val::Percent(100.0),
+
             align_items: AlignItems::Center,
             justify_content: JustifyContent::Center,
             ..default()
@@ -222,10 +212,9 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
 
     let speaker_portrait = ImageBundle {
         style: Style {
-            size: Size {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-            },
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+
             ..default()
         },
         image: UiImage::new(asset_server.load("caveman/portrait.png")),
@@ -234,10 +223,9 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
 
     let dialogue_section = NodeBundle {
         style: Style {
-            size: Size {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-            },
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+
             align_items: AlignItems::Center,
             justify_content: JustifyContent::Center,
             ..default()
@@ -247,10 +235,9 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
 
     let dialogue_background = ImageBundle {
         style: Style {
-            size: Size {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-            },
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+
             ..default()
         },
         image: UiImage::new(asset_server.load("ui/UI_Paper_Textfield.png")),
@@ -368,10 +355,9 @@ pub fn despawn_ingame_screen(
 pub fn spawn_end_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
     let background = NodeBundle {
         style: Style {
-            size: Size {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-            },
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+
             flex_direction: FlexDirection::Column,
             align_items: AlignItems::Center,
             ..default()
@@ -384,10 +370,9 @@ pub fn spawn_end_screen(mut commands: Commands, asset_server: Res<AssetServer>) 
 
     let title_section = NodeBundle {
         style: Style {
-            size: Size {
-                width: Val::Percent(100.0),
-                height: Val::Percent(25.0),
-            },
+            width: Val::Percent(100.0),
+            height: Val::Percent(25.0),
+
             align_items: AlignItems::Center,
             justify_content: JustifyContent::Center,
             ..default()
@@ -432,7 +417,7 @@ pub fn cycle_screens(
         return;
     }
 
-    match &game_state.0 {
+    match game_state.get() {
         GameState::Start => next_state.set(GameState::InGame),
         GameState::InGame => next_state.set(GameState::End),
         GameState::End => next_state.set(GameState::Start),

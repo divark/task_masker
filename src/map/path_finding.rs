@@ -5,7 +5,10 @@ use bevy_ecs_tilemap::prelude::*;
 
 use crate::entities::{streamer::StreamerLabel, MovementType};
 
-use super::tiled::{tiledpos_to_tilepos, LayerNumber};
+use super::{
+    plugins::TilePosEvent,
+    tiled::{tiledpos_to_tilepos, LayerNumber},
+};
 
 #[derive(Component, PartialEq, Debug)]
 pub struct Ground;
@@ -372,7 +375,7 @@ pub fn move_entities(
 }
 
 pub fn move_streamer(
-    mut destination_request_listener: EventReader<TilePos>,
+    mut destination_request_listener: EventReader<TilePosEvent>,
     mut streamer_entity: Query<(&mut Path, &TilePos), With<StreamerLabel>>,
     ground_graph: Query<&NodeEdges, With<Ground>>,
     map_information: Query<(&TilemapSize, &Transform)>,
@@ -413,10 +416,11 @@ pub fn move_streamer(
 
 pub fn move_streamer_on_spacebar(
     keyboard_input: Res<Input<KeyCode>>,
-    mut destination_request_writer: EventWriter<TilePos>,
+    mut destination_request_writer: EventWriter<TilePosEvent>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
-        destination_request_writer.send(TilePos { x: 46, y: 59 }); //{ x: 64, y: 52 });
+        destination_request_writer.send(TilePosEvent(TilePos { x: 46, y: 59 }));
+        //{ x: 64, y: 52 });
     }
 }
 
