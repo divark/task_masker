@@ -9,6 +9,9 @@ pub enum ScreenLabel {
 }
 
 #[derive(Component)]
+pub struct SpeakerUI;
+
+#[derive(Component)]
 pub struct HealthProgress {
     pub current: u32,
     pub total: u32,
@@ -27,11 +30,8 @@ pub fn spawn_start_screen(mut commands: Commands, asset_server: Res<AssetServer>
             align_items: AlignItems::Center,
             ..default()
         },
-        //background_color: Color::rgb_u8(50, 153, 204).into(),
         ..default()
     };
-
-    let default_font = asset_server.load("font/FiraSans-Bold.ttf");
 
     let title_section = NodeBundle {
         style: Style {
@@ -62,8 +62,8 @@ pub fn spawn_start_screen(mut commands: Commands, asset_server: Res<AssetServer>
         "Task Masker",
         TextStyle {
             font_size: 64.0,
-            font: default_font.clone(),
             color: Color::BLACK,
+            ..default()
         },
     );
 
@@ -97,9 +97,9 @@ pub fn spawn_start_screen(mut commands: Commands, asset_server: Res<AssetServer>
     let button_text = TextBundle::from_section(
         "Press Enter",
         TextStyle {
-            font: default_font,
             font_size: 32.0,
             color: Color::BLACK,
+            ..default()
         },
     );
 
@@ -158,11 +158,8 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
             align_items: AlignItems::Start,
             ..default()
         },
-        //background_color: Color::rgb_u8(50, 153, 204).into(),
         ..default()
     };
-
-    let default_font = asset_server.load("font/FiraSans-Bold.ttf");
 
     let health_section = NodeBundle {
         style: Style {
@@ -181,8 +178,8 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
         "12345/12345",
         TextStyle {
             font_size: 32.0,
-            font: default_font,
             color: Color::BLACK,
+            ..default()
         },
     );
 
@@ -254,7 +251,7 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
                 });
 
             background
-                .spawn(speaker_section)
+                .spawn((speaker_section, SpeakerUI))
                 .with_children(|speaker_section| {
                     speaker_section
                         .spawn(speaker_portrait_section)
@@ -352,7 +349,7 @@ pub fn despawn_ingame_screen(
     }
 }
 
-pub fn spawn_end_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub fn spawn_end_screen(mut commands: Commands) {
     let background = NodeBundle {
         style: Style {
             width: Val::Percent(100.0),
@@ -362,11 +359,8 @@ pub fn spawn_end_screen(mut commands: Commands, asset_server: Res<AssetServer>) 
             align_items: AlignItems::Center,
             ..default()
         },
-        //background_color: Color::rgb_u8(50, 153, 204).into(),
         ..default()
     };
-
-    let default_font = asset_server.load("font/FiraSans-Bold.ttf");
 
     let title_section = NodeBundle {
         style: Style {
@@ -384,8 +378,8 @@ pub fn spawn_end_screen(mut commands: Commands, asset_server: Res<AssetServer>) 
         "Thanks for Watching!",
         TextStyle {
             font_size: 64.0,
-            font: default_font,
             color: Color::BLACK,
+            ..default()
         },
     );
 
