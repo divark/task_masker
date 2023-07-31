@@ -2,7 +2,7 @@ use bevy::{prelude::*, window::WindowResolution};
 use bevy_ecs_tilemap::prelude::*;
 //use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use entities::streamer::{animate_sprite, spawn_player};
-use ui::plugins::StartupScreenPlugin;
+use ui::plugins::{ChattingPlugin, StartupScreenPlugin};
 
 mod entities;
 mod map;
@@ -56,6 +56,7 @@ fn main() {
         .add_plugins(map::plugins::TiledMapPlugin)
         .add_plugins(map::plugins::PathFindingPlugin)
         .add_plugins(StartupScreenPlugin)
+        .add_plugins(ChattingPlugin)
         //.add_plugin(WorldInspectorPlugin::new())
         .add_systems(Startup, spawn_camera)
         .add_systems(Update, animate_sprite)
