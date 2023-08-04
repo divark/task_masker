@@ -9,7 +9,10 @@ pub enum ScreenLabel {
 }
 
 #[derive(Component)]
-pub struct SpeakerUI;
+pub struct SpeakerPortrait;
+
+#[derive(Component)]
+pub struct SpeakerChatBox;
 
 #[derive(Component)]
 pub struct HealthProgress {
@@ -241,6 +244,14 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
         ..default()
     };
 
+    let dialogue_text = TextBundle::from_section(
+        "",
+        TextStyle {
+            font_size: 16.0,
+            ..default()
+        },
+    );
+
     commands
         .spawn((background, ScreenLabel::InGame))
         .with_children(|background| {
@@ -251,25 +262,29 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
                 });
 
             background
-                .spawn((speaker_section, SpeakerUI))
+                .spawn(speaker_section)
                 .with_children(|speaker_section| {
                     speaker_section
                         .spawn(speaker_portrait_section)
                         .with_children(|speaker_portrait_section| {
-                            speaker_portrait_section.spawn(speaker_portrait);
+                            speaker_portrait_section.spawn((speaker_portrait, SpeakerPortrait));
                         });
 
                     speaker_section
                         .spawn(dialogue_section)
                         .with_children(|dialogue_section| {
-                            dialogue_section.spawn(dialogue_background);
+                            dialogue_section.spawn(dialogue_background).with_children(
+                                |dialogue_background| {
+                                    dialogue_background.spawn((dialogue_text, SpeakerChatBox));
+                                },
+                            );
                         });
                 });
         });
 }
 
 pub fn insert_counting_information(
-    health_text: Query<Entity, (With<Text>, Without<HealthProgress>)>,
+    health_text: Query<Entity, (With<Text>, Without<SpeakerChatBox>, Without<HealthProgress>)>,
     mut commands: Commands,
 ) {
     if health_text.is_empty() {

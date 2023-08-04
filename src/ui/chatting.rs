@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::entities::MovementType;
 
-use super::screens::SpeakerUI;
+use super::screens::{SpeakerChatBox, SpeakerPortrait};
 
 #[derive(Default, Event)]
 pub struct Msg {
@@ -23,7 +23,7 @@ impl MsgIndex {
     }
 
     pub fn at_end(&self) -> bool {
-        self.current == self.len
+        self.current == self.len && self.len != 0
     }
 }
 
@@ -34,7 +34,7 @@ pub struct MsgWaiting(Timer);
 pub struct TypingSpeedInterval(Timer);
 
 pub fn insert_chatting_information(
-    chatting_fields: Query<Entity, (With<SpeakerUI>, Without<TypingSpeedInterval>)>,
+    chatting_fields: Query<Entity, (With<SpeakerChatBox>, Without<TypingSpeedInterval>)>,
     mut commands: Commands,
 ) {
     if chatting_fields.is_empty() {
@@ -61,8 +61,11 @@ pub fn insert_chatting_information(
 }
 
 pub fn setup_chatting_from_msg(
-    mut chatting_fields: Query<(&mut UiImage, &mut Text)>,
-    mut msg_fields: Query<(&mut MsgIndex, &mut TypingSpeedInterval), With<SpeakerUI>>,
+    mut chatting_fields: Query<&mut UiImage, With<SpeakerPortrait>>,
+    mut msg_fields: Query<
+        (&mut Text, &mut MsgIndex, &mut TypingSpeedInterval),
+        With<SpeakerChatBox>,
+    >,
     mut msg_receiver: EventReader<Msg>,
     asset_server: Res<AssetServer>,
 ) {
@@ -70,11 +73,11 @@ pub fn setup_chatting_from_msg(
         return;
     }
 
-    let (mut speaker_portrait, mut speaker_textbox) = chatting_fields
+    let mut speaker_portrait = chatting_fields
         .get_single_mut()
         .expect("Could not find Speaker UI elements.");
 
-    let (mut msg_index, mut typing_speed_timer) = msg_fields
+    let (mut speaker_textbox, mut msg_index, mut typing_speed_timer) = msg_fields
         .get_single_mut()
         .expect("Msg elements should be attached by now.");
 
@@ -112,23 +115,17 @@ pub fn setup_chatting_from_msg(
 }
 
 pub fn teletype_current_message(
-    mut chatting_fields: Query<(&mut Text)>,
-    mut msg_fields: Query<(&mut MsgIndex, &mut TypingSpeedInterval), With<SpeakerUI>>,
+    mut msg_fields: Query<
+        (&mut Text, &mut MsgIndex, &mut TypingSpeedInterval),
+        With<SpeakerChatBox>,
+    >,
     time: Res<Time>,
 ) {
-    if chatting_fields.is_empty() {
-        return;
-    }
-
     if msg_fields.is_empty() {
         return;
     }
 
-    let mut speaker_msg = chatting_fields
-        .get_single_mut()
-        .expect("Could not retrieve teletype UI information.");
-
-    let (mut msg_index, mut typing_speed_timer) = msg_fields
+    let (mut speaker_msg, mut msg_index, mut typing_speed_timer) = msg_fields
         .get_single_mut()
         .expect("Msg elements should be attached by now.");
 
@@ -172,8 +169,9 @@ pub fn activate_waiting_timer(
 }
 
 pub fn clear_current_msg_on_time_up(
-    mut chatting_fields: Query<(&mut UiImage, &mut Text)>,
-    mut msg_fields: Query<&mut MsgWaiting, With<SpeakerUI>>,
+    mut chatting_fields: Query<&mut UiImage, With<SpeakerPortrait>>,
+    mut msg_fields: Query<(&mut Text, &mut MsgWaiting), With<SpeakerChatBox>>,
+    time: Res<Time>,
 ) {
     if chatting_fields.is_empty() {
         return;
@@ -183,16 +181,27 @@ pub fn clear_current_msg_on_time_up(
         return;
     }
 
-    let (mut speaker_portrait, mut speaker_msg) = chatting_fields
+    let mut speaker_portrait = chatting_fields
         .get_single_mut()
         .expect("Chatting UI fields should exist if the waiting timer exists.");
 
-    let mut msg_waiting_timer = msg_fields
+    let (mut speaker_msg, mut msg_waiting_timer) = msg_fields
         .get_single_mut()
         .expect("Waiting timer should exist with the UI by now.");
 
+    if msg_waiting_timer.paused() {
+        return;
+    }
+
+    msg_waiting_timer.tick(time.delta());
+    if !msg_waiting_timer.just_finished() {
+        return;
+    }
+
     *speaker_portrait = UiImage::default();
+
     speaker_msg.sections[0].value = String::new();
+    speaker_msg.sections.drain(1..);
 
     msg_waiting_timer.pause();
     msg_waiting_timer.reset();
