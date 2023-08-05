@@ -94,12 +94,14 @@ pub fn setup_chatting_from_msg(
 
     *speaker_portrait = role_image;
     speaker_textbox.sections[0].value = format!("{}:\n", recent_msg.speaker_name);
+    speaker_textbox.sections[0].style.font_size = 32.0;
 
     for msg_character in recent_msg.msg.chars() {
         let untyped_character = TextSection::new(
             msg_character,
             TextStyle {
                 color: Color::NONE,
+                font_size: 28.0,
                 ..default()
             },
         );

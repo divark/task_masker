@@ -238,6 +238,13 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
 
+            padding: UiRect {
+                left: Val::Percent(5.),
+                right: Val::Percent(3.),
+                top: Val::Percent(3.),
+                bottom: Val::Percent(3.),
+            },
+
             ..default()
         },
         image: UiImage::new(asset_server.load("ui/UI_Paper_Textfield.png")),
