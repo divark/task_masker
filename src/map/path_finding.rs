@@ -471,7 +471,7 @@ pub mod tests {
         let mut app = App::new();
         spawn_tiles(&mut app, map_size.x, map_size.y, &layer);
         spawn_map_information(&mut app, map_size, grid_size, map_type, layer);
-        app.add_system(create_ground_graph);
+        app.add_systems(Update, create_ground_graph);
         app.update();
 
         let expected_node_edges = NodeEdges(vec![vec![1, 2], vec![0, 3], vec![0, 3], vec![1, 2]]);
@@ -499,7 +499,7 @@ pub mod tests {
         let mut app = App::new();
         spawn_tiles(&mut app, map_size.x, map_size.y, &layer);
         spawn_map_information(&mut app, map_size, grid_size, map_type, layer);
-        app.add_system(create_ground_graph);
+        app.add_systems(Update, create_ground_graph);
         app.update();
         app.update();
 
@@ -522,7 +522,7 @@ pub mod tests {
         let mut app = App::new();
         spawn_tiles(&mut app, map_size.x, map_size.y, &layer);
         spawn_map_information(&mut app, map_size, grid_size, map_type, layer);
-        app.add_system(create_ground_graph);
+        app.add_systems(Update, create_ground_graph);
         app.update();
 
         let expected_node_edges = NodeEdges(vec![vec![], vec![], vec![], vec![]]);
@@ -551,7 +551,7 @@ pub mod tests {
         spawn_tiles(&mut app, map_size.x, map_size.y, &layer);
         spawn_tiles(&mut app, map_size.x, map_size.y, &LayerNumber(2));
         spawn_map_information(&mut app, map_size, grid_size, map_type, LayerNumber(2));
-        app.add_system(create_ground_graph);
+        app.add_systems(Update, create_ground_graph);
         app.update();
 
         let expected_node_edges = NodeEdges(vec![vec![1, 2], vec![0, 3], vec![0, 3], vec![1, 2]]);
@@ -582,7 +582,7 @@ pub mod tests {
             .spawn_empty()
             .insert((TilePos::new(1, 1), LayerNumber(2)));
         spawn_map_information(&mut app, map_size, grid_size, map_type, LayerNumber(2));
-        app.add_system(create_ground_graph);
+        app.add_systems(Update, create_ground_graph);
         app.update();
 
         let expected_node_edges = NodeEdges(vec![vec![1, 2], vec![0, 3], vec![0, 3], vec![1, 2]]);
@@ -613,7 +613,7 @@ pub mod tests {
             .spawn_empty()
             .insert((TilePos::new(0, 0), LayerNumber(2)));
         spawn_map_information(&mut app, map_size, grid_size, map_type, LayerNumber(2));
-        app.add_system(create_ground_graph);
+        app.add_systems(Update, create_ground_graph);
         app.update();
 
         let expected_node_edges = NodeEdges(vec![vec![1, 2], vec![0, 3], vec![0, 3], vec![1, 2]]);
