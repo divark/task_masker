@@ -95,6 +95,7 @@ pub fn setup_chatting_from_msg(
     *speaker_portrait = role_image;
     speaker_textbox.sections[0].value = format!("{}:\n", recent_msg.speaker_name);
     speaker_textbox.sections[0].style.font_size = 32.0;
+    speaker_textbox.sections[0].style.color = Color::BLACK;
 
     for msg_character in recent_msg.msg.chars() {
         let untyped_character = TextSection::new(
@@ -122,6 +123,8 @@ pub fn teletype_current_message(
         With<SpeakerChatBox>,
     >,
     time: Res<Time>,
+    asset_server: Res<AssetServer>,
+    mut commands: Commands,
 ) {
     if msg_fields.is_empty() {
         return;
@@ -141,6 +144,18 @@ pub fn teletype_current_message(
         .get_mut(msg_index.current)
         .expect("Could not find text section in msg.");
     msg_character.style.color = Color::BLACK;
+
+    if msg_character.value != " " {
+        let typing_noise = AudioBundle {
+            source: asset_server.load("ui/balloon-boop.wav"),
+            settings: PlaybackSettings {
+                mode: bevy::audio::PlaybackMode::Despawn,
+                ..default()
+            },
+        };
+
+        commands.spawn(typing_noise);
+    }
 
     msg_index.current += 1;
 }
