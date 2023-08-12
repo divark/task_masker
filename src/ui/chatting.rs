@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::entities::MovementType;
 
-use super::screens::{SpeakerChatBox, SpeakerPortrait};
+use super::screens::{SpeakerChatBox, SpeakerPortrait, SpeakerUI};
 
 #[derive(Default, Event)]
 pub struct Msg {
@@ -11,21 +11,11 @@ pub struct Msg {
     speaker_role: MovementType,
 }
 
-#[derive(Component)]
-pub struct MsgIndex {
-    current: usize,
-    len: usize,
-}
+#[derive(Component, Deref, DerefMut)]
+pub struct MsgIndex(usize);
 
-impl MsgIndex {
-    pub fn new(current: usize, len: usize) -> MsgIndex {
-        MsgIndex { current, len }
-    }
-
-    pub fn at_end(&self) -> bool {
-        self.current == self.len && self.len != 0
-    }
-}
+#[derive(Component, Deref, DerefMut)]
+pub struct MsgLen(usize);
 
 #[derive(Component, Deref, DerefMut)]
 pub struct MsgWaiting(Timer);
@@ -51,25 +41,33 @@ pub fn insert_chatting_information(
     let mut msg_waiting_timer = MsgWaiting(Timer::from_seconds(15.0, TimerMode::Repeating));
     msg_waiting_timer.pause();
 
-    let msg_progress_tracking = MsgIndex::new(0, 0);
+    let msg_character_idx = MsgIndex(0);
+    let msg_len = MsgLen(0);
 
     commands.entity(ui_fields_entity).insert((
         typing_speed_timer,
         msg_waiting_timer,
-        msg_progress_tracking,
+        msg_character_idx,
+        msg_len,
     ));
 }
 
 pub fn setup_chatting_from_msg(
+    mut chatting_ui_section: Query<&mut Visibility, With<SpeakerUI>>,
     mut chatting_fields: Query<&mut UiImage, With<SpeakerPortrait>>,
     mut msg_fields: Query<
-        (&mut Text, &mut MsgIndex, &mut TypingSpeedInterval),
+        (
+            &mut Text,
+            &mut MsgIndex,
+            &mut MsgLen,
+            &mut TypingSpeedInterval,
+        ),
         With<SpeakerChatBox>,
     >,
     mut msg_receiver: EventReader<Msg>,
     asset_server: Res<AssetServer>,
 ) {
-    if msg_receiver.is_empty() {
+    if msg_receiver.is_empty() || chatting_ui_section.is_empty() {
         return;
     }
 
@@ -77,7 +75,7 @@ pub fn setup_chatting_from_msg(
         .get_single_mut()
         .expect("Could not find Speaker UI elements.");
 
-    let (mut speaker_textbox, mut msg_index, mut typing_speed_timer) = msg_fields
+    let (mut speaker_textbox, mut msg_index, mut msg_len, mut typing_speed_timer) = msg_fields
         .get_single_mut()
         .expect("Msg elements should be attached by now.");
 
@@ -93,6 +91,10 @@ pub fn setup_chatting_from_msg(
     };
 
     *speaker_portrait = role_image;
+
+    speaker_textbox.sections[0].value = String::new();
+    speaker_textbox.sections.drain(1..);
+
     speaker_textbox.sections[0].value = format!("{}:\n", recent_msg.speaker_name);
     speaker_textbox.sections[0].style.font_size = 32.0;
     speaker_textbox.sections[0].style.color = Color::BLACK;
@@ -110,8 +112,13 @@ pub fn setup_chatting_from_msg(
         speaker_textbox.sections.push(untyped_character);
     }
 
-    msg_index.current = 1;
-    msg_index.len = recent_msg.msg.len();
+    msg_index.0 = 1;
+    msg_len.0 = recent_msg.msg.len();
+
+    let mut speaker_ui_visibility = chatting_ui_section
+        .get_single_mut()
+        .expect("Speaker UI should exist by now.");
+    *speaker_ui_visibility = Visibility::Visible;
 
     typing_speed_timer.reset();
     typing_speed_timer.unpause();
@@ -141,42 +148,49 @@ pub fn teletype_current_message(
 
     let msg_character = speaker_msg
         .sections
-        .get_mut(msg_index.current)
+        .get_mut(msg_index.0)
         .expect("Could not find text section in msg.");
     msg_character.style.color = Color::BLACK;
 
-    if msg_character.value != " " {
-        let typing_noise = AudioBundle {
-            source: asset_server.load("ui/balloon-boop.wav"),
-            settings: PlaybackSettings {
-                mode: bevy::audio::PlaybackMode::Despawn,
-                ..default()
-            },
-        };
+    msg_index.0 += 1;
 
-        commands.spawn(typing_noise);
+    if msg_character.value == " " {
+        return;
     }
 
-    msg_index.current += 1;
+    let typing_noise = AudioBundle {
+        source: asset_server.load("ui/balloon-boop.wav"),
+        settings: PlaybackSettings {
+            mode: bevy::audio::PlaybackMode::Despawn,
+            ..default()
+        },
+    };
+
+    commands.spawn(typing_noise);
 }
 
 pub fn activate_waiting_timer(
-    mut chatting_information: Query<(&mut MsgIndex, &mut TypingSpeedInterval, &mut MsgWaiting)>,
+    mut chatting_information: Query<
+        (
+            &MsgIndex,
+            &MsgLen,
+            &mut TypingSpeedInterval,
+            &mut MsgWaiting,
+        ),
+        Changed<MsgIndex>,
+    >,
 ) {
     if chatting_information.is_empty() {
         return;
     }
 
-    let (mut msg_index, mut typing_speed_timer, mut msg_waiting_timer) = chatting_information
+    let (msg_index, msg_len, mut typing_speed_timer, mut msg_waiting_timer) = chatting_information
         .get_single_mut()
         .expect("Chatting information should exist.");
 
-    if !msg_index.at_end() {
+    if msg_index.0 != msg_len.0 && msg_len.0 != 0 {
         return;
     }
-
-    msg_index.current = 0;
-    msg_index.len = 0;
 
     typing_speed_timer.pause();
     typing_speed_timer.reset();
@@ -186,23 +200,14 @@ pub fn activate_waiting_timer(
 }
 
 pub fn clear_current_msg_on_time_up(
-    mut chatting_fields: Query<&mut UiImage, With<SpeakerPortrait>>,
-    mut msg_fields: Query<(&mut Text, &mut MsgWaiting), With<SpeakerChatBox>>,
+    mut msg_fields: Query<(&mut MsgLen, &mut MsgWaiting), With<SpeakerChatBox>>,
     time: Res<Time>,
 ) {
-    if chatting_fields.is_empty() {
-        return;
-    }
-
     if msg_fields.is_empty() {
         return;
     }
 
-    let mut speaker_portrait = chatting_fields
-        .get_single_mut()
-        .expect("Chatting UI fields should exist if the waiting timer exists.");
-
-    let (mut speaker_msg, mut msg_waiting_timer) = msg_fields
+    let (mut msg_len, mut msg_waiting_timer) = msg_fields
         .get_single_mut()
         .expect("Waiting timer should exist with the UI by now.");
 
@@ -215,13 +220,32 @@ pub fn clear_current_msg_on_time_up(
         return;
     }
 
-    *speaker_portrait = UiImage::default();
-
-    speaker_msg.sections[0].value = String::new();
-    speaker_msg.sections.drain(1..);
-
     msg_waiting_timer.pause();
     msg_waiting_timer.reset();
+
+    msg_len.0 = 0;
+}
+
+pub fn hide_chatting_ui(
+    msg_fields: Query<&MsgLen, Changed<MsgLen>>,
+    mut speaker_ui_fields: Query<&mut Visibility, With<SpeakerUI>>,
+) {
+    if msg_fields.is_empty() || speaker_ui_fields.is_empty() {
+        return;
+    }
+
+    let msg_len = msg_fields
+        .get_single()
+        .expect("Msg Len should be populated by now.");
+    if msg_len.0 != 0 {
+        return;
+    }
+
+    let mut speaker_ui_visibility = speaker_ui_fields
+        .get_single_mut()
+        .expect("Speaker UI should exist by now.");
+
+    *speaker_ui_visibility = Visibility::Hidden;
 }
 
 pub fn test_streamer_msg(keyboard_input: Res<Input<KeyCode>>, mut msg_writer: EventWriter<Msg>) {

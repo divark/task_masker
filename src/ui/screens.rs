@@ -9,6 +9,9 @@ pub enum ScreenLabel {
 }
 
 #[derive(Component)]
+pub struct SpeakerUI;
+
+#[derive(Component)]
 pub struct SpeakerPortrait;
 
 #[derive(Component)]
@@ -269,7 +272,7 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
                 });
 
             background
-                .spawn(speaker_section)
+                .spawn((speaker_section, SpeakerUI))
                 .with_children(|speaker_section| {
                     speaker_section
                         .spawn(speaker_portrait_section)
