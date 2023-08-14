@@ -1,7 +1,7 @@
 use crate::GameState;
 use bevy::prelude::*;
 
-#[derive(Component)]
+#[derive(Component, PartialEq)]
 pub enum ScreenLabel {
     Start,
     InGame,

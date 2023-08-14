@@ -1,9 +1,11 @@
+use audio::plugins::BackgroundMusicPlugin;
 use bevy::{prelude::*, window::WindowResolution};
 use bevy_ecs_tilemap::prelude::*;
 //use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use entities::streamer::{animate_sprite, spawn_player};
 use ui::plugins::{ChattingPlugin, StartupScreenPlugin};
 
+mod audio;
 mod entities;
 mod map;
 mod ui;
@@ -57,6 +59,7 @@ fn main() {
         .add_plugins(map::plugins::PathFindingPlugin)
         .add_plugins(StartupScreenPlugin)
         .add_plugins(ChattingPlugin)
+        .add_plugins(BackgroundMusicPlugin)
         //.add_plugin(WorldInspectorPlugin::new())
         .add_systems(Startup, spawn_camera)
         .add_systems(Update, animate_sprite)
