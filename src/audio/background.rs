@@ -9,22 +9,7 @@ pub struct Music;
 #[derive(Component)]
 pub struct SoundTrack(Vec<String>);
 
-pub fn insert_start_or_end_screen_music(
-    startup_ui: Query<&ScreenLabel, Added<ScreenLabel>>,
-    asset_loader: Res<AssetServer>,
-    mut commands: Commands,
-) {
-    if startup_ui.is_empty() {
-        return;
-    }
-
-    let ui_label = startup_ui
-        .get_single()
-        .expect("Startup screen should exist by now.");
-    if *ui_label == ScreenLabel::InGame {
-        return;
-    }
-
+pub fn insert_background_noises(asset_loader: Res<AssetServer>, mut commands: Commands) {
     let startup_sounds = AudioBundle {
         source: asset_loader.load("music/start_screen.wav"),
         settings: PlaybackSettings {
@@ -33,13 +18,10 @@ pub fn insert_start_or_end_screen_music(
         },
     };
 
-    commands.spawn((startup_sounds, Music));
+    commands.spawn(startup_sounds);
 }
 
-pub fn remove_music(
-    mut commands: Commands,
-    music_query: Query<(Entity, &AudioSink), With<AudioSink>>,
-) {
+pub fn remove_music(mut commands: Commands, music_query: Query<(Entity, &AudioSink), With<Music>>) {
     if music_query.is_empty() {
         return;
     }
