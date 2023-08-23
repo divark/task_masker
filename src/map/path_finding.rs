@@ -192,6 +192,9 @@ pub fn create_ground_graph(
 pub struct Target(Option<(Vec3, TilePos)>);
 
 #[derive(Component)]
+pub struct StartingPoint(Vec3, TilePos);
+
+#[derive(Component)]
 pub struct Path(VecDeque<usize>);
 
 pub fn get_path(
@@ -264,15 +267,16 @@ pub enum Direction {
 pub struct MovementTimer(Timer);
 
 pub fn insert_pathing_information(
-    moving_entities: Query<Entity, (With<MovementType>, Without<Path>)>,
+    moving_entities: Query<(Entity, &Transform, &TilePos), (With<MovementType>, Without<Path>)>,
     mut spawner: Commands,
 ) {
-    for moving_entity in &moving_entities {
+    for (moving_entity, entity_transform, entity_tilepos) in &moving_entities {
         spawner.entity(moving_entity).insert((
             Path(VecDeque::new()),
+            StartingPoint(entity_transform.translation, *entity_tilepos),
             Target(None),
             Direction::TopRight,
-            MovementTimer(Timer::from_seconds(1.0, TimerMode::Repeating)),
+            MovementTimer(Timer::from_seconds(0.05, TimerMode::Repeating)),
         ));
     }
 }
@@ -331,6 +335,8 @@ fn get_direction(current_pos: Transform, target_pos: Transform) -> Direction {
     }
 }
 
+const NUM_STEPS: f32 = 8.0;
+
 pub fn move_entities(
     mut moving_entity: Query<
         (
@@ -338,39 +344,52 @@ pub fn move_entities(
             &mut Target,
             &mut Direction,
             &mut MovementTimer,
-            &mut TilePos,
+            &mut StartingPoint,
         ),
         With<MovementType>,
     >,
     time: Res<Time>,
 ) {
-    for (mut current_pos, mut target, mut target_direction, mut movement_timer, mut tile_pos) in
+    for (mut current_pos, mut target, mut direction, mut movement_timer, mut starting_point) in
         &mut moving_entity
     {
-        if let Some((target_vec, target_tile_pos)) = target.0 {
-            let target_pos =
-                Transform::from_xyz(target_vec.x, target_vec.y, current_pos.translation.z);
-            if *current_pos == target_pos {
-                target.0 = None;
-                *tile_pos = target_tile_pos;
-                continue;
-            }
-
-            *target_direction = get_direction(*current_pos, target_pos);
-            movement_timer.tick(time.delta());
-
-            if !movement_timer.just_finished() {
-                continue;
-            }
-
-            *current_pos = target_pos;
-            // match *target_direction {
-            //     Direction::TopLeft => current_pos.translation += Vec3::new(-1.0, 1.0, 0.0),
-            //     Direction::TopRight => current_pos.translation += Vec3::new(-1.0, -1.0, 0.0),
-            //     Direction::BottomLeft => current_pos.translation += Vec3::new(1.0, 1.0, 0.0),
-            //     Direction::BottomRight => current_pos.translation += Vec3::new(1.0, -1.0, 0.0),
-            // }
+        movement_timer.tick(time.delta());
+        if !movement_timer.just_finished() {
+            continue;
         }
+
+        if target.0.is_none() {
+            continue;
+        }
+
+        let (target_vec, target_tile_pos) = target.0.expect("Target should be populated by now.");
+        let target_pos = Transform::from_translation(target_vec);
+
+        *direction = get_direction(*current_pos, target_pos);
+        if *current_pos == target_pos {
+            target.0 = None;
+            *starting_point = StartingPoint(target_vec, target_tile_pos);
+            continue;
+        }
+
+        let x_dist = target_pos.translation.x - starting_point.0.x;
+        let x_step = x_dist / NUM_STEPS;
+
+        let y_dist = target_pos.translation.y - starting_point.0.y;
+        let y_step = y_dist / NUM_STEPS;
+
+        let z_dist = target_pos.translation.z - starting_point.0.z;
+        let z_step = z_dist / NUM_STEPS;
+
+        current_pos.translation.x += x_step;
+        current_pos.translation.y += y_step;
+        current_pos.translation.z += z_step;
+    }
+}
+
+pub fn update_current_tilepos(mut moving_entity: Query<(&mut TilePos, &StartingPoint), Changed<StartingPoint>>) {
+    for (mut entity_tilepos, entity_starting_point) in &mut moving_entity {
+        *entity_tilepos = entity_starting_point.1;
     }
 }
 

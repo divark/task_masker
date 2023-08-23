@@ -1,4 +1,4 @@
-use bevy::prelude::{default, Component};
+use bevy::prelude::*;
 
 pub mod streamer;
 
