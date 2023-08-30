@@ -2,13 +2,15 @@ use audio::plugins::BackgroundMusicPlugin;
 use bevy::{prelude::*, window::WindowResolution};
 use bevy_ecs_tilemap::prelude::*;
 //use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use entities::streamer::{animate_sprite, spawn_player};
+use entities::streamer::spawn_player;
 use ui::plugins::{ChattingPlugin, StartupScreenPlugin};
+use visual::plugins::AnimationPlugin;
 
 mod audio;
 mod entities;
 mod map;
 mod ui;
+mod visual;
 
 #[derive(Default, Debug, Hash, PartialEq, Eq, Clone, Copy, States)]
 pub enum GameState {
@@ -60,9 +62,9 @@ fn main() {
         .add_plugins(StartupScreenPlugin)
         .add_plugins(ChattingPlugin)
         .add_plugins(BackgroundMusicPlugin)
+        .add_plugins(AnimationPlugin)
         //.add_plugin(WorldInspectorPlugin::new())
         .add_systems(Startup, spawn_camera)
-        .add_systems(Update, animate_sprite)
         .add_systems(
             Update,
             (spawn_player, map::camera::movement).run_if(in_state(GameState::InGame)),

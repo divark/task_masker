@@ -194,7 +194,7 @@ pub struct Target(Option<(Vec3, TilePos)>);
 #[derive(Component)]
 pub struct StartingPoint(Vec3, TilePos);
 
-#[derive(Component)]
+#[derive(Component, Deref, DerefMut)]
 pub struct Path(VecDeque<usize>);
 
 pub fn get_path(
@@ -387,7 +387,9 @@ pub fn move_entities(
     }
 }
 
-pub fn update_current_tilepos(mut moving_entity: Query<(&mut TilePos, &StartingPoint), Changed<StartingPoint>>) {
+pub fn update_current_tilepos(
+    mut moving_entity: Query<(&mut TilePos, &StartingPoint), Changed<StartingPoint>>,
+) {
     for (mut entity_tilepos, entity_starting_point) in &mut moving_entity {
         *entity_tilepos = entity_starting_point.1;
     }
