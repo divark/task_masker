@@ -26,7 +26,7 @@ pub struct Graph {
 }
 
 /// Maps a 2-dimensional (x, y) index into a 1-dimensional array index.
-fn tilepos_to_idx(x: u32, y: u32, world_size: u32) -> usize {
+pub fn tilepos_to_idx(x: u32, y: u32, world_size: u32) -> usize {
     ((world_size * x) + y) as usize
 }
 
@@ -188,7 +188,7 @@ pub fn create_ground_graph(
     ));
 }
 
-#[derive(Component)]
+#[derive(Component, Deref, DerefMut)]
 pub struct Target(Option<(Vec3, TilePos)>);
 
 #[derive(Component)]
@@ -282,7 +282,7 @@ pub fn insert_pathing_information(
 }
 
 pub fn update_movement_target(
-    mut moving_entity: Query<(&mut Target, &mut Path)>,
+    mut moving_entity: Query<(&mut Target, &mut Path, &Transform, &mut Direction)>,
     map_information: Query<&TilemapSize>,
     ground_graph_query: Query<&NodeData, With<Ground>>,
 ) {
@@ -308,30 +308,45 @@ pub fn update_movement_target(
         .expect("Could not find largest world size. Is the map loaded?");
 
     let nodes = ground_graph_query.get_single().unwrap();
-    for (mut target, mut path) in moving_entity.iter_mut() {
+    for (mut target, mut path, current_pos, mut direction) in moving_entity.iter_mut() {
         if target.0.is_none() && !path.0.is_empty() {
             let new_target = path
                 .0
                 .pop_front()
                 .expect("The path was not supposed to be empty by here.");
             let target_tile_pos = idx_to_tilepos(new_target, world_size.y);
-            target.0 = Some((nodes.0[new_target], target_tile_pos));
+            let target_pos = nodes.0[new_target];
+
+            if let Some(new_direction) =
+                get_direction(*current_pos, Transform::from_translation(target_pos))
+            {
+                *direction = new_direction;
+            }
+
+            target.0 = Some((target_pos, target_tile_pos));
         }
     }
 }
 
-fn get_direction(current_pos: Transform, target_pos: Transform) -> Direction {
+fn get_direction(current_pos: Transform, target_pos: Transform) -> Option<Direction> {
     let current_translation = &current_pos.translation;
     let target_translation = &target_pos.translation;
 
-    let x_direction = target_translation.x > current_translation.x;
-    let y_direction = target_translation.y > current_translation.y;
+    if current_translation == target_translation {
+        return None;
+    }
 
-    match (x_direction, y_direction) {
-        (true, true) => Direction::BottomLeft,
-        (true, false) => Direction::BottomRight,
-        (false, true) => Direction::TopLeft,
-        (false, false) => Direction::TopRight,
+    let x_direction = target_translation.x - current_translation.x;
+    let y_direction = target_translation.y - current_translation.y;
+
+    match (
+        x_direction.is_sign_positive(),
+        y_direction.is_sign_positive(),
+    ) {
+        (false, false) => Some(Direction::BottomLeft),
+        (true, false) => Some(Direction::BottomRight),
+        (false, true) => Some(Direction::TopLeft),
+        (true, true) => Some(Direction::TopRight),
     }
 }
 
@@ -342,7 +357,6 @@ pub fn move_entities(
         (
             &mut Transform,
             &mut Target,
-            &mut Direction,
             &mut MovementTimer,
             &mut StartingPoint,
         ),
@@ -350,8 +364,7 @@ pub fn move_entities(
     >,
     time: Res<Time>,
 ) {
-    for (mut current_pos, mut target, mut direction, mut movement_timer, mut starting_point) in
-        &mut moving_entity
+    for (mut current_pos, mut target, mut movement_timer, mut starting_point) in &mut moving_entity
     {
         movement_timer.tick(time.delta());
         if !movement_timer.just_finished() {
@@ -365,7 +378,6 @@ pub fn move_entities(
         let (target_vec, target_tile_pos) = target.0.expect("Target should be populated by now.");
         let target_pos = Transform::from_translation(target_vec);
 
-        *direction = get_direction(*current_pos, target_pos);
         if *current_pos == target_pos {
             target.0 = None;
             *starting_point = StartingPoint(target_vec, target_tile_pos);
@@ -440,7 +452,7 @@ pub fn move_streamer_on_spacebar(
     mut destination_request_writer: EventWriter<TilePosEvent>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
-        destination_request_writer.send(TilePosEvent(TilePos { x: 46, y: 59 }));
+        destination_request_writer.send(TilePosEvent(TilePos { x: 64, y: 52 }));
         //{ x: 64, y: 52 });
     }
 }
@@ -712,7 +724,7 @@ pub mod tests {
     }
 
     #[test]
-    fn bottom_left_direction_and_coordinate_system() {
+    fn top_right_direction_and_coordinate_system() {
         let grid_size = TilemapGridSize { x: 32.0, y: 16.0 };
 
         let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
@@ -723,15 +735,15 @@ pub mod tests {
                 .center_in_world(&grid_size, &map_type)
                 .extend(1.0),
         );
-        let destination_tilepos = TilePos { x: 0, y: 1 };
+        let destination_tilepos = TilePos { x: 1, y: 1 };
         let destination_transform = Transform::from_translation(
             destination_tilepos
                 .center_in_world(&grid_size, &map_type)
                 .extend(1.0),
         );
 
-        let expected_direction = Direction::BottomLeft;
-        let actual_direction = get_direction(source_transform, destination_transform);
+        let expected_direction = Direction::TopRight;
+        let actual_direction = get_direction(source_transform, destination_transform).unwrap();
 
         assert_eq!(expected_direction, actual_direction);
     }
@@ -756,7 +768,7 @@ pub mod tests {
         );
 
         let expected_direction = Direction::BottomRight;
-        let actual_direction = get_direction(source_transform, destination_transform);
+        let actual_direction = get_direction(source_transform, destination_transform).unwrap();
 
         assert_eq!(expected_direction, actual_direction);
     }
@@ -781,13 +793,13 @@ pub mod tests {
         );
 
         let expected_direction = Direction::TopLeft;
-        let actual_direction = get_direction(source_transform, destination_transform);
+        let actual_direction = get_direction(source_transform, destination_transform).unwrap();
 
         assert_eq!(expected_direction, actual_direction);
     }
 
     #[test]
-    fn top_right_direction_and_coordinate_system() {
+    fn bottom_left_direction_and_coordinate_system() {
         let grid_size = TilemapGridSize { x: 32.0, y: 16.0 };
 
         let map_type = TilemapType::Isometric(IsoCoordSystem::Diamond);
@@ -805,8 +817,8 @@ pub mod tests {
                 .extend(1.0),
         );
 
-        let expected_direction = Direction::TopRight;
-        let actual_direction = get_direction(source_transform, destination_transform);
+        let expected_direction = Direction::BottomLeft;
+        let actual_direction = get_direction(source_transform, destination_transform).unwrap();
 
         assert_eq!(expected_direction, actual_direction);
     }

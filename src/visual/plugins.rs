@@ -13,6 +13,7 @@ impl Plugin for AnimationPlugin {
                 insert_animation_information,
                 change_sprite_direction,
                 animate,
+                check_if_idle,
             ),
         );
     }

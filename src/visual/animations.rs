@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     entities::MovementType,
-    map::path_finding::{Direction, Path},
+    map::path_finding::{tilepos_to_idx, Direction, Path, Target},
 };
 
 #[derive(Component, Deref, DerefMut)]
@@ -10,8 +10,8 @@ pub struct AnimationTimer(Timer);
 
 #[derive(Component)]
 pub struct AnimationIndices {
-    row_num: usize,
-    num_cols: usize,
+    start_idx: usize,
+    end_idx: usize,
 }
 
 pub fn insert_animation_information(
@@ -19,29 +19,37 @@ pub fn insert_animation_information(
     mut commands: Commands,
 ) {
     for (moving_entity, entity_type) in &moving_entities {
-        let (row_num, num_cols) = match entity_type {
-            MovementType::Walk => (5, 4),
-            MovementType::Fly => (0, 8),
-            MovementType::Swim => (0, 1),
+        let start_idx = match entity_type {
+            MovementType::Walk => ground_directional_index_from(&Direction::BottomRight),
+            MovementType::Fly => tilepos_to_idx(0, 0, 6),
+            MovementType::Swim => tilepos_to_idx(0, 0, 1),
         };
+
+        let end_idx = start_idx
+            + match entity_type {
+                MovementType::Walk => 4,
+                MovementType::Fly => 6,
+                MovementType::Swim => 1,
+            };
 
         commands.entity(moving_entity).insert((
             AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
-            AnimationIndices { row_num, num_cols },
-            TextureAtlasSprite::new(row_num * num_cols),
+            AnimationIndices { start_idx, end_idx },
+            TextureAtlasSprite::new(start_idx),
         ));
     }
 }
 
 fn ground_directional_index_from(direction: &Direction) -> usize {
     match direction {
-        Direction::BottomLeft => 7,
-        Direction::BottomRight => 8,
-        Direction::TopLeft => 5,
-        Direction::TopRight => 6,
+        Direction::BottomLeft => tilepos_to_idx(7, 0, 4),
+        Direction::BottomRight => tilepos_to_idx(8, 0, 4),
+        Direction::TopLeft => tilepos_to_idx(5, 0, 4),
+        Direction::TopRight => tilepos_to_idx(6, 0, 4),
     }
 }
 
+//TODO: Use tilepos_to_idx for this like ground_directional_index_from.
 fn fly_directional_index_from(direction: &Direction) -> usize {
     match direction {
         Direction::BottomLeft | Direction::TopLeft => 0,
@@ -49,6 +57,7 @@ fn fly_directional_index_from(direction: &Direction) -> usize {
     }
 }
 
+//TODO: Use tilepos_to_idx for this like ground_directional_index_from.
 fn swim_directional_index_from(direction: &Direction) -> usize {
     0
 }
@@ -75,8 +84,10 @@ pub fn change_sprite_direction(
     for (mut animation_indices, mut entity_spritesheet, entity_type, entity_direction) in
         &mut moving_entities
     {
-        animation_indices.row_num = direction_to_row_index(entity_direction, entity_type);
-        entity_spritesheet.index = animation_indices.row_num;
+        animation_indices.start_idx = direction_to_row_index(entity_direction, entity_type);
+        //TODO: Make this +4 dependent upon entity type.
+        animation_indices.end_idx = animation_indices.start_idx + 4;
+        entity_spritesheet.index = animation_indices.start_idx;
     }
 }
 
@@ -93,10 +104,7 @@ pub fn check_if_idle(mut moving_entities: Query<(&mut AnimationTimer, &Path)>) {
 }
 
 //TODO: Make Unit Tests to ensure indexes are calculated as intended.
-fn bound_add_for_index(index: usize, row_num: usize, num_cols: usize) -> usize {
-    let lower_bound = ((row_num + 1) * num_cols) - 1;
-    let upper_bound = lower_bound + num_cols;
-
+fn bound_add_for_index(index: usize, lower_bound: usize, upper_bound: usize) -> usize {
     let new_index = index + 1;
     if new_index >= upper_bound {
         return lower_bound;
@@ -115,7 +123,7 @@ pub fn animate(
 ) {
     for (mut timer, animation_indices, mut entity_spritesheet) in &mut moving_entities {
         if timer.paused() {
-            entity_spritesheet.index = animation_indices.row_num;
+            entity_spritesheet.index = animation_indices.start_idx;
             continue;
         }
 
@@ -126,8 +134,8 @@ pub fn animate(
 
         entity_spritesheet.index = bound_add_for_index(
             entity_spritesheet.index,
-            animation_indices.row_num,
-            animation_indices.num_cols,
+            animation_indices.start_idx,
+            animation_indices.end_idx,
         );
     }
 }
