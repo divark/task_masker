@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     entities::MovementType,
-    map::path_finding::{tilepos_to_idx, Direction, Path, Target},
+    map::path_finding::{tilepos_to_idx, Direction, Path},
 };
 
 #[derive(Component, Deref, DerefMut)]
@@ -21,16 +21,11 @@ pub fn insert_animation_information(
     for (moving_entity, entity_type) in &moving_entities {
         let start_idx = match entity_type {
             MovementType::Walk => ground_directional_index_from(&Direction::BottomRight),
-            MovementType::Fly => tilepos_to_idx(0, 0, 6),
-            MovementType::Swim => tilepos_to_idx(0, 0, 1),
+            MovementType::Fly => fly_directional_index_from(&Direction::BottomRight),
+            MovementType::Swim => swim_directional_index_from(&Direction::BottomRight),
         };
 
-        let end_idx = start_idx
-            + match entity_type {
-                MovementType::Walk => 4,
-                MovementType::Fly => 6,
-                MovementType::Swim => 1,
-            };
+        let end_idx = start_idx + movement_type_len(entity_type);
 
         commands.entity(moving_entity).insert((
             AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
@@ -40,26 +35,42 @@ pub fn insert_animation_information(
     }
 }
 
+fn movement_type_len(entity_type: &MovementType) -> usize {
+    match entity_type {
+        MovementType::Walk => 4,
+        MovementType::Fly => 6,
+        MovementType::Swim => 1,
+    }
+}
+
 fn ground_directional_index_from(direction: &Direction) -> usize {
+    let num_ground_sprites_in_row = movement_type_len(&MovementType::Walk) as u32;
+
     match direction {
-        Direction::BottomLeft => tilepos_to_idx(7, 0, 4),
-        Direction::BottomRight => tilepos_to_idx(8, 0, 4),
-        Direction::TopLeft => tilepos_to_idx(5, 0, 4),
-        Direction::TopRight => tilepos_to_idx(6, 0, 4),
+        Direction::BottomLeft => tilepos_to_idx(7, 0, num_ground_sprites_in_row),
+        Direction::BottomRight => tilepos_to_idx(8, 0, num_ground_sprites_in_row),
+        Direction::TopLeft => tilepos_to_idx(5, 0, num_ground_sprites_in_row),
+        Direction::TopRight => tilepos_to_idx(6, 0, num_ground_sprites_in_row),
     }
 }
 
-//TODO: Use tilepos_to_idx for this like ground_directional_index_from.
 fn fly_directional_index_from(direction: &Direction) -> usize {
+    let num_flying_sprites_in_row = movement_type_len(&MovementType::Fly) as u32;
+
     match direction {
-        Direction::BottomLeft | Direction::TopLeft => 0,
-        Direction::BottomRight | Direction::TopRight => 1,
+        Direction::BottomLeft | Direction::TopLeft => {
+            tilepos_to_idx(0, 0, num_flying_sprites_in_row)
+        }
+        Direction::BottomRight | Direction::TopRight => {
+            tilepos_to_idx(1, 0, num_flying_sprites_in_row)
+        }
     }
 }
 
-//TODO: Use tilepos_to_idx for this like ground_directional_index_from.
-fn swim_directional_index_from(direction: &Direction) -> usize {
-    0
+fn swim_directional_index_from(_direction: &Direction) -> usize {
+    let num_swim_sprites_in_row = movement_type_len(&MovementType::Swim) as u32;
+
+    tilepos_to_idx(0, 0, num_swim_sprites_in_row)
 }
 
 fn direction_to_row_index(direction: &Direction, entity_type: &MovementType) -> usize {
@@ -85,8 +96,7 @@ pub fn change_sprite_direction(
         &mut moving_entities
     {
         animation_indices.start_idx = direction_to_row_index(entity_direction, entity_type);
-        //TODO: Make this +4 dependent upon entity type.
-        animation_indices.end_idx = animation_indices.start_idx + 4;
+        animation_indices.end_idx = animation_indices.start_idx + movement_type_len(entity_type);
         entity_spritesheet.index = animation_indices.start_idx;
     }
 }
