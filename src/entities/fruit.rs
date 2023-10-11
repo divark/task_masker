@@ -107,9 +107,10 @@ pub fn make_fruit_fall(
             continue;
         }
 
+        //TODO: Utilize Ground Graph to get Target Destination.
         let tile_translation: Vec3 = fruit_tile_pos
             .center_in_world(grid_size, map_type)
-            .extend(map_transform.translation.z);
+            .extend(12.0);
         let tile_transform = *map_transform * Transform::from_translation(tile_translation);
 
         fruit_pathing_target.0 = Some((
