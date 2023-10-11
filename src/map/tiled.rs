@@ -12,7 +12,7 @@
 //   * When the 'atlas' feature is enabled tilesets using a collection of images will be skipped.
 //   * Only finite tile layers are loaded. Infinite tile layers and object layers will be skipped.
 
-use std::io::Cursor;
+use std::{io::Cursor, collections::VecDeque};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -376,5 +376,55 @@ pub fn process_loaded_maps(
                 }
             }
         }
+    }
+}
+
+#[derive(Component)]
+pub struct BitsQueue(VecDeque<()>);
+
+pub fn identify_fruit_tiles(
+    mut tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,
+    map_info_query: Query<(&Transform, &TilemapGridSize, &TilemapType), Added<TilemapGridSize>>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) {
+    // return if map_info_query is empty.
+    // let (grid_size, map_type) = map_info_query.get_single().expect("Map should exist by now.");
+    let fruit_tiles_layer_num = 17;
+
+    let map_information = map_info_query
+        .iter()
+        .find(|map_info| map_info.0.translation.z == fruit_tiles_layer_num as f32);
+
+    if map_information.is_none() {
+        return;
+    }
+
+    let (map_transform, grid_size, map_type) = map_information.expect("identify_fruit_tiles: Map information should exist by now.");
+
+    let texture_handle = asset_server.load("Fruit(16x16).png");
+    let fruit_texture_atlas =
+            TextureAtlas::from_grid(texture_handle, Vec2::new(16.0, 16.0), 38, 6, None, None);
+    let fruit_texture_atlas_handle = texture_atlases.add(fruit_texture_atlas);
+    for (_entity, layer_number, tile_pos, tile_texture_index) in &mut tiles_query {
+        if layer_number.0 != fruit_tiles_layer_num {
+            continue;
+        }
+
+        let tile_translation = tile_pos
+            .center_in_world(grid_size, map_type)
+            .extend(map_transform.translation.z);
+        let tile_transform = *map_transform * Transform::from_translation(tile_translation);
+
+        let fruit_sprite = SpriteSheetBundle {
+            sprite: TextureAtlasSprite::new(tile_texture_index.0 as usize),
+            texture_atlas: fruit_texture_atlas_handle.clone(),
+            transform: tile_transform,
+            ..default()
+        };
+
+        commands.entity(_entity).despawn_recursive();
+        commands.spawn(fruit_sprite);
     }
 }

@@ -31,7 +31,7 @@ pub fn tilepos_to_idx(x: u32, y: u32, world_size: u32) -> usize {
 }
 
 /// Transforms a 1D array index into its associated 2-dimensional Tilepos index.
-fn idx_to_tilepos(mapped_idx: usize, world_size: u32) -> TilePos {
+pub fn idx_to_tilepos(mapped_idx: usize, world_size: u32) -> TilePos {
     let x = mapped_idx / world_size as usize;
     let y = mapped_idx - (world_size as usize * x);
 

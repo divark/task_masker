@@ -6,7 +6,7 @@ use super::{
         create_ground_graph, insert_pathing_information, move_entities, move_streamer,
         move_streamer_on_spacebar, update_current_tilepos, update_movement_target,
     },
-    tiled::{process_loaded_maps, TiledLoader, TiledMap},
+    tiled::{identify_fruit_tiles, process_loaded_maps, TiledLoader, TiledMap},
 };
 use crate::{spawn_map, GameState};
 
@@ -42,6 +42,6 @@ impl Plugin for TiledMapPlugin {
         app.add_asset::<TiledMap>()
             .add_asset_loader(TiledLoader)
             .add_systems(Startup, spawn_map)
-            .add_systems(Update, process_loaded_maps);
+            .add_systems(Update, (process_loaded_maps, identify_fruit_tiles));
     }
 }
