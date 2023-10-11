@@ -2,7 +2,10 @@ use audio::plugins::BackgroundMusicPlugin;
 use bevy::{prelude::*, window::WindowResolution};
 use bevy_ecs_tilemap::prelude::*;
 //use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use entities::streamer::spawn_player;
+use entities::{
+    plugins::{FruitPlugin, StreamerPlugin},
+    streamer::spawn_player,
+};
 use ui::plugins::{ChattingPlugin, StartupScreenPlugin};
 use visual::plugins::AnimationPlugin;
 
@@ -63,11 +66,13 @@ fn main() {
         .add_plugins(ChattingPlugin)
         .add_plugins(BackgroundMusicPlugin)
         .add_plugins(AnimationPlugin)
+        .add_plugins(StreamerPlugin)
+        .add_plugins(FruitPlugin)
         //.add_plugin(WorldInspectorPlugin::new())
         .add_systems(Startup, spawn_camera)
         .add_systems(
             Update,
-            (spawn_player, map::camera::movement).run_if(in_state(GameState::InGame)),
+            (map::camera::movement).run_if(in_state(GameState::InGame)),
         )
         .run();
 }

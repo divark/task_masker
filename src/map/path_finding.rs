@@ -189,10 +189,10 @@ pub fn create_ground_graph(
 }
 
 #[derive(Component, Deref, DerefMut)]
-pub struct Target(Option<(Vec3, TilePos)>);
+pub struct Target(pub Option<(Vec3, TilePos)>);
 
 #[derive(Component)]
-pub struct StartingPoint(Vec3, TilePos);
+pub struct StartingPoint(pub Vec3, pub TilePos);
 
 #[derive(Component, Deref, DerefMut)]
 pub struct Path(VecDeque<usize>);
@@ -264,7 +264,7 @@ pub enum Direction {
 }
 
 #[derive(Component, Deref, DerefMut)]
-pub struct MovementTimer(Timer);
+pub struct MovementTimer(pub Timer);
 
 pub fn insert_pathing_information(
     moving_entities: Query<(Entity, &Transform, &TilePos), (With<MovementType>, Without<Path>)>,
@@ -353,15 +353,12 @@ fn get_direction(current_pos: Transform, target_pos: Transform) -> Option<Direct
 const NUM_STEPS: f32 = 8.0;
 
 pub fn move_entities(
-    mut moving_entity: Query<
-        (
-            &mut Transform,
-            &mut Target,
-            &mut MovementTimer,
-            &mut StartingPoint,
-        ),
-        With<MovementType>,
-    >,
+    mut moving_entity: Query<(
+        &mut Transform,
+        &mut Target,
+        &mut MovementTimer,
+        &mut StartingPoint,
+    )>,
     time: Res<Time>,
 ) {
     for (mut current_pos, mut target, mut movement_timer, mut starting_point) in &mut moving_entity
