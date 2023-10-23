@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use crate::map::{
-    path_finding::{tilepos_to_idx, Ground, MovementTimer, NodeData, Path, StartingPoint, Target},
+    path_finding::{tilepos_to_idx, Ground, MovementTimer, NodeData, StartingPoint, Target},
     plugins::TilePosEvent,
     tiled::*,
 };
@@ -9,7 +9,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use rand::seq::IteratorRandom;
 
-use super::streamer::{Streamer, StreamerLabel};
+use super::streamer::StreamerLabel;
 
 #[derive(Component)]
 pub struct TriggerQueue(VecDeque<()>);
