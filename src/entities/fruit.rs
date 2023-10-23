@@ -1,14 +1,15 @@
 use std::collections::VecDeque;
 
 use crate::map::{
-    path_finding::{MovementTimer, StartingPoint, Target},
+    path_finding::{tilepos_to_idx, Ground, MovementTimer, NodeData, Path, StartingPoint, Target},
+    plugins::TilePosEvent,
     tiled::*,
 };
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use rand::seq::IteratorRandom;
 
-use super::streamer::StreamerLabel;
+use super::streamer::{Streamer, StreamerLabel};
 
 #[derive(Component)]
 pub struct TriggerQueue(VecDeque<()>);
@@ -70,8 +71,8 @@ pub fn replace_fruit_tiles(
             fruit_sprite,
             *tile_pos,
             FruitState::Hanging,
-            StartingPoint(tile_translation, *tile_pos),
-            RespawnPoint(StartingPoint(tile_translation, *tile_pos)),
+            StartingPoint(tile_transform.translation, *tile_pos),
+            RespawnPoint(StartingPoint(tile_transform.translation, *tile_pos)),
             Target(None),
             MovementTimer(Timer::from_seconds(0.05, TimerMode::Repeating)),
             TriggerQueue(VecDeque::new()),
@@ -81,8 +82,14 @@ pub fn replace_fruit_tiles(
 
 pub fn make_fruit_fall(
     mut fruit_query: Query<(&TilePos, &mut FruitState, &mut Target, &TriggerQueue)>,
-    map_info_query: Query<(&Transform, &TilemapGridSize, &TilemapType)>,
+    ground_graph_query: Query<&NodeData, With<Ground>>,
+    map_info_query: Query<(&Transform, &TilemapSize)>,
 ) {
+    if ground_graph_query.is_empty() {
+        return;
+    }
+
+    let ground_graph_nodes = ground_graph_query.single();
     let fallen_fruit_tiles_layer_num = 16 - 4;
 
     let map_information = map_info_query
@@ -93,7 +100,7 @@ pub fn make_fruit_fall(
         return;
     }
 
-    let (map_transform, grid_size, map_type) =
+    let (_map_transform, world_size) =
         map_information.expect("make_fruit_fall: Map information should exist by now.");
 
     for (fruit_tile_pos, mut fruit_state, mut fruit_pathing_target, fruit_trigger_queue) in
@@ -107,16 +114,14 @@ pub fn make_fruit_fall(
             continue;
         }
 
-        //TODO: Utilize Ground Graph to get Target Destination.
-        let tile_translation: Vec3 = fruit_tile_pos
-            .center_in_world(grid_size, map_type)
-            .extend(12.0);
-        let tile_transform = *map_transform * Transform::from_translation(tile_translation);
+        let tile_target_pos = TilePos::new(fruit_tile_pos.x + 3, fruit_tile_pos.y - 3);
+        let tiled_target_pos =
+            tiledpos_to_tilepos(tile_target_pos.x, tile_target_pos.y, world_size);
+        let tile_translation: Vec3 = ground_graph_nodes.0
+            [tilepos_to_idx(tiled_target_pos.x, tiled_target_pos.y, world_size.x)];
+        let tile_transform = Transform::from_translation(tile_translation);
 
-        fruit_pathing_target.0 = Some((
-            tile_translation,
-            TilePos::new(fruit_tile_pos.x + 3, fruit_tile_pos.y - 3),
-        ));
+        fruit_pathing_target.0 = Some((tile_transform.translation, tiled_target_pos));
         *fruit_state = FruitState::Falling;
     }
 }
@@ -136,30 +141,21 @@ pub fn make_fruit_dropped(mut fruit_query: Query<(&mut FruitState, &Target)>) {
 }
 
 pub fn pathfind_streamer_to_fruit(
-    fruit_query: Query<(&FruitState, &TilePos, &Transform)>,
-    mut streamer_query: Query<&mut Target, With<StreamerLabel>>,
+    fruit_query: Query<(&FruitState, &TilePos), Changed<FruitState>>,
+    mut streamer_destination_request_writer: EventWriter<TilePosEvent>,
 ) {
-    if streamer_query.is_empty() {
-        return;
-    }
-
-    let mut streamer_pathfinding_target = streamer_query.single_mut();
-    if streamer_pathfinding_target.is_some() {
-        return;
-    }
-
-    for (fruit_state, fruit_tile_pos, fruit_transform) in fruit_query.iter() {
+    for (fruit_state, fruit_tile_pos) in fruit_query.iter() {
         if *fruit_state != FruitState::Dropped {
             continue;
         }
 
-        streamer_pathfinding_target.0 = Some((fruit_transform.translation, *fruit_tile_pos));
+        streamer_destination_request_writer.send(TilePosEvent(*fruit_tile_pos));
     }
 }
 
 pub fn claim_fruit_from_streamer(
     mut fruit_query: Query<(&TilePos, &mut FruitState, &mut Visibility)>,
-    streamer_query: Query<&TilePos, With<StreamerLabel>>,
+    streamer_query: Query<&TilePos, (With<StreamerLabel>, Changed<TilePos>)>,
 ) {
     if streamer_query.is_empty() {
         return;
@@ -182,18 +178,23 @@ pub fn claim_fruit_from_streamer(
 }
 
 pub fn respawn_fruit(
-    mut fruit_query: Query<(
-        &mut Transform,
-        &mut TilePos,
-        &RespawnPoint,
-        &mut FruitState,
-        &mut Visibility,
-        &mut TriggerQueue,
-    )>,
+    mut fruit_query: Query<
+        (
+            &mut Transform,
+            &mut TilePos,
+            &mut StartingPoint,
+            &RespawnPoint,
+            &mut FruitState,
+            &mut Visibility,
+            &mut TriggerQueue,
+        ),
+        Changed<FruitState>,
+    >,
 ) {
     for (
         mut fruit_transform,
         mut fruit_tile_pos,
+        mut fruit_starting_point,
         fruit_respawn_point,
         mut fruit_state,
         mut fruit_sprite_visibility,
@@ -206,6 +207,7 @@ pub fn respawn_fruit(
 
         fruit_trigger_queue.0.pop_front();
         *fruit_tile_pos = fruit_respawn_point.0 .1;
+        *fruit_starting_point = StartingPoint(fruit_respawn_point.0 .0, fruit_respawn_point.0 .1);
         *fruit_transform = Transform::from_translation(fruit_respawn_point.0 .0);
         *fruit_sprite_visibility = Visibility::Visible;
         // Spawn Fruit Popping in Noise

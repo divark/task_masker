@@ -14,7 +14,7 @@ use super::{
 pub struct Ground;
 
 #[derive(Component)]
-pub struct NodeData(Vec<Vec3>);
+pub struct NodeData(pub Vec<Vec3>);
 
 #[derive(Component, PartialEq, Debug)]
 pub struct NodeEdges(Vec<Vec<usize>>);
@@ -195,7 +195,7 @@ pub struct Target(pub Option<(Vec3, TilePos)>);
 pub struct StartingPoint(pub Vec3, pub TilePos);
 
 #[derive(Component, Deref, DerefMut)]
-pub struct Path(VecDeque<usize>);
+pub struct Path(pub VecDeque<usize>);
 
 pub fn get_path(
     source: &TilePos,
