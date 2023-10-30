@@ -5,7 +5,7 @@ use crate::map::{
     plugins::TilePosEvent,
     tiled::*,
 };
-use bevy::prelude::*;
+use bevy::{audio::PlaybackMode, prelude::*};
 use bevy_ecs_tilemap::prelude::*;
 use rand::seq::IteratorRandom;
 
@@ -84,6 +84,8 @@ pub fn make_fruit_fall(
     mut fruit_query: Query<(&TilePos, &mut FruitState, &mut Target, &TriggerQueue)>,
     ground_graph_query: Query<&NodeData, With<Ground>>,
     map_info_query: Query<(&Transform, &TilemapSize)>,
+    asset_loader: Res<AssetServer>,
+    mut commands: Commands,
 ) {
     if ground_graph_query.is_empty() {
         return;
@@ -123,6 +125,16 @@ pub fn make_fruit_fall(
 
         fruit_pathing_target.0 = Some((tile_transform.translation, tiled_target_pos));
         *fruit_state = FruitState::Falling;
+
+        let fruit_pickedup_sound = AudioBundle {
+            source: asset_loader.load("sfx/fruit_dropped.wav"),
+            settings: PlaybackSettings {
+                mode: PlaybackMode::Despawn,
+                ..default()
+            },
+        };
+
+        commands.spawn(fruit_pickedup_sound);
     }
 }
 
@@ -156,6 +168,8 @@ pub fn pathfind_streamer_to_fruit(
 pub fn claim_fruit_from_streamer(
     mut fruit_query: Query<(&TilePos, &mut FruitState, &mut Visibility)>,
     streamer_query: Query<&TilePos, (With<StreamerLabel>, Changed<TilePos>)>,
+    asset_loader: Res<AssetServer>,
+    mut commands: Commands,
 ) {
     if streamer_query.is_empty() {
         return;
@@ -173,7 +187,16 @@ pub fn claim_fruit_from_streamer(
 
         *fruit_state = FruitState::Claimed;
         *fruit_sprite_visibility = Visibility::Hidden;
-        // Spawn Fruit Claimed noise here.
+
+        let fruit_pickedup_sound = AudioBundle {
+            source: asset_loader.load("sfx/fruit_pickedup.wav"),
+            settings: PlaybackSettings {
+                mode: PlaybackMode::Despawn,
+                ..default()
+            },
+        };
+
+        commands.spawn(fruit_pickedup_sound);
     }
 }
 
