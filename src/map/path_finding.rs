@@ -266,6 +266,9 @@ pub enum Direction {
 #[derive(Component, Deref, DerefMut)]
 pub struct MovementTimer(pub Timer);
 
+#[derive(Component, Deref, DerefMut)]
+pub struct DestinationQueue(VecDeque<TilePos>);
+
 pub fn insert_pathing_information(
     moving_entities: Query<(Entity, &Transform, &TilePos), (With<MovementType>, Without<Path>)>,
     mut spawner: Commands,
@@ -273,6 +276,7 @@ pub fn insert_pathing_information(
     for (moving_entity, entity_transform, entity_tilepos) in &moving_entities {
         spawner.entity(moving_entity).insert((
             Path(VecDeque::new()),
+            DestinationQueue(VecDeque::new()),
             StartingPoint(entity_transform.translation, *entity_tilepos),
             Target(None),
             Direction::TopRight,
@@ -404,9 +408,22 @@ pub fn update_current_tilepos(
     }
 }
 
-pub fn move_streamer(
+pub fn queue_destination_for_streamer(
     mut destination_request_listener: EventReader<TilePosEvent>,
-    mut streamer_entity: Query<(&mut Path, &TilePos), With<StreamerLabel>>,
+    mut streamer_entity: Query<(&mut DestinationQueue), With<StreamerLabel>>,
+) {
+    if streamer_entity.is_empty() {
+        return;
+    }
+
+    let mut streamer_destination_queue = streamer_entity.single_mut();
+    for destination_tilepos in &mut destination_request_listener {
+        streamer_destination_queue.push_back(destination_tilepos.0);
+    }
+}
+
+pub fn move_streamer(
+    mut streamer_entity: Query<(&mut Path, &TilePos, &mut DestinationQueue), With<StreamerLabel>>,
     ground_graph: Query<&NodeEdges, With<Ground>>,
     map_information: Query<(&TilemapSize, &Transform)>,
 ) {
@@ -435,13 +452,26 @@ pub fn move_streamer(
         })
         .expect("Could not find largest world size. Is the map loaded?");
 
-    for destination_request in destination_request_listener.iter() {
-        let (mut streamer_path, streamer_tile_pos) = streamer_entity
-            .get_single_mut()
-            .expect("The streamer should be loaded.");
+    let (mut streamer_path, streamer_tile_pos, mut streamer_destination_queue) = streamer_entity
+        .get_single_mut()
+        .expect("The streamer should be loaded.");
 
-        *streamer_path = get_path(streamer_tile_pos, destination_request, map_size, edges);
+    if !streamer_path.is_empty() {
+        return;
     }
+
+    if streamer_destination_queue.is_empty() {
+        return;
+    }
+
+    *streamer_path = get_path(
+        streamer_tile_pos,
+        &streamer_destination_queue.pop_front().expect(
+            "move_streamer: Destination queue for streamer should have been filled with something.",
+        ),
+        map_size,
+        edges,
+    );
 }
 
 pub fn move_streamer_on_spacebar(

@@ -1,3 +1,4 @@
+use crate::entities::crop::*;
 use crate::entities::fruit::*;
 use crate::{spawn_player, GameState};
 use bevy::prelude::*;
@@ -26,6 +27,25 @@ impl Plugin for FruitPlugin {
                 claim_fruit_from_streamer,
                 respawn_fruit,
                 drop_random_fruit_on_f_key,
+            ),
+        );
+    }
+}
+
+#[derive(Default)]
+pub struct CropPlugin;
+
+impl Plugin for CropPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_event::<NewSubscriber>();
+        app.add_systems(
+            Update,
+            (
+                replace_crop_tiles,
+                grow_crop_on_c_key,
+                grow_crops,
+                inform_streamer_of_grown_crops,
+                pick_up_crops,
             ),
         );
     }

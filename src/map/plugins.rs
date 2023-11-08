@@ -2,10 +2,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::tiles::TilePos;
 
 use super::{
-    path_finding::{
-        create_ground_graph, insert_pathing_information, move_entities, move_streamer,
-        move_streamer_on_spacebar, update_current_tilepos, update_movement_target,
-    },
+    path_finding::*,
     tiled::{process_loaded_maps, TiledLoader, TiledMap},
 };
 use crate::{spawn_map, GameState};
@@ -27,6 +24,7 @@ impl Plugin for PathFindingPlugin {
                 move_entities,
                 move_streamer,
                 move_streamer_on_spacebar,
+                queue_destination_for_streamer,
                 update_current_tilepos,
             )
                 .run_if(in_state(GameState::InGame)),
