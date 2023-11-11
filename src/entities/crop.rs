@@ -22,8 +22,8 @@ pub struct CropEndIdx(usize);
 pub struct NewSubscriber;
 
 const CROP_START_ROW_RANGE: [usize; 6] = [1, 3, 5, 7, 9, 11];
-const CROP_COL_OFFSET: usize = 3;
-const CROP_NUM_STAGES: usize = 6;
+const CROP_COL_OFFSET: usize = 2;
+const CROP_NUM_STAGES: usize = 7;
 
 /// Maps a 2-dimensional (x, y) index into a 1-dimensional array index.
 pub fn two_dim_to_one_dim_idx(x: usize, y: usize, num_cols: usize) -> usize {
