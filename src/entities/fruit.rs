@@ -161,13 +161,13 @@ pub fn pathfind_streamer_to_fruit(
             continue;
         }
 
-        streamer_destination_request_writer.send(TilePosEvent(*fruit_tile_pos));
+        streamer_destination_request_writer.send(TilePosEvent::new(*fruit_tile_pos, true));
     }
 }
 
 pub fn claim_fruit_from_streamer(
     mut fruit_query: Query<(&TilePos, &mut FruitState, &mut Visibility)>,
-    streamer_query: Query<&TilePos, (With<StreamerLabel>, Changed<TilePos>)>,
+    streamer_query: Query<&TilePos, With<StreamerLabel>>,
     asset_loader: Res<AssetServer>,
     mut commands: Commands,
 ) {

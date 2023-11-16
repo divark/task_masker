@@ -252,7 +252,7 @@ pub fn get_path(
         path.push_front(mapped_destination_idx);
     }
 
-    Path(path)
+    Path(path.split_off(1))
 }
 
 #[derive(Component, PartialEq, PartialOrd, Debug)]
@@ -410,20 +410,27 @@ pub fn update_current_tilepos(
 
 pub fn queue_destination_for_streamer(
     mut destination_request_listener: EventReader<TilePosEvent>,
-    mut streamer_entity: Query<(&mut DestinationQueue), With<StreamerLabel>>,
+    mut streamer_entity: Query<&mut DestinationQueue, With<StreamerLabel>>,
 ) {
     if streamer_entity.is_empty() {
         return;
     }
 
     let mut streamer_destination_queue = streamer_entity.single_mut();
-    for destination_tilepos in &mut destination_request_listener {
-        streamer_destination_queue.push_back(destination_tilepos.0);
+    for destination_info in &mut destination_request_listener {
+        if !destination_info.queued && !streamer_destination_queue.is_empty() {
+            continue;
+        }
+
+        streamer_destination_queue.push_back(destination_info.destination);
     }
 }
 
 pub fn move_streamer(
-    mut streamer_entity: Query<(&mut Path, &TilePos, &mut DestinationQueue), With<StreamerLabel>>,
+    mut streamer_entity: Query<
+        (&mut Path, &StartingPoint, &mut DestinationQueue),
+        With<StreamerLabel>,
+    >,
     ground_graph: Query<&NodeEdges, With<Ground>>,
     map_information: Query<(&TilemapSize, &Transform)>,
 ) {
@@ -465,7 +472,7 @@ pub fn move_streamer(
     }
 
     *streamer_path = get_path(
-        streamer_tile_pos,
+        &streamer_tile_pos.1,
         &streamer_destination_queue.pop_front().expect(
             "move_streamer: Destination queue for streamer should have been filled with something.",
         ),
@@ -479,7 +486,7 @@ pub fn move_streamer_on_spacebar(
     mut destination_request_writer: EventWriter<TilePosEvent>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
-        destination_request_writer.send(TilePosEvent(TilePos { x: 64, y: 52 }));
+        destination_request_writer.send(TilePosEvent::new(TilePos { x: 64, y: 52 }, true));
         //{ x: 64, y: 52 });
     }
 }

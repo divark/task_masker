@@ -7,8 +7,20 @@ use super::{
 };
 use crate::{spawn_map, GameState};
 
-#[derive(Event, Deref, DerefMut)]
-pub struct TilePosEvent(pub TilePos);
+#[derive(Event)]
+pub struct TilePosEvent {
+    pub destination: TilePos,
+    pub queued: bool,
+}
+
+impl TilePosEvent {
+    pub fn new(destination: TilePos, queued: bool) -> Self {
+        TilePosEvent {
+            destination,
+            queued,
+        }
+    }
+}
 
 #[derive(Default)]
 pub struct PathFindingPlugin;
