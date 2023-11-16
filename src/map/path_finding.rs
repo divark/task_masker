@@ -380,8 +380,8 @@ pub fn move_entities(
         let target_pos = Transform::from_translation(target_vec);
 
         if *current_pos == target_pos {
-            target.0 = None;
             *starting_point = StartingPoint(target_vec, target_tile_pos);
+            target.0 = None;
             continue;
         }
 
@@ -428,7 +428,7 @@ pub fn queue_destination_for_streamer(
 
 pub fn move_streamer(
     mut streamer_entity: Query<
-        (&mut Path, &StartingPoint, &mut DestinationQueue),
+        (&mut Path, &StartingPoint, &Target, &mut DestinationQueue),
         With<StreamerLabel>,
     >,
     ground_graph: Query<&NodeEdges, With<Ground>>,
@@ -459,11 +459,12 @@ pub fn move_streamer(
         })
         .expect("Could not find largest world size. Is the map loaded?");
 
-    let (mut streamer_path, streamer_tile_pos, mut streamer_destination_queue) = streamer_entity
-        .get_single_mut()
-        .expect("The streamer should be loaded.");
+    let (mut streamer_path, streamer_tile_pos, streamer_target, mut streamer_destination_queue) =
+        streamer_entity
+            .get_single_mut()
+            .expect("The streamer should be loaded.");
 
-    if !streamer_path.is_empty() {
+    if !streamer_path.is_empty() || streamer_target.is_some() {
         return;
     }
 
