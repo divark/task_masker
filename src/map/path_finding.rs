@@ -252,7 +252,7 @@ pub fn get_path(
         path.push_front(mapped_destination_idx);
     }
 
-    Path(path.split_off(1))
+    Path(path)
 }
 
 #[derive(Component, PartialEq, PartialOrd, Debug)]

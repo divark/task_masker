@@ -167,7 +167,7 @@ pub fn pathfind_streamer_to_fruit(
 
 pub fn claim_fruit_from_streamer(
     mut fruit_query: Query<(&TilePos, &mut FruitState, &mut Visibility)>,
-    streamer_query: Query<&TilePos, With<StreamerLabel>>,
+    streamer_query: Query<&TilePos, (With<StreamerLabel>, Changed<TilePos>)>,
     asset_loader: Res<AssetServer>,
     mut commands: Commands,
 ) {

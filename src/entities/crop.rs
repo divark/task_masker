@@ -13,7 +13,6 @@ use super::streamer::StreamerLabel;
 pub enum CropState {
     Growing,
     Grown,
-    Ripe,
 }
 
 #[derive(Component)]
@@ -117,14 +116,14 @@ pub fn grow_crops(
 pub struct Visiting;
 
 pub fn inform_streamer_of_grown_crops(
-    mut crop_query: Query<(&mut CropState, &TilePos), Without<Visiting>>,
+    crop_query: Query<(&CropState, &TilePos), Without<Visiting>>,
     mut streamer_destination_broadcast: EventWriter<TilePosEvent>,
 ) {
     let crop_to_pick_up = crop_query
-        .iter_mut()
+        .iter()
         .find(|crop_info| *crop_info.0 == CropState::Grown);
 
-    if let Some(mut crop_tile_pos) = crop_to_pick_up {
+    if let Some(crop_tile_pos) = crop_to_pick_up {
         streamer_destination_broadcast.send(TilePosEvent::new(*crop_tile_pos.1, false));
     }
 }
