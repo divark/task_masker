@@ -97,7 +97,7 @@ pub fn grow_crops(
     mut subscriber_reader: EventReader<NewSubscriber>,
     mut crop_query: Query<(&mut CropState, &mut TextureAtlasSprite, &mut CropEndIdx)>,
 ) {
-    for _subscriber_msg in subscriber_reader.iter() {
+    for _subscriber_msg in subscriber_reader.read() {
         for (mut crop_state, mut crop_texture_atlas, crop_end_idx) in &mut crop_query {
             if *crop_state != CropState::Growing {
                 continue;

@@ -417,7 +417,7 @@ pub fn queue_destination_for_streamer(
     }
 
     let mut streamer_destination_queue = streamer_entity.single_mut();
-    for destination_info in &mut destination_request_listener {
+    for destination_info in &mut destination_request_listener.read() {
         if !destination_info.queued && !streamer_destination_queue.is_empty() {
             continue;
         }

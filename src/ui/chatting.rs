@@ -80,7 +80,7 @@ pub fn setup_chatting_from_msg(
         .expect("Msg elements should be attached by now.");
 
     let recent_msg = msg_receiver
-        .iter()
+        .read()
         .next()
         .expect("Should have a message pending.");
 
