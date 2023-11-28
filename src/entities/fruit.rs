@@ -12,7 +12,7 @@ use rand::seq::IteratorRandom;
 use super::streamer::StreamerLabel;
 
 #[derive(Component)]
-pub struct TriggerQueue(VecDeque<()>);
+pub struct TriggerQueue(pub VecDeque<()>);
 
 #[derive(Component, PartialEq, Eq)]
 pub enum FruitState {
@@ -240,7 +240,7 @@ pub fn respawn_fruit(
 
 pub fn drop_random_fruit_on_f_key(
     keyboard_input: Res<Input<KeyCode>>,
-    mut fruit_query: Query<(&mut TriggerQueue,)>,
+    mut fruit_query: Query<&mut TriggerQueue, With<FruitState>>,
 ) {
     if fruit_query.is_empty() {
         return;
@@ -249,8 +249,7 @@ pub fn drop_random_fruit_on_f_key(
     let mut random_fruit_queue = fruit_query
         .iter_mut()
         .choose(&mut rand::thread_rng())
-        .expect("Fruit should exist.")
-        .0;
+        .expect("Fruit should exist.");
 
     if keyboard_input.just_pressed(KeyCode::F) {
         random_fruit_queue.0.push_back(());

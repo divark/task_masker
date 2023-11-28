@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use bevy_ecs_tilemap::tiles::{TilePos, TileTextureIndex};
@@ -7,6 +9,7 @@ use crate::map::path_finding::{tilepos_to_idx, Path};
 use crate::map::plugins::TilePosEvent;
 use crate::map::tiled::{tiledpos_to_tilepos, LayerNumber};
 
+use super::fruit::TriggerQueue;
 use super::streamer::StreamerLabel;
 
 #[derive(Component, PartialEq, PartialOrd)]
@@ -21,14 +24,7 @@ pub struct CropEndIdx(usize);
 #[derive(Event)]
 pub struct NewSubscriber;
 
-const CROP_START_ROW_RANGE: [usize; 6] = [1, 3, 5, 7, 9, 11];
-const CROP_COL_OFFSET: usize = 2;
 const CROP_NUM_STAGES: usize = 7;
-
-/// Maps a 2-dimensional (x, y) index into a 1-dimensional array index.
-pub fn two_dim_to_one_dim_idx(x: usize, y: usize, num_cols: usize) -> usize {
-    (num_cols * x) + y
-}
 
 pub fn replace_crop_tiles(
     mut tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,
@@ -80,33 +76,50 @@ pub fn replace_crop_tiles(
             tiledpos_to_tilepos(tile_pos.x, tile_pos.y, world_size),
             CropState::Growing,
             CropEndIdx(tile_texture_index.0 as usize + CROP_NUM_STAGES - 1),
+            TriggerQueue(VecDeque::new()),
         ));
     }
 }
 
 pub fn grow_crop_on_c_key(
     keyboard_input: Res<Input<KeyCode>>,
-    mut subscriber_broadcaster: EventWriter<NewSubscriber>,
+    mut crop_queues: Query<&mut TriggerQueue, With<CropState>>,
 ) {
+    if crop_queues.is_empty() {
+        return;
+    }
+
+    let mut random_crop_queue = crop_queues
+        .iter_mut()
+        .choose(&mut rand::thread_rng())
+        .expect("Crop should exist by now.");
+
     if keyboard_input.just_pressed(KeyCode::C) {
-        subscriber_broadcaster.send(NewSubscriber);
+        random_crop_queue.0.push_back(());
     }
 }
 
 pub fn grow_crops(
-    mut subscriber_reader: EventReader<NewSubscriber>,
-    mut crop_query: Query<(&mut CropState, &mut TextureAtlasSprite, &mut CropEndIdx)>,
+    mut crop_query: Query<
+        (
+            &mut TriggerQueue,
+            &mut CropState,
+            &mut TextureAtlasSprite,
+            &mut CropEndIdx,
+        ),
+        Changed<TriggerQueue>,
+    >,
 ) {
-    for _subscriber_msg in subscriber_reader.read() {
-        for (mut crop_state, mut crop_texture_atlas, crop_end_idx) in &mut crop_query {
-            if *crop_state != CropState::Growing {
-                continue;
-            }
+    for (mut crop_queue, mut crop_state, mut crop_texture_atlas, crop_end_idx) in &mut crop_query {
+        if *crop_state != CropState::Growing {
+            continue;
+        }
 
-            crop_texture_atlas.index += 1;
-            if crop_texture_atlas.index >= crop_end_idx.0 {
-                *crop_state = CropState::Grown;
-            }
+        crop_queue.0.pop_front();
+
+        crop_texture_atlas.index += 1;
+        if crop_texture_atlas.index >= crop_end_idx.0 {
+            *crop_state = CropState::Grown;
         }
     }
 }
@@ -176,13 +189,7 @@ pub fn mark_crop_tile_visited(
 }
 
 pub fn pick_up_crops(
-    mut crop_query: Query<(
-        Entity,
-        &mut CropState,
-        &mut TextureAtlasSprite,
-        &mut CropEndIdx,
-        &TilePos,
-    )>,
+    mut crop_query: Query<(Entity, &mut CropState, &mut TextureAtlasSprite, &TilePos)>,
     streamer_query: Query<&TilePos, (With<StreamerLabel>, Changed<TilePos>)>,
     mut commands: Commands,
 ) {
@@ -192,15 +199,7 @@ pub fn pick_up_crops(
 
     let streamer_tile_pos = streamer_query.single();
 
-    let crop_start_col_idx = CROP_COL_OFFSET;
-    let crop_start_row_idx = *CROP_START_ROW_RANGE
-        .iter()
-        .choose(&mut rand::thread_rng())
-        .expect("grow_crops: Could not pick a random column number for a crop.");
-
-    for (crop_entity, mut crop_state, mut crop_texture_atlas, mut crop_end_idx, crop_tile_pos) in
-        &mut crop_query
-    {
+    for (crop_entity, mut crop_state, mut crop_texture_atlas, crop_tile_pos) in &mut crop_query {
         if *crop_state != CropState::Grown {
             continue;
         }
@@ -209,13 +208,7 @@ pub fn pick_up_crops(
             continue;
         }
 
-        crop_texture_atlas.index =
-            two_dim_to_one_dim_idx(crop_start_row_idx, crop_start_col_idx, 16);
-        crop_end_idx.0 = two_dim_to_one_dim_idx(
-            crop_start_row_idx,
-            crop_start_col_idx + CROP_NUM_STAGES - 1,
-            16,
-        );
+        crop_texture_atlas.index -= CROP_NUM_STAGES - 1;
         *crop_state = CropState::Growing;
 
         commands.entity(crop_entity).remove::<Visiting>();

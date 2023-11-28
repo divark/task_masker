@@ -1,4 +1,5 @@
 /target
+.sublimetext/*
 .vscode/*
 .DS_Store
 
