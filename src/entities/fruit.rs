@@ -32,7 +32,7 @@ pub fn replace_fruit_tiles(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
-    let fruit_tiles_layer_num = 16;
+    let fruit_tiles_layer_num = 17;
 
     let map_information = map_info_query
         .iter()
@@ -126,7 +126,7 @@ pub fn make_fruit_fall(
         fruit_pathing_target.0 = Some((tile_transform.translation, tiled_target_pos));
         *fruit_state = FruitState::Falling;
 
-        let fruit_pickedup_sound = AudioBundle {
+        let fruit_fall_sound = AudioBundle {
             source: asset_loader.load("sfx/fruit_dropped.wav"),
             settings: PlaybackSettings {
                 mode: PlaybackMode::Despawn,
@@ -134,7 +134,7 @@ pub fn make_fruit_fall(
             },
         };
 
-        commands.spawn(fruit_pickedup_sound);
+        commands.spawn(fruit_fall_sound);
     }
 }
 

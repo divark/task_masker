@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 
+use bevy::audio::PlaybackMode;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use bevy_ecs_tilemap::tiles::{TilePos, TileTextureIndex};
@@ -109,9 +110,15 @@ pub fn grow_crops(
         ),
         Changed<TriggerQueue>,
     >,
+    mut commands: Commands,
+    asset_loader: Res<AssetServer>,
 ) {
     for (mut crop_queue, mut crop_state, mut crop_texture_atlas, crop_end_idx) in &mut crop_query {
         if *crop_state != CropState::Growing {
+            continue;
+        }
+
+        if crop_queue.0.is_empty() {
             continue;
         }
 
@@ -121,6 +128,16 @@ pub fn grow_crops(
         if crop_texture_atlas.index >= crop_end_idx.0 {
             *crop_state = CropState::Grown;
         }
+
+        let crop_grow_sound = AudioBundle {
+            source: asset_loader.load("sfx/crop_grow.wav"),
+            settings: PlaybackSettings {
+                mode: PlaybackMode::Despawn,
+                ..default()
+            },
+        };
+
+        commands.spawn(crop_grow_sound);
     }
 }
 
@@ -192,6 +209,7 @@ pub fn pick_up_crops(
     mut crop_query: Query<(Entity, &mut CropState, &mut TextureAtlasSprite, &TilePos)>,
     streamer_query: Query<&TilePos, (With<StreamerLabel>, Changed<TilePos>)>,
     mut commands: Commands,
+    asset_loader: Res<AssetServer>,
 ) {
     if streamer_query.is_empty() {
         return;
@@ -212,5 +230,15 @@ pub fn pick_up_crops(
         *crop_state = CropState::Growing;
 
         commands.entity(crop_entity).remove::<Visiting>();
+
+        let crop_pickedup_sound = AudioBundle {
+            source: asset_loader.load("sfx/crop_pickedup.wav"),
+            settings: PlaybackSettings {
+                mode: PlaybackMode::Despawn,
+                ..default()
+            },
+        };
+
+        commands.spawn(crop_pickedup_sound);
     }
 }

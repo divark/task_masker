@@ -24,7 +24,7 @@ pub enum GameState {
 }
 
 fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let map_handle: Handle<map::tiled::TiledMap> = asset_server.load("TM_v2.tmx");
+    let map_handle: Handle<map::tiled::TiledMap> = asset_server.load("TM_v3.tmx");
 
     commands.spawn(map::tiled::TiledMapBundle {
         tiled_map: map_handle,
