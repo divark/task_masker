@@ -10,15 +10,11 @@ use crate::{spawn_map, GameState};
 #[derive(Event)]
 pub struct TilePosEvent {
     pub destination: TilePos,
-    pub queued: bool,
 }
 
 impl TilePosEvent {
-    pub fn new(destination: TilePos, queued: bool) -> Self {
-        TilePosEvent {
-            destination,
-            queued,
-        }
+    pub fn new(destination: TilePos) -> Self {
+        TilePosEvent { destination }
     }
 }
 

@@ -6,7 +6,6 @@ use bevy_ecs_tilemap::prelude::*;
 use bevy_ecs_tilemap::tiles::{TilePos, TileTextureIndex};
 use rand::seq::IteratorRandom;
 
-use crate::map::path_finding::{tilepos_to_idx, Path};
 use crate::map::plugins::TilePosEvent;
 use crate::map::tiled::{tiledpos_to_tilepos, LayerNumber};
 
@@ -101,15 +100,12 @@ pub fn grow_crop_on_c_key(
 }
 
 pub fn grow_crops(
-    mut crop_query: Query<
-        (
-            &mut TriggerQueue,
-            &mut CropState,
-            &mut TextureAtlasSprite,
-            &mut CropEndIdx,
-        ),
-        Changed<TriggerQueue>,
-    >,
+    mut crop_query: Query<(
+        &mut TriggerQueue,
+        &mut CropState,
+        &mut TextureAtlasSprite,
+        &mut CropEndIdx,
+    )>,
     mut commands: Commands,
     asset_loader: Res<AssetServer>,
 ) {
@@ -141,72 +137,21 @@ pub fn grow_crops(
     }
 }
 
-#[derive(Component)]
-#[component(storage = "SparseSet")]
-pub struct Visiting;
-
-pub fn inform_streamer_of_grown_crops(
-    crop_query: Query<(&CropState, &TilePos), Without<Visiting>>,
+pub fn pathfind_streamer_to_crops(
+    crop_query: Query<(&CropState, &TilePos), Changed<CropState>>,
     mut streamer_destination_broadcast: EventWriter<TilePosEvent>,
 ) {
-    let crop_to_pick_up = crop_query
-        .iter()
-        .find(|crop_info| *crop_info.0 == CropState::Grown);
+    for (crop_state, crop_tile_pos) in &crop_query {
+        if *crop_state != CropState::Grown {
+            continue;
+        }
 
-    if let Some(crop_tile_pos) = crop_to_pick_up {
-        streamer_destination_broadcast.send(TilePosEvent::new(*crop_tile_pos.1, false));
-    }
-}
-
-pub fn mark_crop_tile_visited(
-    crop_query: Query<(Entity, &TilePos), (With<CropState>, Without<Visiting>)>,
-    streamer_path_query: Query<&Path, (With<StreamerLabel>, Changed<Path>)>,
-    map_info_query: Query<&TilemapSize>,
-    mut commands: Commands,
-) {
-    if streamer_path_query.is_empty() {
-        return;
-    }
-
-    let streamer_path = streamer_path_query.single();
-    if streamer_path.back().is_none() {
-        return;
-    }
-
-    let added_tile_pos = streamer_path
-        .back()
-        .expect("mark_crop_tile_visited: Streamer Path should have something.");
-
-    let map_size = map_info_query
-        .iter()
-        .next()
-        .expect("mark_crop_tile_visited: World should be populated by now.");
-    if map_info_query.is_empty() {
-        return;
-    }
-
-    let mut crop_indexes: Vec<(usize, Entity)> = crop_query
-        .iter()
-        .map(|crop_info| {
-            (
-                tilepos_to_idx(crop_info.1.x, crop_info.1.y, map_size.y),
-                crop_info.0,
-            )
-        })
-        .collect();
-
-    crop_indexes.sort_unstable_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-
-    let tile_found = crop_indexes.binary_search_by(|probe| probe.0.cmp(added_tile_pos));
-    if let Ok(crop_tile_idx) = tile_found {
-        let crop_entity = crop_indexes[crop_tile_idx].1;
-
-        commands.entity(crop_entity).insert(Visiting);
+        streamer_destination_broadcast.send(TilePosEvent::new(*crop_tile_pos));
     }
 }
 
 pub fn pick_up_crops(
-    mut crop_query: Query<(Entity, &mut CropState, &mut TextureAtlasSprite, &TilePos)>,
+    mut crop_query: Query<(&mut CropState, &mut TextureAtlasSprite, &TilePos)>,
     streamer_query: Query<&TilePos, (With<StreamerLabel>, Changed<TilePos>)>,
     mut commands: Commands,
     asset_loader: Res<AssetServer>,
@@ -217,7 +162,7 @@ pub fn pick_up_crops(
 
     let streamer_tile_pos = streamer_query.single();
 
-    for (crop_entity, mut crop_state, mut crop_texture_atlas, crop_tile_pos) in &mut crop_query {
+    for (mut crop_state, mut crop_texture_atlas, crop_tile_pos) in &mut crop_query {
         if *crop_state != CropState::Grown {
             continue;
         }
@@ -228,8 +173,6 @@ pub fn pick_up_crops(
 
         crop_texture_atlas.index -= CROP_NUM_STAGES - 1;
         *crop_state = CropState::Growing;
-
-        commands.entity(crop_entity).remove::<Visiting>();
 
         let crop_pickedup_sound = AudioBundle {
             source: asset_loader.load("sfx/crop_pickedup.wav"),

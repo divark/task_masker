@@ -24,7 +24,6 @@ impl Plugin for FruitPlugin {
                 make_fruit_fall,
                 make_fruit_dropped,
                 pathfind_streamer_to_fruit,
-                mark_crop_tile_visited,
                 claim_fruit_from_streamer,
                 respawn_fruit,
                 drop_random_fruit_on_f_key,
@@ -45,7 +44,7 @@ impl Plugin for CropPlugin {
                 replace_crop_tiles,
                 grow_crop_on_c_key,
                 grow_crops,
-                inform_streamer_of_grown_crops,
+                pathfind_streamer_to_crops,
                 pick_up_crops,
             ),
         );

@@ -418,10 +418,6 @@ pub fn queue_destination_for_streamer(
 
     let mut streamer_destination_queue = streamer_entity.single_mut();
     for destination_info in &mut destination_request_listener.read() {
-        if !destination_info.queued && !streamer_destination_queue.is_empty() {
-            continue;
-        }
-
         streamer_destination_queue.push_back(destination_info.destination);
     }
 }
@@ -487,7 +483,7 @@ pub fn move_streamer_on_spacebar(
     mut destination_request_writer: EventWriter<TilePosEvent>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
-        destination_request_writer.send(TilePosEvent::new(TilePos { x: 64, y: 52 }, true));
+        destination_request_writer.send(TilePosEvent::new(TilePos { x: 64, y: 52 }));
         //{ x: 64, y: 52 });
     }
 }

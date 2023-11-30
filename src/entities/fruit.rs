@@ -161,7 +161,7 @@ pub fn pathfind_streamer_to_fruit(
             continue;
         }
 
-        streamer_destination_request_writer.send(TilePosEvent::new(*fruit_tile_pos, true));
+        streamer_destination_request_writer.send(TilePosEvent::new(*fruit_tile_pos));
     }
 }
 
