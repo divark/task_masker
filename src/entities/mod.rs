@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 
+pub mod chatter;
 pub mod crop;
 pub mod fruit;
 pub mod plugins;

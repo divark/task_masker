@@ -1,7 +1,17 @@
+use crate::entities::chatter::*;
 use crate::entities::crop::*;
 use crate::entities::fruit::*;
 use crate::{spawn_player, GameState};
 use bevy::prelude::*;
+
+#[derive(Default)]
+pub struct ChatterPlugin;
+
+impl Plugin for ChatterPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Update, replace_chatter);
+    }
+}
 
 #[derive(Default)]
 pub struct StreamerPlugin;

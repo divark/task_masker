@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    entities::MovementType,
+    entities::{streamer::StreamerLabel, MovementType},
     map::path_finding::{tilepos_to_idx, Direction, Path},
 };
 
@@ -38,7 +38,7 @@ pub fn insert_animation_information(
 fn movement_type_len(entity_type: &MovementType) -> usize {
     match entity_type {
         MovementType::Walk => 4,
-        MovementType::Fly => 6,
+        MovementType::Fly => 8,
         MovementType::Swim => 1,
     }
 }
@@ -101,7 +101,9 @@ pub fn change_sprite_direction(
     }
 }
 
-pub fn check_if_idle(mut moving_entities: Query<(&mut AnimationTimer, &Path)>) {
+pub fn check_if_idle(
+    mut moving_entities: Query<(&mut AnimationTimer, &Path), With<StreamerLabel>>,
+) {
     for (mut timer, path) in &mut moving_entities {
         if path.is_empty() {
             timer.pause();

@@ -3,7 +3,7 @@ use bevy::{prelude::*, window::WindowResolution};
 use bevy_ecs_tilemap::prelude::*;
 //use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use entities::{
-    plugins::{CropPlugin, FruitPlugin, StreamerPlugin},
+    plugins::{ChatterPlugin, CropPlugin, FruitPlugin, StreamerPlugin},
     streamer::spawn_player,
 };
 use ui::plugins::{ChattingPlugin, StartupScreenPlugin};
@@ -69,6 +69,7 @@ fn main() {
         .add_plugins(StreamerPlugin)
         .add_plugins(FruitPlugin)
         .add_plugins(CropPlugin)
+        .add_plugins(ChatterPlugin)
         //.add_plugin(WorldInspectorPlugin::new())
         .add_systems(Startup, spawn_camera)
         .add_systems(
