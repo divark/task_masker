@@ -4,7 +4,7 @@ use bevy_ecs_tilemap::{
     tiles::TilePos,
 };
 
-use crate::map::tiled::tiledpos_to_tilepos;
+use crate::map::tiled::BevyTilePos;
 
 use super::MovementType;
 
@@ -22,10 +22,7 @@ pub fn spawn_player(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-    map_information: Query<
-        (&Transform, &TilemapType, &TilemapGridSize, &TilemapSize),
-        Added<TilemapType>,
-    >,
+    map_information: Query<(&Transform, &TilemapGridSize, &TilemapSize), Added<TilemapType>>,
     streamer_query: Query<(), With<StreamerLabel>>,
 ) {
     if !streamer_query.is_empty() {
@@ -41,18 +38,15 @@ pub fn spawn_player(
         return;
     }
 
-    let (map_transform, map_type, grid_size, map_size) = map_information
+    let (map_transform, grid_size, map_size) = map_information
         .iter()
         .nth(6)
         .expect("Could not load map information. Is world loaded?");
 
     let streamer_location = TilePos { x: 38, y: 59 }; //{ x: 42, y: 59 };
-    let tiled_to_bevy_pos = tiledpos_to_tilepos(streamer_location.x, streamer_location.y, map_size);
+    let tiled_to_bevy_pos = BevyTilePos::from(&streamer_location, map_size);
 
-    let streamer_translation = tiled_to_bevy_pos
-        .center_in_world(grid_size, map_type)
-        .extend(map_transform.translation.z);
-    let streamer_transform = *map_transform * Transform::from_translation(streamer_translation);
+    let streamer_transform = tiled_to_bevy_pos.world_transform(grid_size, map_transform);
 
     commands.spawn((
         Streamer {

@@ -27,6 +27,7 @@ use bevy::{
     reflect::TypePath,
     utils::{BoxedFuture, HashMap},
 };
+use bevy_ecs_tilemap::helpers::square_grid::diamond::DiamondPos;
 use bevy_ecs_tilemap::prelude::*;
 
 use thiserror::Error;
@@ -199,6 +200,33 @@ impl AssetLoader for TiledLoader {
     fn extensions(&self) -> &[&str] {
         static EXTENSIONS: &[&str] = &["tmx"];
         EXTENSIONS
+    }
+}
+
+pub struct BevyTilePos {
+    tile_pos: DiamondPos,
+}
+
+impl BevyTilePos {
+    pub fn from(tile_pos: &TilePos, map_size: &TilemapSize) -> Self {
+        let inverted_y = map_size.y - 1 - tile_pos.y;
+
+        BevyTilePos {
+            tile_pos: DiamondPos::new(tile_pos.x as i32, inverted_y as i32),
+        }
+    }
+
+    pub fn world_transform(
+        &self,
+        grid_size: &TilemapGridSize,
+        map_transform: &Transform,
+    ) -> Transform {
+        let tile_translation = self
+            .tile_pos
+            .center_in_world(grid_size)
+            .extend(map_transform.translation.z);
+
+        *map_transform * Transform::from_translation(tile_translation)
     }
 }
 
