@@ -4,7 +4,7 @@ use bevy_ecs_tilemap::{
     tiles::TilePos,
 };
 
-use crate::map::tiled::tiledpos_to_tilepos;
+use crate::map::tiled::{tiled_to_bevy_transform, TiledMapInformation};
 
 use super::MovementType;
 
@@ -45,14 +45,10 @@ pub fn spawn_player(
         .iter()
         .nth(6)
         .expect("Could not load map information. Is world loaded?");
+    let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
 
     let streamer_location = TilePos { x: 38, y: 59 }; //{ x: 42, y: 59 };
-    let tiled_to_bevy_pos = tiledpos_to_tilepos(streamer_location.x, streamer_location.y, map_size);
-
-    let streamer_translation = tiled_to_bevy_pos
-        .center_in_world(grid_size, map_type)
-        .extend(map_transform.translation.z);
-    let streamer_transform = *map_transform * Transform::from_translation(streamer_translation);
+    let streamer_transform = tiled_to_bevy_transform(&streamer_location, map_info);
 
     commands.spawn((
         Streamer {

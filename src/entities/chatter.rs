@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
-use crate::map::tiled::LayerNumber;
+use crate::map::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
 
 use super::MovementType;
 
@@ -17,7 +17,10 @@ pub struct ChatterBundle {
 
 pub fn replace_chatter(
     mut tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,
-    map_info_query: Query<(&Transform, &TilemapGridSize, &TilemapType), Added<TilemapGridSize>>,
+    map_info_query: Query<
+        (&Transform, &TilemapGridSize, &TilemapSize, &TilemapType),
+        Added<TilemapGridSize>,
+    >,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -32,7 +35,7 @@ pub fn replace_chatter(
         return;
     }
 
-    let (map_transform, grid_size, map_type) =
+    let (map_transform, grid_size, map_size, map_type) =
         map_information.expect("replace_chatter: Map information should exist by now.");
 
     let texture_handle = asset_server.load("BirdSprite (16x16).png");
@@ -44,10 +47,8 @@ pub fn replace_chatter(
             continue;
         }
 
-        let tile_translation = tile_pos
-            .center_in_world(grid_size, map_type)
-            .extend(map_transform.translation.z);
-        let tile_transform = *map_transform * Transform::from_translation(tile_translation);
+        let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
+        let tile_transform = to_bevy_transform(tile_pos, map_info);
 
         let chatter_sprite = SpriteSheetBundle {
             sprite: TextureAtlasSprite::new(tile_texture_index.0 as usize),

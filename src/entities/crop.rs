@@ -7,7 +7,7 @@ use bevy_ecs_tilemap::tiles::{TilePos, TileTextureIndex};
 use rand::seq::IteratorRandom;
 
 use crate::map::plugins::TilePosEvent;
-use crate::map::tiled::{tiledpos_to_tilepos, LayerNumber};
+use crate::map::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
 
 use super::fruit::TriggerQueue;
 use super::streamer::StreamerLabel;
@@ -58,10 +58,8 @@ pub fn replace_crop_tiles(
             continue;
         }
 
-        let tile_translation = tile_pos
-            .center_in_world(grid_size, map_type)
-            .extend(map_transform.translation.z);
-        let tile_transform = *map_transform * Transform::from_translation(tile_translation);
+        let map_info = TiledMapInformation::new(grid_size, world_size, map_type, map_transform);
+        let tile_transform = to_bevy_transform(tile_pos, map_info);
 
         let crop_sprite = SpriteSheetBundle {
             sprite: TextureAtlasSprite::new(tile_texture_index.0 as usize),
@@ -73,7 +71,7 @@ pub fn replace_crop_tiles(
         commands.entity(_entity).despawn_recursive();
         commands.spawn((
             crop_sprite,
-            tiledpos_to_tilepos(tile_pos.x, tile_pos.y, world_size),
+            *tile_pos,
             CropState::Growing,
             CropEndIdx(tile_texture_index.0 as usize + CROP_NUM_STAGES - 1),
             TriggerQueue(VecDeque::new()),

@@ -202,10 +202,45 @@ impl AssetLoader for TiledLoader {
     }
 }
 
-pub fn tiledpos_to_tilepos(x: u32, y: u32, map_size: &TilemapSize) -> TilePos {
+pub fn tiled_to_tile_pos(x: u32, y: u32, map_size: &TilemapSize) -> TilePos {
     let mapped_y = map_size.y - 1 - y;
 
     TilePos::new(x, mapped_y)
+}
+
+pub struct TiledMapInformation<'a> {
+    grid_size: &'a TilemapGridSize,
+    map_size: &'a TilemapSize,
+    map_type: &'a TilemapType,
+    map_transform: &'a Transform,
+}
+
+impl<'a> TiledMapInformation<'a> {
+    pub fn new(
+        grid_size: &'a TilemapGridSize,
+        map_size: &'a TilemapSize,
+        map_type: &'a TilemapType,
+        map_transform: &'a Transform,
+    ) -> Self {
+        TiledMapInformation {
+            grid_size,
+            map_size,
+            map_type,
+            map_transform,
+        }
+    }
+}
+
+pub fn tiled_to_bevy_transform(tile_pos: &TilePos, map_info: TiledMapInformation) -> Transform {
+    let tiled_to_bevy_pos = tiled_to_tile_pos(tile_pos.x, tile_pos.y, map_info.map_size);
+    to_bevy_transform(&tiled_to_bevy_pos, map_info)
+}
+
+pub fn to_bevy_transform(tile_pos: &TilePos, map_info: TiledMapInformation) -> Transform {
+    let streamer_translation = tile_pos
+        .center_in_world(map_info.grid_size, map_info.map_type)
+        .extend(map_info.map_transform.translation.z);
+    *map_info.map_transform * Transform::from_translation(streamer_translation)
 }
 
 pub fn process_loaded_maps(

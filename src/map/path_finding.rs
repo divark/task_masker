@@ -7,7 +7,7 @@ use crate::entities::{streamer::StreamerLabel, MovementType};
 
 use super::{
     plugins::TilePosEvent,
-    tiled::{tiledpos_to_tilepos, LayerNumber},
+    tiled::{tiled_to_bevy_transform, tiled_to_tile_pos, LayerNumber, TiledMapInformation},
 };
 
 #[derive(Component, PartialEq, Debug)]
@@ -103,7 +103,7 @@ pub fn create_ground_graph(
         .iter()
         .map(|tile_pair| {
             (
-                tiledpos_to_tilepos(tile_pair.0.x, tile_pair.0.y, world_size),
+                tiled_to_tile_pos(tile_pair.0.x, tile_pair.0.y, world_size),
                 tile_pair.1,
             )
         })
@@ -146,18 +146,15 @@ pub fn create_ground_graph(
         let tile_idx = tilepos_to_idx(tile_position.x, tile_position.y, world_size.x);
         let tile_height = height_map[tile_idx];
 
-        let tiled_to_bevy_pos = tiledpos_to_tilepos(tile_position.x, tile_position.y, world_size);
         let map_transform = map_information
             .iter()
             .nth(tile_height)
             .expect("Tile should be on this layer.")
             .3;
-        let tiled_transform = Transform::from_translation(
-            tiled_to_bevy_pos
-                .center_in_world(grid_size, map_type)
-                .extend(tile_height as f32),
-        );
-        let node_data = (*map_transform * tiled_transform).translation;
+
+        let map_info = TiledMapInformation::new(grid_size, world_size, map_type, map_transform);
+        let tiled_transform = tiled_to_bevy_transform(&tile_position, map_info);
+        let node_data = tiled_transform.translation;
         let mut node_edges = Vec::new();
 
         if tile_position.x > 0 && tile_height > 0 {
@@ -248,7 +245,7 @@ pub fn create_air_graph(
         .iter()
         .map(|tile_pair| {
             (
-                tiledpos_to_tilepos(tile_pair.0.x, tile_pair.0.y, world_size),
+                tiled_to_tile_pos(tile_pair.0.x, tile_pair.0.y, world_size),
                 tile_pair.1,
             )
         })
@@ -276,18 +273,15 @@ pub fn create_air_graph(
     for (tile_position, layer_number) in tile_positions_sorted {
         let tile_idx = tilepos_to_idx(tile_position.x, tile_position.y, world_size.x);
 
-        let tiled_to_bevy_pos = tiledpos_to_tilepos(tile_position.x, tile_position.y, world_size);
         let map_transform = map_information
             .iter()
             .nth(layer_number.0)
             .expect("Tile should be on this layer.")
             .3;
-        let tiled_transform = Transform::from_translation(
-            tiled_to_bevy_pos
-                .center_in_world(grid_size, map_type)
-                .extend(layer_number.0 as f32),
-        );
-        let node_data = (*map_transform * tiled_transform).translation;
+
+        let map_info = TiledMapInformation::new(grid_size, world_size, map_type, map_transform);
+        let tiled_transform = tiled_to_bevy_transform(&tile_position, map_info);
+        let node_data = tiled_transform.translation;
         let mut node_edges = Vec::new();
 
         if tile_position.x > 0 {
