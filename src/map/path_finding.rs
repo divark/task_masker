@@ -3,7 +3,6 @@ use std::collections::VecDeque;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
-use crate::entities::chatter::CHATTER_LAYER_NUM;
 use crate::entities::{streamer::StreamerLabel, MovementType};
 
 use super::{
@@ -195,7 +194,7 @@ pub fn create_ground_graph(
 /// Spawns an Undirected Graph representing all land titles where the edges
 /// indicate an at most 1 tile offset between two tiles.
 pub fn create_air_graph(
-    tile_positions: Query<(&TilePos, &LayerNumber)>,
+    tile_positions: Query<&TilePos>,
     map_information: Query<(&TilemapSize, &TilemapGridSize, &TilemapType, &Transform)>,
     air_graph_query: Query<(&NodeEdges, &NodeData, &GraphType)>,
     mut spawner: Commands,
@@ -250,39 +249,30 @@ pub fn create_air_graph(
     // yet.
     let mut tile_positions_sorted = tile_positions
         .iter()
-        .map(|tile_pair| {
-            (
-                tiled_to_tile_pos(tile_pair.0.x, tile_pair.0.y, world_size),
-                tile_pair.1,
-            )
-        })
-        .collect::<Vec<(TilePos, &LayerNumber)>>();
+        .map(|tile_pair| tiled_to_tile_pos(tile_pair.x, tile_pair.y, world_size))
+        .collect::<Vec<TilePos>>();
     tile_positions_sorted.sort_by(|&pos1, &pos2| {
-        let pos1_converted = tilepos_to_idx(pos1.0.x, pos1.0.y, world_size.x);
-        let pos2_converted = tilepos_to_idx(pos2.0.x, pos2.0.y, world_size.x);
+        let pos1_converted = tilepos_to_idx(pos1.x, pos1.y, world_size.x);
+        let pos2_converted = tilepos_to_idx(pos2.x, pos2.y, world_size.x);
 
-        let pos1_layer = pos1.1;
-        let pos2_layer = pos2.1;
-
-        pos1_converted
-            .cmp(&pos2_converted)
-            .then(pos1_layer.cmp(pos2_layer))
+        pos1_converted.cmp(&pos2_converted)
     });
 
-    // We want the tiles on the highest layer in order
-    // for whoever is traveling in the air to not clip
-    // through the terrain.
-    tile_positions_sorted.dedup_by(|a, b| a.0.eq(&b.0).then(|| a.1.lt(b.1)).is_some());
+    // Perhaps it's a precaution, but given we are dealing with
+    // many layers, and Tile Positions don't take into consideration
+    // its layer (z value), we don't want to be dealing with
+    // repeated entries.
+    tile_positions_sorted.dedup();
 
     let mut directed_graph_data: Vec<Vec3> = Vec::new();
     let mut directed_graph_edges: Vec<Vec<usize>> = Vec::new();
 
-    for (tile_position, layer_number) in tile_positions_sorted {
+    for tile_position in tile_positions_sorted {
         let tile_idx = tilepos_to_idx(tile_position.x, tile_position.y, world_size.x);
 
         let map_transform = map_information
             .iter()
-            .nth(CHATTER_LAYER_NUM)
+            .last()
             .expect("Tile should be on this layer.")
             .3;
 
@@ -769,14 +759,19 @@ pub mod tests {
         app.add_systems(Update, create_air_graph);
         app.update();
 
-        let mut ground_graph_query = app.world.query::<(&NodeEdges, &GraphType)>();
-        let mut air_graph_query = app.world.query::<(&NodeEdges, &Air)>();
-        let (ground_node_edges, ground_graph_type) = ground_graph_query.single(&app.world);
-        let (air_node_edges, air_graph_type) = air_graph_query.single(&app.world);
+        let mut graph_query = app.world.query::<(&NodeEdges, &GraphType)>();
+        let (ground_node_edges, ground_graph_type) = graph_query
+            .iter(&app.world)
+            .find(|graph_elements| graph_elements.1 == &GraphType::Ground)
+            .expect("Ground Graph not created.");
+        let (air_node_edges, air_graph_type) = graph_query
+            .iter(&app.world)
+            .find(|graph_elements| graph_elements.1 == &GraphType::Air)
+            .expect("Air Graph not created.");
 
         assert_ne!(*ground_node_edges, *air_node_edges);
-        assert_eq!(*ground_graph_type, Ground);
-        assert_eq!(*air_graph_type, Air);
+        assert_eq!(*ground_graph_type, GraphType::Ground);
+        assert_eq!(*air_graph_type, GraphType::Air);
     }
 
     #[test]
@@ -802,7 +797,10 @@ pub mod tests {
         let expected_graph_type = GraphType::Ground;
 
         let mut graph_query = app.world.query::<(&NodeEdges, &GraphType)>();
-        let (actual_node_edges, actual_graph_type) = graph_query.single(&app.world);
+        let (actual_node_edges, actual_graph_type) = graph_query
+            .iter(&app.world)
+            .find(|graph_elements| graph_elements.1 == &GraphType::Ground)
+            .unwrap();
 
         assert_eq!(expected_node_edges, *actual_node_edges);
         assert_eq!(expected_graph_type, *actual_graph_type);
