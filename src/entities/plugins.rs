@@ -9,7 +9,15 @@ pub struct ChatterPlugin;
 
 impl Plugin for ChatterPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, replace_chatter);
+        app.add_event::<ChatMsg>();
+        app.add_systems(
+            Update,
+            (
+                replace_chatter,
+                trigger_flying_to_streamer,
+                fly_to_streamer_to_speak,
+            ),
+        );
     }
 }
 

@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use crate::map::{
-    path_finding::{tilepos_to_idx, Ground, MovementTimer, NodeData, StartingPoint, Target},
+    path_finding::{tilepos_to_idx, GraphType, MovementTimer, NodeData, StartingPoint, Target},
     plugins::TilePosEvent,
     tiled::*,
 };
@@ -83,7 +83,7 @@ pub fn replace_fruit_tiles(
 
 pub fn make_fruit_fall(
     mut fruit_query: Query<(&TilePos, &mut FruitState, &mut Target, &TriggerQueue)>,
-    ground_graph_query: Query<&NodeData, With<Ground>>,
+    ground_graph_query: Query<(&NodeData, &GraphType)>,
     map_info_query: Query<(&Transform, &TilemapSize)>,
     asset_loader: Res<AssetServer>,
     mut commands: Commands,
@@ -92,7 +92,14 @@ pub fn make_fruit_fall(
         return;
     }
 
-    let ground_graph_nodes = ground_graph_query.single();
+    let ground_graph = ground_graph_query
+        .iter()
+        .find(|graph_elements| graph_elements.1 == &GraphType::Ground);
+    if ground_graph.is_none() {
+        return;
+    }
+
+    let ground_graph_nodes = ground_graph.unwrap().0;
     let fallen_fruit_tiles_layer_num = 16 - 4;
 
     let map_information = map_info_query

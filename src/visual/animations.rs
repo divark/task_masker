@@ -59,7 +59,7 @@ fn fly_directional_index_from(direction: &Direction) -> usize {
 
     match direction {
         Direction::BottomLeft | Direction::TopLeft => {
-            tilepos_to_idx(0, 0, num_flying_sprites_in_row)
+            tilepos_to_idx(1, 0, num_flying_sprites_in_row)
         }
         Direction::BottomRight | Direction::TopRight => {
             tilepos_to_idx(1, 0, num_flying_sprites_in_row)

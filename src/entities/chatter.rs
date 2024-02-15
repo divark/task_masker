@@ -1,12 +1,23 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
-use crate::map::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
+use crate::entities::streamer::StreamerLabel;
+use crate::map::path_finding::*;
+use crate::map::tiled::{tiled_to_tile_pos, to_bevy_transform, LayerNumber, TiledMapInformation};
+use crate::ui::screens::SpeakerChatBox;
 
 use super::MovementType;
 
+pub const CHATTER_LAYER_NUM: usize = 18;
+
 #[derive(Component)]
 pub struct ChatterLabel;
+
+#[derive(Component, Event, Clone)]
+pub struct ChatMsg {
+    pub name: String,
+    pub msg: String,
+}
 
 #[derive(Bundle)]
 pub struct ChatterBundle {
@@ -25,11 +36,9 @@ pub fn replace_chatter(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
-    let chatter_tiles_layer_num = 18;
-
     let map_information = map_info_query
         .iter()
-        .find(|map_info| map_info.0.translation.z == chatter_tiles_layer_num as f32);
+        .find(|map_info| map_info.0.translation.z == CHATTER_LAYER_NUM as f32);
 
     if map_information.is_none() {
         return;
@@ -43,7 +52,7 @@ pub fn replace_chatter(
         TextureAtlas::from_grid(texture_handle, Vec2::new(16.0, 16.0), 8, 3, None, None);
     let chatter_texture_atlas_handle = texture_atlases.add(chatter_texture_atlas);
     for (crop_entity, layer_number, tile_pos, tile_texture_index) in &mut tiles_query {
-        if layer_number.0 != chatter_tiles_layer_num {
+        if layer_number.0 != CHATTER_LAYER_NUM {
             continue;
         }
 
@@ -56,6 +65,7 @@ pub fn replace_chatter(
             transform: tile_transform,
             ..default()
         };
+        let chatter_tilepos = tiled_to_tile_pos(tile_pos.x, tile_pos.y, map_size);
 
         commands.entity(crop_entity).despawn_recursive();
         commands.spawn((
@@ -64,7 +74,69 @@ pub fn replace_chatter(
                 sprite: chatter_sprite,
                 movement_type: MovementType::Fly,
             },
-            *tile_pos,
+            chatter_tilepos,
         ));
+    }
+}
+
+pub fn trigger_flying_to_streamer(
+    mut chatter_msg: EventWriter<ChatMsg>,
+    pressed_key: Res<Input<KeyCode>>,
+) {
+    if !pressed_key.pressed(KeyCode::G) {
+        return;
+    }
+
+    let chat_msg = ChatMsg {
+        name: String::from("Bob"),
+        msg: String::from("Hello Caveman!"),
+    };
+
+    chatter_msg.send(chat_msg);
+}
+
+pub fn fly_to_streamer_to_speak(
+    mut chatter_msg: EventReader<ChatMsg>,
+    mut chatter: Query<
+        (Entity, &TilePos, &mut Visibility, &mut Path),
+        (With<ChatterLabel>, Without<ChatMsg>),
+    >,
+    air_graph: Query<(&NodeEdges, &GraphType)>,
+    streamer: Query<&TilePos, With<StreamerLabel>>,
+    map_info: Query<&TilemapSize>,
+    textbox: Query<&Text, With<SpeakerChatBox>>,
+    mut commands: Commands,
+) {
+    if air_graph.is_empty() || streamer.is_empty() || map_info.is_empty() || textbox.is_empty() {
+        return;
+    }
+
+    let air_graph_edges = air_graph
+        .iter()
+        .find(|graph_elements| graph_elements.1 == &GraphType::Air)
+        .expect("fly_to_streamer_to_speak: There should only be one air graph.");
+    let streamer_tilepos = streamer
+        .get_single()
+        .expect("fly_to_streamer_to_speak: There should only be one streamer.");
+    let map_size = map_info
+        .iter()
+        .next()
+        .expect("fly_to_streamer_to_speak: There should be only one map.");
+    for (chatter_entity, chatter_tilepos, mut chatter_visibility, mut chatter_path) in &mut chatter
+    {
+        if chatter_msg.is_empty() {
+            break;
+        }
+
+        *chatter_visibility = Visibility::Visible;
+        *chatter_path = get_path(
+            chatter_tilepos,
+            streamer_tilepos,
+            map_size,
+            air_graph_edges.0,
+        );
+        commands
+            .entity(chatter_entity)
+            .insert(chatter_msg.read().next().unwrap().clone());
     }
 }
