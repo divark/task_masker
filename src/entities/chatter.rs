@@ -4,7 +4,6 @@ use bevy_ecs_tilemap::prelude::*;
 use crate::entities::streamer::StreamerLabel;
 use crate::map::path_finding::*;
 use crate::map::tiled::{tiled_to_tile_pos, to_bevy_transform, LayerNumber, TiledMapInformation};
-use crate::ui::screens::SpeakerChatBox;
 
 use super::MovementType;
 
@@ -97,17 +96,13 @@ pub fn trigger_flying_to_streamer(
 
 pub fn fly_to_streamer_to_speak(
     mut chatter_msg: EventReader<ChatMsg>,
-    mut chatter: Query<
-        (Entity, &TilePos, &mut Visibility, &mut Path),
-        (With<ChatterLabel>, Without<ChatMsg>),
-    >,
+    mut chatter: Query<(Entity, &TilePos, &mut Path), (With<ChatterLabel>, Without<ChatMsg>)>,
     air_graph: Query<(&NodeEdges, &GraphType)>,
     streamer: Query<&TilePos, With<StreamerLabel>>,
     map_info: Query<&TilemapSize>,
-    textbox: Query<&Text, With<SpeakerChatBox>>,
     mut commands: Commands,
 ) {
-    if air_graph.is_empty() || streamer.is_empty() || map_info.is_empty() || textbox.is_empty() {
+    if air_graph.is_empty() || streamer.is_empty() || map_info.is_empty() {
         return;
     }
 
@@ -122,13 +117,11 @@ pub fn fly_to_streamer_to_speak(
         .iter()
         .next()
         .expect("fly_to_streamer_to_speak: There should be only one map.");
-    for (chatter_entity, chatter_tilepos, mut chatter_visibility, mut chatter_path) in &mut chatter
-    {
+    for (chatter_entity, chatter_tilepos, mut chatter_path) in &mut chatter {
         if chatter_msg.is_empty() {
             break;
         }
 
-        *chatter_visibility = Visibility::Visible;
         *chatter_path = get_path(
             chatter_tilepos,
             streamer_tilepos,
