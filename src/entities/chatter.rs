@@ -8,6 +8,7 @@ use crate::map::tiled::{tiled_to_tile_pos, to_bevy_transform, LayerNumber, Tiled
 use super::MovementType;
 
 pub const CHATTER_LAYER_NUM: usize = 18;
+pub const DIST_AWAY_FROM_STREAMER: usize = 2;
 
 #[derive(Component)]
 pub struct ChatterLabel;
@@ -122,12 +123,22 @@ pub fn fly_to_streamer_to_speak(
             break;
         }
 
-        *chatter_path = get_path(
+        let mut path_to_streamer = get_path(
             chatter_tilepos,
             streamer_tilepos,
             map_size,
             air_graph_edges.0,
         );
+
+        // The chatter should not be directly on top of the
+        // streamer, so we provide some distance by adjusting
+        // the path to not go straight to the streamer.
+        for _i in 0..DIST_AWAY_FROM_STREAMER {
+            path_to_streamer.pop_back();
+        }
+
+        *chatter_path = path_to_streamer;
+
         commands
             .entity(chatter_entity)
             .insert(chatter_msg.read().next().unwrap().clone());
