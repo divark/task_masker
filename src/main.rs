@@ -28,6 +28,10 @@ fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     commands.spawn(map::tiled::TiledMapBundle {
         tiled_map: map_handle,
+        render_settings: TilemapRenderSettings {
+            render_chunk_size: UVec2::new(1280, 1),
+            y_sort: true,
+        },
         ..Default::default()
     });
 }
@@ -38,10 +42,6 @@ fn spawn_camera(mut commands: Commands) {
 
 fn main() {
     App::new()
-        .insert_resource(TilemapRenderSettings {
-            render_chunk_size: UVec2::new(1280, 1),
-            y_sort: true,
-        })
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
