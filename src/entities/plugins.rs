@@ -16,6 +16,7 @@ impl Plugin for ChatterPlugin {
                 replace_chatter,
                 trigger_flying_to_streamer,
                 fly_to_streamer_to_speak,
+                speak_to_streamer,
             ),
         );
     }

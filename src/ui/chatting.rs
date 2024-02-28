@@ -6,9 +6,9 @@ use super::screens::{SpeakerChatBox, SpeakerPortrait, SpeakerUI};
 
 #[derive(Default, Event)]
 pub struct Msg {
-    speaker_name: String,
-    msg: String,
-    speaker_role: MovementType,
+    pub speaker_name: String,
+    pub msg: String,
+    pub speaker_role: MovementType,
 }
 
 #[derive(Component, Deref, DerefMut)]

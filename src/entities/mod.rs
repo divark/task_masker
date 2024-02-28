@@ -6,7 +6,7 @@ pub mod fruit;
 pub mod plugins;
 pub mod streamer;
 
-#[derive(Component, Default, PartialEq, Eq)]
+#[derive(Component, Default, PartialEq, Eq, Clone, Copy)]
 pub enum MovementType {
     Walk,
     #[default]
