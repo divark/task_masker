@@ -247,17 +247,3 @@ pub fn hide_chatting_ui(
 
     *speaker_ui_visibility = Visibility::Hidden;
 }
-
-pub fn test_streamer_msg(keyboard_input: Res<Input<KeyCode>>, mut msg_writer: EventWriter<Msg>) {
-    if !keyboard_input.just_pressed(KeyCode::Q) {
-        return;
-    }
-
-    let streamer_msg = Msg {
-        speaker_name: "Caveman".to_string(),
-        msg: "This is a test message to see if this works and types as expected.".to_string(),
-        speaker_role: MovementType::Walk,
-    };
-
-    msg_writer.send(streamer_msg);
-}

@@ -4,7 +4,10 @@ use bevy_ecs_tilemap::{
     tiles::TilePos,
 };
 
+use crate::map::path_finding::*;
+use crate::map::plugins::TilePosEvent;
 use crate::map::tiled::{tiled_to_bevy_transform, TiledMapInformation};
+use crate::ui::chatting::Msg;
 
 use super::MovementType;
 
@@ -62,4 +65,98 @@ pub fn spawn_player(
         },
         streamer_location,
     ));
+}
+
+pub fn move_streamer(
+    mut streamer_entity: Query<
+        (&mut Path, &StartingPoint, &Target, &mut DestinationQueue),
+        With<StreamerLabel>,
+    >,
+    ground_graph_query: Query<(&NodeEdges, &GraphType)>,
+    map_information: Query<(&TilemapSize, &Transform)>,
+) {
+    if streamer_entity.is_empty() {
+        return;
+    }
+
+    let ground_graph = ground_graph_query
+        .iter()
+        .find(|graph_elements| graph_elements.1 == &GraphType::Ground);
+    if ground_graph.is_none() {
+        return;
+    }
+
+    let edges = ground_graph.expect("Ground graph should be loaded.").0;
+    // Each Tile Layer has its own World and Grid size should someone decide
+    // to change tilesets for the layer. However, I will not do that, so
+    // both the world size and grid size should be the same.
+    let map_size = map_information
+        .iter()
+        .map(|sizes| sizes.0)
+        .max_by(|&x, &y| {
+            let x_world_area = x.x * x.y;
+            let y_world_area = y.x * y.y;
+
+            x_world_area.cmp(&y_world_area)
+        })
+        .expect("Could not find largest world size. Is the map loaded?");
+
+    let (mut streamer_path, streamer_tile_pos, streamer_target, mut streamer_destination_queue) =
+        streamer_entity
+            .get_single_mut()
+            .expect("The streamer should be loaded.");
+
+    if !streamer_path.is_empty() || streamer_target.is_some() {
+        return;
+    }
+
+    if streamer_destination_queue.is_empty() {
+        return;
+    }
+
+    *streamer_path = get_path(
+        &streamer_tile_pos.1,
+        &streamer_destination_queue.pop_front().expect(
+            "move_streamer: Destination queue for streamer should have been filled with something.",
+        ),
+        map_size,
+        edges,
+    );
+}
+
+pub fn queue_destination_for_streamer(
+    mut destination_request_listener: EventReader<TilePosEvent>,
+    mut streamer_entity: Query<&mut DestinationQueue, With<StreamerLabel>>,
+) {
+    if streamer_entity.is_empty() {
+        return;
+    }
+
+    let mut streamer_destination_queue = streamer_entity.single_mut();
+    for destination_info in &mut destination_request_listener.read() {
+        streamer_destination_queue.push_back(destination_info.destination);
+    }
+}
+
+pub fn move_streamer_on_spacebar(
+    keyboard_input: Res<Input<KeyCode>>,
+    mut destination_request_writer: EventWriter<TilePosEvent>,
+) {
+    if keyboard_input.just_pressed(KeyCode::Space) {
+        destination_request_writer.send(TilePosEvent::new(TilePos { x: 64, y: 52 }));
+    }
+}
+
+pub fn test_streamer_msg(keyboard_input: Res<Input<KeyCode>>, mut msg_writer: EventWriter<Msg>) {
+    if !keyboard_input.just_pressed(KeyCode::Q) {
+        return;
+    }
+
+    let streamer_msg = Msg {
+        speaker_name: "Caveman".to_string(),
+        msg: "This is a test message to see if this works and types as expected.".to_string(),
+        speaker_role: MovementType::Walk,
+    };
+
+    msg_writer.send(streamer_msg);
 }

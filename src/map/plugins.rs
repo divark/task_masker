@@ -5,6 +5,7 @@ use super::{
     path_finding::*,
     tiled::{process_loaded_maps, TiledLoader, TiledMap},
 };
+use crate::map::camera::*;
 use crate::{spawn_map, GameState};
 
 #[derive(Event)]
@@ -31,9 +32,6 @@ impl Plugin for PathFindingPlugin {
                 insert_pathing_information,
                 update_movement_target,
                 move_entities,
-                move_streamer,
-                move_streamer_on_spacebar,
-                queue_destination_for_streamer,
                 update_current_tilepos,
             )
                 .run_if(in_state(GameState::InGame)),
@@ -50,5 +48,15 @@ impl Plugin for TiledMapPlugin {
             .register_asset_loader(TiledLoader)
             .add_systems(Startup, spawn_map)
             .add_systems(Update, process_loaded_maps);
+    }
+}
+
+#[derive(Default)]
+pub struct TiledCameraPlugin;
+
+impl Plugin for TiledCameraPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Startup, spawn_camera)
+            .add_systems(Update, movement.run_if(in_state(GameState::InGame)));
     }
 }

@@ -47,7 +47,6 @@ impl Plugin for ChattingPlugin {
                 activate_waiting_timer,
                 clear_current_msg_on_time_up,
                 hide_chatting_ui,
-                test_streamer_msg,
             )
                 .run_if(in_state(GameState::InGame)),
         );

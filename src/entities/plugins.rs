@@ -1,7 +1,8 @@
 use crate::entities::chatter::*;
 use crate::entities::crop::*;
 use crate::entities::fruit::*;
-use crate::{spawn_player, GameState};
+use crate::entities::streamer::*;
+use crate::GameState;
 use bevy::prelude::*;
 
 #[derive(Default)]
@@ -27,7 +28,17 @@ pub struct StreamerPlugin;
 
 impl Plugin for StreamerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (spawn_player).run_if(in_state(GameState::InGame)));
+        app.add_systems(
+            Update,
+            (
+                spawn_player,
+                move_streamer,
+                move_streamer_on_spacebar,
+                test_streamer_msg,
+                queue_destination_for_streamer,
+            )
+                .run_if(in_state(GameState::InGame)),
+        );
     }
 }
 

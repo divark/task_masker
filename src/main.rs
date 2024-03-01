@@ -1,11 +1,8 @@
 use audio::plugins::BackgroundMusicPlugin;
 use bevy::{prelude::*, window::WindowResolution};
 use bevy_ecs_tilemap::prelude::*;
-//use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use entities::{
-    plugins::{ChatterPlugin, CropPlugin, FruitPlugin, StreamerPlugin},
-    streamer::spawn_player,
-};
+use entities::plugins::{ChatterPlugin, CropPlugin, FruitPlugin, StreamerPlugin};
+use map::plugins::TiledCameraPlugin;
 use ui::plugins::{ChattingPlugin, StartupScreenPlugin};
 use visual::plugins::AnimationPlugin;
 
@@ -34,10 +31,6 @@ fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>) {
         },
         ..Default::default()
     });
-}
-
-fn spawn_camera(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
 }
 
 fn main() {
@@ -70,11 +63,6 @@ fn main() {
         .add_plugins(FruitPlugin)
         .add_plugins(CropPlugin)
         .add_plugins(ChatterPlugin)
-        //.add_plugin(WorldInspectorPlugin::new())
-        .add_systems(Startup, spawn_camera)
-        .add_systems(
-            Update,
-            (map::camera::movement).run_if(in_state(GameState::InGame)),
-        )
+        .add_plugins(TiledCameraPlugin)
         .run();
 }
