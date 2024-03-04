@@ -14,6 +14,14 @@ use super::MovementType;
 #[derive(Component)]
 pub struct StreamerLabel;
 
+#[derive(Component)]
+pub enum StreamerStatus {
+    Idle,
+    Moving,
+    Speaking,
+    // TODO: Should Action be included?
+}
+
 #[derive(Bundle)]
 pub struct Streamer {
     label: StreamerLabel,

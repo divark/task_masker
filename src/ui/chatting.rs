@@ -4,6 +4,12 @@ use crate::entities::MovementType;
 
 use super::screens::{SpeakerChatBox, SpeakerPortrait, SpeakerUI};
 
+#[derive(Component)]
+pub enum ChattingStatus {
+    Idle,
+    Speaking(MovementType),
+}
+
 #[derive(Default, Event)]
 pub struct Msg {
     pub speaker_name: String,
@@ -49,6 +55,7 @@ pub fn insert_chatting_information(
         msg_waiting_timer,
         msg_character_idx,
         msg_len,
+        ChattingStatus::Idle,
     ));
 }
 
@@ -61,6 +68,7 @@ pub fn setup_chatting_from_msg(
             &mut MsgIndex,
             &mut MsgLen,
             &mut TypingSpeedInterval,
+            &mut ChattingStatus,
         ),
         With<SpeakerChatBox>,
     >,
@@ -75,7 +83,13 @@ pub fn setup_chatting_from_msg(
         .get_single_mut()
         .expect("Could not find Speaker UI elements.");
 
-    let (mut speaker_textbox, mut msg_index, mut msg_len, mut typing_speed_timer) = msg_fields
+    let (
+        mut speaker_textbox,
+        mut msg_index,
+        mut msg_len,
+        mut typing_speed_timer,
+        mut chatting_status,
+    ) = msg_fields
         .get_single_mut()
         .expect("Msg elements should be attached by now.");
 
@@ -119,6 +133,8 @@ pub fn setup_chatting_from_msg(
         .get_single_mut()
         .expect("Speaker UI should exist by now.");
     *speaker_ui_visibility = Visibility::Visible;
+
+    *chatting_status = ChattingStatus::Speaking(recent_msg.speaker_role);
 
     typing_speed_timer.reset();
     typing_speed_timer.unpause();
@@ -200,14 +216,17 @@ pub fn activate_waiting_timer(
 }
 
 pub fn clear_current_msg_on_time_up(
-    mut msg_fields: Query<(&mut MsgLen, &mut MsgWaiting), With<SpeakerChatBox>>,
+    mut msg_fields: Query<
+        (&mut MsgLen, &mut MsgWaiting, &mut ChattingStatus),
+        With<SpeakerChatBox>,
+    >,
     time: Res<Time>,
 ) {
     if msg_fields.is_empty() {
         return;
     }
 
-    let (mut msg_len, mut msg_waiting_timer) = msg_fields
+    let (mut msg_len, mut msg_waiting_timer, mut chatting_status) = msg_fields
         .get_single_mut()
         .expect("Waiting timer should exist with the UI by now.");
 
@@ -224,6 +243,7 @@ pub fn clear_current_msg_on_time_up(
     msg_waiting_timer.reset();
 
     msg_len.0 = 0;
+    *chatting_status = ChattingStatus::Idle;
 }
 
 pub fn hide_chatting_ui(
