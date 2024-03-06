@@ -7,7 +7,7 @@ use bevy_ecs_tilemap::{
 use crate::map::path_finding::*;
 use crate::map::plugins::TilePosEvent;
 use crate::map::tiled::{tiled_to_bevy_transform, TiledMapInformation};
-use crate::ui::chatting::Msg;
+use crate::ui::chatting::{ChattingStatus, Msg};
 
 use super::MovementType;
 
@@ -27,6 +27,7 @@ pub struct Streamer {
     label: StreamerLabel,
     sprites: SpriteSheetBundle,
     movement_type: MovementType,
+    status: StreamerStatus,
 }
 
 pub fn spawn_player(
@@ -70,6 +71,7 @@ pub fn spawn_player(
                 ..default()
             },
             movement_type: MovementType::Walk,
+            status: StreamerStatus::Idle,
         },
         streamer_location,
     ));
@@ -77,7 +79,13 @@ pub fn spawn_player(
 
 pub fn move_streamer(
     mut streamer_entity: Query<
-        (&mut Path, &StartingPoint, &Target, &mut DestinationQueue),
+        (
+            &mut Path,
+            &StartingPoint,
+            &Target,
+            &mut DestinationQueue,
+            &mut StreamerStatus,
+        ),
         With<StreamerLabel>,
     >,
     ground_graph_query: Query<(&NodeEdges, &GraphType)>,
@@ -109,16 +117,22 @@ pub fn move_streamer(
         })
         .expect("Could not find largest world size. Is the map loaded?");
 
-    let (mut streamer_path, streamer_tile_pos, streamer_target, mut streamer_destination_queue) =
-        streamer_entity
-            .get_single_mut()
-            .expect("The streamer should be loaded.");
+    let (
+        mut streamer_path,
+        streamer_tile_pos,
+        streamer_target,
+        mut streamer_destination_queue,
+        mut streamer_status,
+    ) = streamer_entity
+        .get_single_mut()
+        .expect("The streamer should be loaded.");
 
     if !streamer_path.is_empty() || streamer_target.is_some() {
         return;
     }
 
     if streamer_destination_queue.is_empty() {
+        *streamer_status = StreamerStatus::Idle;
         return;
     }
 
@@ -130,6 +144,8 @@ pub fn move_streamer(
         map_size,
         edges,
     );
+
+    *streamer_status = StreamerStatus::Moving;
 }
 
 pub fn queue_destination_for_streamer(
@@ -167,4 +183,24 @@ pub fn test_streamer_msg(keyboard_input: Res<Input<KeyCode>>, mut msg_writer: Ev
     };
 
     msg_writer.send(streamer_msg);
+}
+
+pub fn update_status_when_speaking(
+    chatting_query: Query<&ChattingStatus, Changed<ChattingStatus>>,
+    mut streamer_query: Query<&mut StreamerStatus>,
+) {
+    if streamer_query.is_empty() {
+        return;
+    }
+
+    let mut streamer_status = streamer_query
+        .get_single_mut()
+        .expect("update_status_when_speaking: Streamer's status should exist by now.");
+    for chatting_status in &chatting_query {
+        if *chatting_status != ChattingStatus::Speaking(MovementType::Walk) {
+            continue;
+        }
+
+        *streamer_status = StreamerStatus::Speaking;
+    }
 }

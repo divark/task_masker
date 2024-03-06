@@ -195,8 +195,9 @@ pub fn speak_to_streamer(
 pub fn leave_from_streamer() {
     /* if I've waited too long => WaitTimer.0.tick(time.delta()); WaitTimer.0.is_finished()
      * or if streamer finished speaking, => !StreamerStatus::Speaking
-     * - chatter.path = pathTo(chatter.pos, chatter.start_pos)
+     * - chatter.path = pathTo(chatter.spawn_pos, chatter.start_pos)
      * - remove wait timer => commands.entity(chatter_entity).remove::<WaitTimer>();
      * - remove msg => commands.entity(chatter_entity).remove::<ChatterMsg>();
+     * - status = ChatterStatus::Leaving
      */
 }

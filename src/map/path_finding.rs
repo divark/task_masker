@@ -21,6 +21,7 @@ pub struct NodeEdges(Vec<Vec<usize>>);
 
 #[derive(Bundle)]
 pub struct Graph {
+    graph_type: GraphType,
     node_data: NodeData,
     node_edges: NodeEdges,
 }
@@ -179,13 +180,11 @@ pub fn create_ground_graph(
         directed_graph_edges.push(node_edges);
     }
 
-    spawner.spawn((
-        Graph {
-            node_data: NodeData(directed_graph_data),
-            node_edges: NodeEdges(directed_graph_edges),
-        },
-        GraphType::Ground,
-    ));
+    spawner.spawn(Graph {
+        graph_type: GraphType::Ground,
+        node_data: NodeData(directed_graph_data),
+        node_edges: NodeEdges(directed_graph_edges),
+    });
 }
 
 /// Spawns an Undirected Graph representing all land titles where the edges
@@ -294,13 +293,11 @@ pub fn create_air_graph(
         directed_graph_edges.push(node_edges);
     }
 
-    spawner.spawn((
-        Graph {
-            node_data: NodeData(directed_graph_data),
-            node_edges: NodeEdges(directed_graph_edges),
-        },
-        GraphType::Air,
-    ));
+    spawner.spawn(Graph {
+        graph_type: GraphType::Air,
+        node_data: NodeData(directed_graph_data),
+        node_edges: NodeEdges(directed_graph_edges),
+    });
 }
 
 #[derive(Component, Deref, DerefMut)]
@@ -383,6 +380,9 @@ pub struct MovementTimer(pub Timer);
 
 #[derive(Component, Deref, DerefMut)]
 pub struct DestinationQueue(VecDeque<TilePos>);
+
+// TODO: Add Spawning Point structure into Pathing Information.
+// TODO: Abstract individual components of Pathing information into PathInfo struct.
 
 pub fn insert_pathing_information(
     moving_entities: Query<(Entity, &Transform, &TilePos), (With<MovementType>, Without<Path>)>,

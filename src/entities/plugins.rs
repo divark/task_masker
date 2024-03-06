@@ -36,6 +36,7 @@ impl Plugin for StreamerPlugin {
                 move_streamer_on_spacebar,
                 test_streamer_msg,
                 queue_destination_for_streamer,
+                update_status_when_speaking,
             )
                 .run_if(in_state(GameState::InGame)),
         );
