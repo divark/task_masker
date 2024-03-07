@@ -14,7 +14,7 @@ use super::MovementType;
 #[derive(Component)]
 pub struct StreamerLabel;
 
-#[derive(Component)]
+#[derive(Component, PartialEq)]
 pub enum StreamerStatus {
     Idle,
     Moving,

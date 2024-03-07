@@ -192,12 +192,62 @@ pub fn speak_to_streamer(
     }
 }
 
-pub fn leave_from_streamer() {
-    /* if I've waited too long => WaitTimer.0.tick(time.delta()); WaitTimer.0.is_finished()
-     * or if streamer finished speaking, => !StreamerStatus::Speaking
-     * - chatter.path = pathTo(chatter.spawn_pos, chatter.start_pos)
-     * - remove wait timer => commands.entity(chatter_entity).remove::<WaitTimer>();
-     * - remove msg => commands.entity(chatter_entity).remove::<ChatterMsg>();
-     * - status = ChatterStatus::Leaving
-     */
+pub fn leave_from_streamer(
+    time: Res<Time>,
+    mut chatter: Query<(
+        Entity,
+        &mut WaitTimer,
+        &mut Path,
+        &StartingPoint,
+        &SpawnPoint,
+        &mut ChatterStatus,
+    )>,
+    air_graph_info: Query<(&NodeEdges, &GraphType)>,
+    map_info: Query<&TilemapSize>,
+    mut commands: Commands,
+) {
+    if chatter.is_empty() || air_graph_info.is_empty() || map_info.is_empty() {
+        return;
+    }
+
+    let map_size = map_info
+        .iter()
+        .last()
+        .expect("leave_from_streamer: Map should be spawned by now.");
+
+    let air_graph_edges = air_graph_info
+        .iter()
+        .filter(|graph_info| *graph_info.1 == GraphType::Air)
+        .map(|graph_info| graph_info.0)
+        .next()
+        .expect("leave_from_streamer: Exactly one air graph should exist by now.");
+
+    for (
+        chatter_entity,
+        mut chatter_wait_time,
+        mut chatter_path,
+        chatter_start_pos,
+        chatter_spawn_pos,
+        mut chatter_status,
+    ) in &mut chatter
+    {
+        chatter_wait_time.0.tick(time.delta());
+        if !chatter_wait_time.0.finished() {
+            continue;
+        }
+
+        *chatter_path = get_path(
+            &chatter_start_pos.1,
+            &chatter_spawn_pos.0,
+            map_size,
+            air_graph_edges,
+        );
+
+        commands
+            .entity(chatter_entity)
+            .remove::<WaitTimer>()
+            .remove::<ChatMsg>();
+
+        *chatter_status = ChatterStatus::Leaving;
+    }
 }

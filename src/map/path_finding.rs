@@ -382,21 +382,34 @@ pub struct MovementTimer(pub Timer);
 pub struct DestinationQueue(VecDeque<TilePos>);
 
 // TODO: Add Spawning Point structure into Pathing Information.
-// TODO: Abstract individual components of Pathing information into PathInfo struct.
+#[derive(Component)]
+pub struct SpawnPoint(pub TilePos);
+
+#[derive(Bundle)]
+pub struct PathInfo {
+    spawn_pos: SpawnPoint,
+    path: Path,
+    requested_targets: DestinationQueue,
+    start_pos: StartingPoint,
+    target_pos: Target,
+    direction: Direction,
+    movement_timer: MovementTimer,
+}
 
 pub fn insert_pathing_information(
     moving_entities: Query<(Entity, &Transform, &TilePos), (With<MovementType>, Without<Path>)>,
     mut spawner: Commands,
 ) {
     for (moving_entity, entity_transform, entity_tilepos) in &moving_entities {
-        spawner.entity(moving_entity).insert((
-            Path(VecDeque::new()),
-            DestinationQueue(VecDeque::new()),
-            StartingPoint(entity_transform.translation, *entity_tilepos),
-            Target(None),
-            Direction::TopRight,
-            MovementTimer(Timer::from_seconds(0.05, TimerMode::Repeating)),
-        ));
+        spawner.entity(moving_entity).insert(PathInfo {
+            spawn_pos: SpawnPoint(*entity_tilepos),
+            path: Path(VecDeque::new()),
+            requested_targets: DestinationQueue(VecDeque::new()),
+            start_pos: StartingPoint(entity_transform.translation, *entity_tilepos),
+            target_pos: Target(None),
+            direction: Direction::TopRight,
+            movement_timer: MovementTimer(Timer::from_seconds(0.05, TimerMode::Repeating)),
+        });
     }
 }
 
