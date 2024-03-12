@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
+use std::collections::VecDeque;
 
-use crate::entities::streamer::StreamerLabel;
+use crate::entities::streamer::{StreamerLabel, StreamerStatus};
 use crate::map::path_finding::*;
 use crate::map::tiled::{tiled_to_tile_pos, to_bevy_transform, LayerNumber, TiledMapInformation};
 use crate::ui::chatting::Msg;
@@ -250,4 +251,33 @@ pub fn leave_from_streamer(
 
         *chatter_status = ChatterStatus::Leaving;
     }
+}
+
+pub fn follow_streamer_while_speaking(
+    streamer_info: Query<(&StreamerStatus, &Path), Changed<StreamerStatus>>,
+    mut chatter_info: Query<(&ChatterStatus, &mut Path)>,
+) {
+    if streamer_info.is_empty() || chatter_info.is_empty() {
+        return;
+    }
+
+    let (streamer_status, streamer_path) = streamer_info
+        .get_single()
+        .expect("follow_streamer_while_speaking: Streamer should exist by now.");
+    for (chatter_status, mut chatter_path) in &mut chatter_info {
+        if *chatter_status != ChatterStatus::Speaking || !chatter_path.is_empty() {
+            continue;
+        }
+    }
+    // When Streamer Status is now Moving
+    // if Chatter not Speaking or Chatter.path is not empty
+    // - continue
+    // chatter.path = pathTo(chatter.pos, received_streamer_destination);
+}
+
+pub fn follow_streamer_while_approaching() {
+    // When Streamer Status is now Moving
+    // if Chatter not Approaching
+    // - continue
+    // chatter.path = pathTo(chatter.pos, received_streamer_destination)
 }
