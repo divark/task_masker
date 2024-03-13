@@ -255,29 +255,119 @@ pub fn leave_from_streamer(
 
 pub fn follow_streamer_while_speaking(
     streamer_info: Query<(&StreamerStatus, &Path), Changed<StreamerStatus>>,
-    mut chatter_info: Query<(&ChatterStatus, &mut Path)>,
+    mut chatter_info: Query<(&ChatterStatus, &mut Path), Without<StreamerStatus>>,
+    map_info: Query<&TilemapSize>,
 ) {
-    if streamer_info.is_empty() || chatter_info.is_empty() {
+    if streamer_info.is_empty() || chatter_info.is_empty() || map_info.is_empty() {
         return;
     }
+
+    let map_size = map_info
+        .iter()
+        .last()
+        .expect("follow_streamer_while_speaking: Map should be spawned by now.");
 
     let (streamer_status, streamer_path) = streamer_info
         .get_single()
         .expect("follow_streamer_while_speaking: Streamer should exist by now.");
+
+    if *streamer_status != StreamerStatus::Moving {
+        return;
+    }
+
     for (chatter_status, mut chatter_path) in &mut chatter_info {
         if *chatter_status != ChatterStatus::Speaking || !chatter_path.is_empty() {
             continue;
         }
+
+        chatter_path.0 = streamer_path
+            .0
+            .iter()
+            .map(|target| idx_to_tilepos(*target, map_size.y))
+            .map(|tilepos| {
+                TilePos::new(
+                    tilepos.x + DIST_AWAY_FROM_STREAMER as u32,
+                    tilepos.y + DIST_AWAY_FROM_STREAMER as u32,
+                )
+            })
+            .map(|tilepos_adjusted| {
+                tilepos_to_idx(tilepos_adjusted.x, tilepos_adjusted.y, map_size.y)
+            })
+            .collect::<VecDeque<usize>>();
     }
-    // When Streamer Status is now Moving
-    // if Chatter not Speaking or Chatter.path is not empty
-    // - continue
-    // chatter.path = pathTo(chatter.pos, received_streamer_destination);
 }
 
-pub fn follow_streamer_while_approaching() {
-    // When Streamer Status is now Moving
-    // if Chatter not Approaching
-    // - continue
-    // chatter.path = pathTo(chatter.pos, received_streamer_destination)
+pub fn follow_streamer_while_approaching(
+    streamer_info: Query<(&StreamerStatus, &Path), Without<ChatterStatus>>,
+    mut chatter_info: Query<(&ChatterStatus, &TilePos, &mut Path), Without<StreamerStatus>>,
+    air_graph_info: Query<(&NodeEdges, &GraphType)>,
+    map_info: Query<&TilemapSize>,
+) {
+    if streamer_info.is_empty() || chatter_info.is_empty() || map_info.is_empty() {
+        return;
+    }
+
+    let map_size = map_info
+        .iter()
+        .last()
+        .expect("follow_streamer_while_approaching: Map should be spawned by now.");
+
+    let (streamer_status, streamer_path) = streamer_info
+        .get_single()
+        .expect("follow_streamer_while_approaching: Streamer should exist by now.");
+
+    if *streamer_status != StreamerStatus::Moving {
+        return;
+    }
+
+    if streamer_path.0.is_empty() {
+        return;
+    }
+
+    let air_graph_edges = air_graph_info
+        .iter()
+        .filter(|graph_info| *graph_info.1 == GraphType::Air)
+        .map(|graph_info| graph_info.0)
+        .next()
+        .expect("follow_streamer_while_approaching: Exactly one air graph should exist by now.");
+
+    for (chatter_status, chatter_pos, mut chatter_path) in &mut chatter_info {
+        if *chatter_status != ChatterStatus::Approaching || chatter_path.0.is_empty() {
+            continue;
+        }
+
+        let streamer_destination = streamer_path
+            .0
+            .iter()
+            .last()
+            .expect("follow_streamer_while_approaching: Streamer Path should be populated.");
+        let streamer_destination_tilepos = idx_to_tilepos(*streamer_destination, map_size.y);
+        let chatter_destination_distanced = TilePos::new(
+            streamer_destination_tilepos.x + DIST_AWAY_FROM_STREAMER as u32,
+            streamer_destination_tilepos.y + DIST_AWAY_FROM_STREAMER as u32,
+        );
+
+        let current_chatter_destination =
+            idx_to_tilepos(*chatter_path.0.iter().last().unwrap(), map_size.y);
+
+        // We do not want to re-populate the path if the Chatter is already
+        // going to the desired destination.
+        if current_chatter_destination == chatter_destination_distanced {
+            continue;
+        }
+
+        // This accounts for the situation when the Chatter
+        // arrives before the Streamer does, and the Chatter
+        // is just waiting.
+        if *chatter_pos == chatter_destination_distanced {
+            continue;
+        }
+
+        *chatter_path = get_path(
+            chatter_pos,
+            &chatter_destination_distanced,
+            map_size,
+            air_graph_edges,
+        );
+    }
 }

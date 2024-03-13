@@ -381,7 +381,6 @@ pub struct MovementTimer(pub Timer);
 #[derive(Component, Deref, DerefMut)]
 pub struct DestinationQueue(VecDeque<TilePos>);
 
-// TODO: Add Spawning Point structure into Pathing Information.
 #[derive(Component)]
 pub struct SpawnPoint(pub TilePos);
 

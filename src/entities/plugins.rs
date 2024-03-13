@@ -19,6 +19,8 @@ impl Plugin for ChatterPlugin {
                 fly_to_streamer_to_speak,
                 speak_to_streamer,
                 leave_from_streamer,
+                follow_streamer_while_speaking,
+                follow_streamer_while_approaching,
             ),
         );
     }

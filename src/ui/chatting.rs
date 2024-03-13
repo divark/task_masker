@@ -59,15 +59,13 @@ pub fn insert_chatting_information(
     let msg_character_idx = MsgIndex(0);
     let msg_len = MsgLen(0);
 
-    commands.entity(ui_fields_entity).insert(
-        Chatting {
-            typing_speed: typing_speed_timer,
-            msg_waiting: msg_waiting_timer,
-            msg_character_idx,
-            msg_len,
-            status: ChattingStatus::Idle,
-        }
-    );
+    commands.entity(ui_fields_entity).insert(Chatting {
+        typing_speed: typing_speed_timer,
+        msg_waiting: msg_waiting_timer,
+        msg_character_idx,
+        msg_len,
+        status: ChattingStatus::Idle,
+    });
 }
 
 pub fn setup_chatting_from_msg(
