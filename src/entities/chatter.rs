@@ -61,9 +61,9 @@ pub fn replace_chatter(
     let (map_transform, grid_size, map_size, map_type) =
         map_information.expect("replace_chatter: Map information should exist by now.");
 
-    let texture_handle = asset_server.load("BirdSprite (16x16).png");
+    let texture_handle = asset_server.load("chatters/animation.png");
     let chatter_texture_atlas =
-        TextureAtlas::from_grid(texture_handle, Vec2::new(16.0, 16.0), 8, 3, None, None);
+        TextureAtlas::from_grid(texture_handle, Vec2::new(16.0, 16.0), 8, 2, None, None);
     let chatter_texture_atlas_handle = texture_atlases.add(chatter_texture_atlas);
     for (chatter_entity, layer_number, tile_pos, tile_texture_index) in &mut tiles_query {
         if layer_number.0 != CHATTER_LAYER_NUM {
