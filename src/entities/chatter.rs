@@ -165,7 +165,7 @@ pub fn fly_to_streamer_to_speak(
     }
 }
 
-pub fn speak_to_streamer(
+pub fn speak_to_streamer_from_chatter(
     mut chatter_query: Query<
         (Entity, &ChatMsg, &Path, &mut ChatterStatus, &MovementType),
         Without<WaitTimer>,
@@ -193,7 +193,7 @@ pub fn speak_to_streamer(
     }
 }
 
-pub fn leave_from_streamer(
+pub fn leave_from_streamer_from_chatter(
     time: Res<Time>,
     mut chatter: Query<(
         Entity,

@@ -18,7 +18,7 @@ pub enum GraphType {
 pub struct NodeData(pub Vec<Vec3>);
 
 #[derive(Component, PartialEq, Debug)]
-pub struct NodeEdges(Vec<Vec<usize>>);
+pub struct NodeEdges(pub Vec<Vec<usize>>);
 
 #[derive(Bundle)]
 pub struct Graph {

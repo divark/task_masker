@@ -95,6 +95,10 @@ pub fn change_sprite_direction(
     for (mut animation_indices, mut entity_spritesheet, entity_type, entity_direction) in
         &mut moving_entities
     {
+        if *entity_type == MovementType::Swim {
+            continue;
+        }
+
         animation_indices.start_idx = direction_to_row_index(entity_direction, entity_type);
         animation_indices.end_idx = animation_indices.start_idx + movement_type_len(entity_type);
         entity_spritesheet.index = animation_indices.start_idx;

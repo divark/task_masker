@@ -18,8 +18,8 @@ impl Plugin for ChatterPlugin {
                 replace_chatter,
                 trigger_flying_to_streamer,
                 fly_to_streamer_to_speak,
-                speak_to_streamer,
-                leave_from_streamer,
+                speak_to_streamer_from_chatter,
+                leave_from_streamer_from_chatter,
                 follow_streamer_while_speaking,
                 follow_streamer_while_approaching,
             ),
@@ -33,7 +33,16 @@ pub struct SubscriberPlugin;
 impl Plugin for SubscriberPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<SubscriberMsg>();
-        app.add_systems(Update, (replace_subscriber,));
+        app.add_systems(
+            Update,
+            (
+                replace_subscriber,
+                trigger_swimming_to_streamer,
+                swim_to_streamer_to_speak,
+                speak_to_streamer_from_subscriber,
+                leave_from_streamer_from_subscriber,
+            ),
+        );
     }
 }
 
