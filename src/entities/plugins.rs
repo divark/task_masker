@@ -2,6 +2,7 @@ use crate::entities::chatter::*;
 use crate::entities::crop::*;
 use crate::entities::fruit::*;
 use crate::entities::streamer::*;
+use crate::entities::subscriber::*;
 use crate::GameState;
 use bevy::prelude::*;
 
@@ -23,6 +24,16 @@ impl Plugin for ChatterPlugin {
                 follow_streamer_while_approaching,
             ),
         );
+    }
+}
+
+#[derive(Default)]
+pub struct SubscriberPlugin;
+
+impl Plugin for SubscriberPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_event::<SubscriberMsg>();
+        app.add_systems(Update, (replace_subscriber,));
     }
 }
 

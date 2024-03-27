@@ -39,7 +39,7 @@ fn movement_type_len(entity_type: &MovementType) -> usize {
     match entity_type {
         MovementType::Walk => 4,
         MovementType::Fly => 8,
-        MovementType::Swim => 1,
+        MovementType::Swim => 16,
     }
 }
 
@@ -70,7 +70,7 @@ fn fly_directional_index_from(direction: &Direction) -> usize {
 fn swim_directional_index_from(_direction: &Direction) -> usize {
     let num_swim_sprites_in_row = movement_type_len(&MovementType::Swim) as u32;
 
-    tilepos_to_idx(0, 0, num_swim_sprites_in_row)
+    tilepos_to_idx(1, 0, num_swim_sprites_in_row)
 }
 
 fn direction_to_row_index(direction: &Direction, entity_type: &MovementType) -> usize {
@@ -129,11 +129,20 @@ pub fn animate(
     mut moving_entities: Query<(
         &mut AnimationTimer,
         &mut AnimationIndices,
+        &MovementType,
         &mut TextureAtlasSprite,
     )>,
     time: Res<Time>,
 ) {
-    for (mut timer, animation_indices, mut entity_spritesheet) in &mut moving_entities {
+    for (mut timer, animation_indices, movement_type, mut entity_spritesheet) in
+        &mut moving_entities
+    {
+        // Fish do not have animation, at least with the
+        // currently used sprite sheet.
+        if *movement_type == MovementType::Swim {
+            continue;
+        }
+
         if timer.paused() {
             entity_spritesheet.index = animation_indices.start_idx;
             continue;

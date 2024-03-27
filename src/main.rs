@@ -1,7 +1,7 @@
 use audio::plugins::BackgroundMusicPlugin;
 use bevy::{prelude::*, window::WindowResolution};
 use bevy_ecs_tilemap::prelude::*;
-use entities::plugins::{ChatterPlugin, CropPlugin, FruitPlugin, StreamerPlugin};
+use entities::plugins::{ChatterPlugin, CropPlugin, FruitPlugin, StreamerPlugin, SubscriberPlugin};
 use map::plugins::TiledCameraPlugin;
 use ui::plugins::{ChattingPlugin, StartupScreenPlugin};
 use visual::plugins::AnimationPlugin;
@@ -63,6 +63,7 @@ fn main() {
         .add_plugins(FruitPlugin)
         .add_plugins(CropPlugin)
         .add_plugins(ChatterPlugin)
+        .add_plugins(SubscriberPlugin)
         .add_plugins(TiledCameraPlugin)
         .run();
 }

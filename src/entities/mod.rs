@@ -5,6 +5,7 @@ pub mod crop;
 pub mod fruit;
 pub mod plugins;
 pub mod streamer;
+pub mod subscriber;
 
 #[derive(Component, Default, PartialEq, Eq, Clone, Copy)]
 pub enum MovementType {

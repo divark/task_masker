@@ -29,6 +29,7 @@ impl Plugin for PathFindingPlugin {
             (
                 create_ground_graph,
                 create_air_graph,
+                create_water_graph,
                 insert_pathing_information,
                 update_movement_target,
                 move_entities,
