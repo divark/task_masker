@@ -45,7 +45,7 @@ pub fn replace_subscriber(
         (&Transform, &TilemapGridSize, &TilemapSize, &TilemapType),
         Added<TilemapGridSize>,
     >,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
@@ -62,7 +62,7 @@ pub fn replace_subscriber(
 
     let texture_handle = asset_server.load("subscribers/animation.png");
     let subscriber_texture_atlas =
-        TextureAtlas::from_grid(texture_handle, Vec2::new(32.0, 32.0), 16, 16, None, None);
+        TextureAtlasLayout::from_grid(Vec2::new(32.0, 32.0), 16, 16, None, None);
     let subscriber_texture_atlas_handle = texture_atlases.add(subscriber_texture_atlas);
     for (subscriber_entity, layer_number, tile_pos, tile_texture_index) in &mut tiles_query {
         if layer_number.0 != SUBSCRIBER_LAYER_NUM {
@@ -73,8 +73,12 @@ pub fn replace_subscriber(
         let tile_transform = to_bevy_transform(tile_pos, map_info);
 
         let subscriber_sprite = SpriteSheetBundle {
-            sprite: TextureAtlasSprite::new(tile_texture_index.0 as usize),
-            texture_atlas: subscriber_texture_atlas_handle.clone(),
+            sprite: Sprite::default(),
+            atlas: TextureAtlas {
+                layout: subscriber_texture_atlas_handle.clone(),
+                index: tile_texture_index.0 as usize,
+            },
+            texture: texture_handle.clone(),
             transform: tile_transform,
             ..default()
         };
@@ -95,9 +99,9 @@ pub fn replace_subscriber(
 
 pub fn trigger_swimming_to_streamer(
     mut subscriber_msg: EventWriter<SubscriberMsg>,
-    pressed_key: Res<Input<KeyCode>>,
+    pressed_key: Res<ButtonInput<KeyCode>>,
 ) {
-    if !pressed_key.pressed(KeyCode::U) {
+    if !pressed_key.pressed(KeyCode::KeyU) {
         return;
     }
 

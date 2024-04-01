@@ -30,7 +30,6 @@ pub fn insert_animation_information(
         commands.entity(moving_entity).insert((
             AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
             AnimationIndices { start_idx, end_idx },
-            TextureAtlasSprite::new(start_idx),
         ));
     }
 }
@@ -81,20 +80,11 @@ fn direction_to_row_index(direction: &Direction, entity_type: &MovementType) -> 
     }
 }
 
-pub fn change_sprite_direction(
-    mut moving_entities: Query<
-        (
-            &mut AnimationIndices,
-            &mut TextureAtlasSprite,
-            &MovementType,
-            &Direction,
-        ),
-        Changed<Direction>,
-    >,
+/// Flips the Fish sprite on Direction change.
+pub fn change_fish_direction(
+    mut moving_entities: Query<(&MovementType, &Direction, &mut Sprite), Changed<Direction>>,
 ) {
-    for (mut animation_indices, mut entity_spritesheet, entity_type, entity_direction) in
-        &mut moving_entities
-    {
+    for (entity_type, entity_direction, mut entity_spritesheet) in &mut moving_entities {
         // Since Fish have no animation, flipping the sprite serves
         // as a good enough solution to at least make it seem like
         // the fish is facing something or someone.
@@ -104,6 +94,26 @@ pub fn change_sprite_direction(
                 Direction::BottomRight | Direction::TopRight => entity_spritesheet.flip_x = true,
             }
 
+            continue;
+        }
+    }
+}
+
+pub fn change_sprite_direction(
+    mut moving_entities: Query<
+        (
+            &mut AnimationIndices,
+            &mut TextureAtlas,
+            &MovementType,
+            &Direction,
+        ),
+        Changed<Direction>,
+    >,
+) {
+    for (mut animation_indices, mut entity_spritesheet, entity_type, entity_direction) in
+        &mut moving_entities
+    {
+        if *entity_type == MovementType::Swim {
             continue;
         }
 
@@ -142,7 +152,7 @@ pub fn animate(
         &mut AnimationTimer,
         &mut AnimationIndices,
         &MovementType,
-        &mut TextureAtlasSprite,
+        &mut TextureAtlas,
     )>,
     time: Res<Time>,
 ) {

@@ -428,11 +428,11 @@ pub fn despawn_end_screen(mut commands: Commands, end_screen_items: Query<(Entit
 }
 
 pub fn cycle_screens(
-    keyboard_input: Res<Input<KeyCode>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     game_state: Res<State<GameState>>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
-    if !keyboard_input.just_pressed(KeyCode::Return) {
+    if !keyboard_input.just_pressed(KeyCode::Enter) {
         return;
     }
 

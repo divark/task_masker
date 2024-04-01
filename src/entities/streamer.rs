@@ -33,7 +33,7 @@ pub struct Streamer {
 pub fn spawn_player(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
     map_information: Query<
         (&Transform, &TilemapType, &TilemapGridSize, &TilemapSize),
         Added<TilemapType>,
@@ -45,8 +45,7 @@ pub fn spawn_player(
     }
 
     let texture_handle = asset_server.load("caveman/caveman-sheet.png");
-    let texture_atlas =
-        TextureAtlas::from_grid(texture_handle, Vec2::new(16.0, 16.0), 4, 9, None, None);
+    let texture_atlas = TextureAtlasLayout::from_grid(Vec2::new(16.0, 16.0), 4, 9, None, None);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     if map_information.is_empty() {
@@ -66,7 +65,12 @@ pub fn spawn_player(
         Streamer {
             label: StreamerLabel,
             sprites: SpriteSheetBundle {
-                texture_atlas: texture_atlas_handle,
+                sprite: Sprite::default(),
+                atlas: TextureAtlas {
+                    layout: texture_atlas_handle,
+                    index: 0,
+                },
+                texture: texture_handle,
                 transform: streamer_transform,
                 ..default()
             },
@@ -163,7 +167,7 @@ pub fn queue_destination_for_streamer(
 }
 
 pub fn move_streamer_on_spacebar(
-    keyboard_input: Res<Input<KeyCode>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     mut destination_request_writer: EventWriter<TilePosEvent>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
@@ -171,8 +175,11 @@ pub fn move_streamer_on_spacebar(
     }
 }
 
-pub fn test_streamer_msg(keyboard_input: Res<Input<KeyCode>>, mut msg_writer: EventWriter<Msg>) {
-    if !keyboard_input.just_pressed(KeyCode::Q) {
+pub fn test_streamer_msg(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut msg_writer: EventWriter<Msg>,
+) {
+    if !keyboard_input.just_pressed(KeyCode::KeyQ) {
         return;
     }
 

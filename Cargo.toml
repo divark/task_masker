@@ -6,8 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = { version = "^0.12", features = ["wav", "wayland"] }
-bevy_ecs_tilemap = "^0.12"
+bevy = { version = "^0.13", features = ["wav", "wayland"] }
+bevy_ecs_tilemap = { git = "https://github.com/StarArawn/bevy_ecs_tilemap.git", rev = "25def41e029626bb5e84fe7aca1f16a1d6beccdc" }
 thiserror = "^1.0"
 tiled = "^0.11"
 rand = "^0.8"

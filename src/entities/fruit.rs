@@ -31,7 +31,7 @@ pub fn replace_fruit_tiles(
         (&Transform, &TilemapGridSize, &TilemapSize, &TilemapType),
         Added<TilemapGridSize>,
     >,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
@@ -50,7 +50,7 @@ pub fn replace_fruit_tiles(
 
     let texture_handle = asset_server.load("Fruit(16x16).png");
     let fruit_texture_atlas =
-        TextureAtlas::from_grid(texture_handle, Vec2::new(16.0, 16.0), 38, 6, None, None);
+        TextureAtlasLayout::from_grid(Vec2::new(16.0, 16.0), 38, 6, None, None);
     let fruit_texture_atlas_handle = texture_atlases.add(fruit_texture_atlas);
     for (_entity, layer_number, tile_pos, tile_texture_index) in &mut tiles_query {
         if layer_number.0 != fruit_tiles_layer_num {
@@ -61,8 +61,12 @@ pub fn replace_fruit_tiles(
         let tile_transform = to_bevy_transform(tile_pos, map_info);
 
         let fruit_sprite = SpriteSheetBundle {
-            sprite: TextureAtlasSprite::new(tile_texture_index.0 as usize),
-            texture_atlas: fruit_texture_atlas_handle.clone(),
+            sprite: Sprite::default(),
+            atlas: TextureAtlas {
+                layout: fruit_texture_atlas_handle.clone(),
+                index: tile_texture_index.0 as usize,
+            },
+            texture: texture_handle.clone(),
             transform: tile_transform,
             ..default()
         };
@@ -246,7 +250,7 @@ pub fn respawn_fruit(
 }
 
 pub fn drop_random_fruit_on_f_key(
-    keyboard_input: Res<Input<KeyCode>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     mut fruit_query: Query<&mut TriggerQueue, With<FruitState>>,
 ) {
     if fruit_query.is_empty() {
@@ -258,7 +262,7 @@ pub fn drop_random_fruit_on_f_key(
         .choose(&mut rand::thread_rng())
         .expect("Fruit should exist.");
 
-    if keyboard_input.just_pressed(KeyCode::F) {
+    if keyboard_input.just_pressed(KeyCode::KeyF) {
         random_fruit_queue.0.push_back(());
     }
 }

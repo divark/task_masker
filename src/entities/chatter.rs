@@ -46,7 +46,7 @@ pub fn replace_chatter(
         (&Transform, &TilemapGridSize, &TilemapSize, &TilemapType),
         Added<TilemapGridSize>,
     >,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
@@ -63,7 +63,7 @@ pub fn replace_chatter(
 
     let texture_handle = asset_server.load("chatters/animation.png");
     let chatter_texture_atlas =
-        TextureAtlas::from_grid(texture_handle, Vec2::new(16.0, 16.0), 8, 2, None, None);
+        TextureAtlasLayout::from_grid(Vec2::new(16.0, 16.0), 8, 2, None, None);
     let chatter_texture_atlas_handle = texture_atlases.add(chatter_texture_atlas);
     for (chatter_entity, layer_number, tile_pos, tile_texture_index) in &mut tiles_query {
         if layer_number.0 != CHATTER_LAYER_NUM {
@@ -74,8 +74,12 @@ pub fn replace_chatter(
         let tile_transform = to_bevy_transform(tile_pos, map_info);
 
         let chatter_sprite = SpriteSheetBundle {
-            sprite: TextureAtlasSprite::new(tile_texture_index.0 as usize),
-            texture_atlas: chatter_texture_atlas_handle.clone(),
+            sprite: Sprite::default(),
+            atlas: TextureAtlas {
+                layout: chatter_texture_atlas_handle.clone(),
+                index: tile_texture_index.0 as usize,
+            },
+            texture: texture_handle.clone(),
             transform: tile_transform,
             ..default()
         };
@@ -96,9 +100,9 @@ pub fn replace_chatter(
 
 pub fn trigger_flying_to_streamer(
     mut chatter_msg: EventWriter<ChatMsg>,
-    pressed_key: Res<Input<KeyCode>>,
+    pressed_key: Res<ButtonInput<KeyCode>>,
 ) {
-    if !pressed_key.pressed(KeyCode::G) {
+    if !pressed_key.pressed(KeyCode::KeyG) {
         return;
     }
 

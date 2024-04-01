@@ -32,7 +32,7 @@ pub fn replace_crop_tiles(
         (&Transform, &TilemapGridSize, &TilemapSize, &TilemapType),
         Added<TilemapGridSize>,
     >,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
@@ -51,7 +51,7 @@ pub fn replace_crop_tiles(
 
     let texture_handle = asset_server.load("farming crops 1(16x16).png");
     let crop_texture_atlas =
-        TextureAtlas::from_grid(texture_handle, Vec2::new(16.0, 16.0), 16, 16, None, None);
+        TextureAtlasLayout::from_grid(Vec2::new(16.0, 16.0), 16, 16, None, None);
     let crop_texture_atlas_handle = texture_atlases.add(crop_texture_atlas);
     for (_entity, layer_number, tile_pos, tile_texture_index) in &mut tiles_query {
         if layer_number.0 != crop_tiles_layer_num {
@@ -62,8 +62,12 @@ pub fn replace_crop_tiles(
         let tile_transform = to_bevy_transform(tile_pos, map_info);
 
         let crop_sprite = SpriteSheetBundle {
-            sprite: TextureAtlasSprite::new(tile_texture_index.0 as usize),
-            texture_atlas: crop_texture_atlas_handle.clone(),
+            sprite: Sprite::default(),
+            atlas: TextureAtlas {
+                layout: crop_texture_atlas_handle.clone(),
+                index: tile_texture_index.0 as usize,
+            },
+            texture: texture_handle.clone(),
             transform: tile_transform,
             ..default()
         };
@@ -80,7 +84,7 @@ pub fn replace_crop_tiles(
 }
 
 pub fn grow_crop_on_c_key(
-    keyboard_input: Res<Input<KeyCode>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     mut crop_queues: Query<&mut TriggerQueue, With<CropState>>,
 ) {
     if crop_queues.is_empty() {
@@ -92,7 +96,7 @@ pub fn grow_crop_on_c_key(
         .choose(&mut rand::thread_rng())
         .expect("Crop should exist by now.");
 
-    if keyboard_input.just_pressed(KeyCode::C) {
+    if keyboard_input.just_pressed(KeyCode::KeyC) {
         random_crop_queue.0.push_back(());
     }
 }
@@ -101,7 +105,7 @@ pub fn grow_crops(
     mut crop_query: Query<(
         &mut TriggerQueue,
         &mut CropState,
-        &mut TextureAtlasSprite,
+        &mut TextureAtlas,
         &mut CropEndIdx,
     )>,
     mut commands: Commands,
@@ -149,7 +153,7 @@ pub fn pathfind_streamer_to_crops(
 }
 
 pub fn pick_up_crops(
-    mut crop_query: Query<(&mut CropState, &mut TextureAtlasSprite, &TilePos)>,
+    mut crop_query: Query<(&mut CropState, &mut TextureAtlas, &TilePos)>,
     streamer_query: Query<&TilePos, (With<StreamerLabel>, Changed<TilePos>)>,
     mut commands: Commands,
     asset_loader: Res<AssetServer>,
