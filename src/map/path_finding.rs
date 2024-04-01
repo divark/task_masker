@@ -819,7 +819,7 @@ pub mod tests {
 
     #[test]
     fn air_and_ground_graphs_different() {
-        let layer = LayerNumber(0);
+        let layer = LayerNumber(SUBSCRIBER_LAYER_NUM);
         let map_size = TilemapSize { x: 2, y: 2 };
 
         let grid_size = TilemapGridSize {
