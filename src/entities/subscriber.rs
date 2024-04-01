@@ -286,3 +286,22 @@ pub fn leave_from_streamer_from_subscriber(
         *subscriber_status = SubscriberStatus::Leaving;
     }
 }
+
+/// Sets the Subscriber's Status back to Idle
+/// when reaching its starting position once
+/// again after leaving.
+pub fn return_subscriber_to_idle(
+    mut subscriber: Query<(&Path, &mut SubscriberStatus), (Changed<Path>, With<SubscriberLabel>)>,
+) {
+    for (subscriber_path, mut subscriber_status) in &mut subscriber {
+        if *subscriber_status != SubscriberStatus::Leaving {
+            continue;
+        }
+
+        if !subscriber_path.0.is_empty() {
+            continue;
+        }
+
+        *subscriber_status = SubscriberStatus::Idle;
+    }
+}

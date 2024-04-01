@@ -20,6 +20,7 @@ impl Plugin for ChatterPlugin {
                 fly_to_streamer_to_speak,
                 speak_to_streamer_from_chatter,
                 leave_from_streamer_from_chatter,
+                return_chatter_to_idle,
                 follow_streamer_while_speaking,
                 follow_streamer_while_approaching,
             ),
@@ -41,6 +42,7 @@ impl Plugin for SubscriberPlugin {
                 swim_to_streamer_to_speak,
                 speak_to_streamer_from_subscriber,
                 leave_from_streamer_from_subscriber,
+                return_subscriber_to_idle,
             ),
         );
     }

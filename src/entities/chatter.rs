@@ -182,7 +182,7 @@ pub fn speak_to_streamer_from_chatter(
 
         commands
             .entity(chatter_entity)
-            .insert(WaitTimer(Timer::from_seconds(60.0, TimerMode::Once)));
+            .insert(WaitTimer(Timer::from_seconds(10.0, TimerMode::Once)));
 
         *chatter_status = ChatterStatus::Speaking;
         chat_msg_requester.send(Msg {
@@ -250,6 +250,25 @@ pub fn leave_from_streamer_from_chatter(
             .remove::<ChatMsg>();
 
         *chatter_status = ChatterStatus::Leaving;
+    }
+}
+
+/// Sets the Chatter's Status back to Idle
+/// when reaching its starting position once
+/// again after leaving.
+pub fn return_chatter_to_idle(
+    mut chatter: Query<(&Path, &mut ChatterStatus), (Changed<Path>, With<ChatterLabel>)>,
+) {
+    for (chatter_path, mut chatter_status) in &mut chatter {
+        if *chatter_status != ChatterStatus::Leaving {
+            continue;
+        }
+
+        if !chatter_path.0.is_empty() {
+            continue;
+        }
+
+        *chatter_status = ChatterStatus::Idle;
     }
 }
 
