@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use std::collections::VecDeque;
 
-use crate::entities::streamer::{StreamerLabel, StreamerStatus};
+use crate::entities::streamer::StreamerLabel;
 use crate::map::path_finding::*;
 use crate::map::tiled::{tiled_to_tile_pos, to_bevy_transform, LayerNumber, TiledMapInformation};
 use crate::ui::chatting::Msg;
@@ -176,7 +176,7 @@ pub fn swim_to_streamer_to_speak(
             air_graph_edges,
         );
 
-        let path_to_shore = include_nodes_only_from(path_to_streamer, &water_graph_edges);
+        let path_to_shore = include_nodes_only_from(path_to_streamer, water_graph_edges);
 
         *subscriber_path = path_to_shore;
 

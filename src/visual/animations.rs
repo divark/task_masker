@@ -95,7 +95,15 @@ pub fn change_sprite_direction(
     for (mut animation_indices, mut entity_spritesheet, entity_type, entity_direction) in
         &mut moving_entities
     {
+        // Since Fish have no animation, flipping the sprite serves
+        // as a good enough solution to at least make it seem like
+        // the fish is facing something or someone.
         if *entity_type == MovementType::Swim {
+            match entity_direction {
+                Direction::BottomLeft | Direction::TopLeft => entity_spritesheet.flip_x = false,
+                Direction::BottomRight | Direction::TopRight => entity_spritesheet.flip_x = true,
+            }
+
             continue;
         }
 
