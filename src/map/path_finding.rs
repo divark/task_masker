@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
-use crate::entities::MovementType;
+use crate::entities::{chatter::CHATTER_LAYER_NUM, subscriber::SUBSCRIBER_LAYER_NUM, MovementType};
 
 use super::tiled::{tiled_to_bevy_transform, tiled_to_tile_pos, LayerNumber, TiledMapInformation};
 
@@ -294,7 +294,7 @@ pub fn create_water_graph(
 
         let map_transform = map_information
             .iter()
-            .nth(tile_height)
+            .nth(SUBSCRIBER_LAYER_NUM)
             .expect("Tile should be on this layer.")
             .3;
 
@@ -412,7 +412,7 @@ pub fn create_air_graph(
 
         let map_transform = map_information
             .iter()
-            .last()
+            .nth(CHATTER_LAYER_NUM)
             .expect("Tile should be on this layer.")
             .3;
 
