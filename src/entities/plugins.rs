@@ -22,7 +22,7 @@ impl Plugin for ChatterPlugin {
                 leave_from_streamer_from_chatter,
                 return_chatter_to_idle,
                 follow_streamer_while_speaking,
-                follow_streamer_while_approaching,
+                follow_streamer_while_approaching_for_chatter,
             ),
         );
     }
@@ -43,6 +43,7 @@ impl Plugin for SubscriberPlugin {
                 speak_to_streamer_from_subscriber,
                 leave_from_streamer_from_subscriber,
                 return_subscriber_to_idle,
+                follow_streamer_while_approaching_for_subscriber,
             ),
         );
     }

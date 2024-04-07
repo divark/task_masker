@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use std::collections::VecDeque;
 
-use crate::entities::streamer::StreamerLabel;
+use crate::entities::streamer::{StreamerLabel, StreamerStatus};
 use crate::map::path_finding::*;
 use crate::map::tiled::{tiled_to_tile_pos, to_bevy_transform, LayerNumber, TiledMapInformation};
 use crate::ui::chatting::Msg;
@@ -307,5 +307,99 @@ pub fn return_subscriber_to_idle(
         }
 
         *subscriber_status = SubscriberStatus::Idle;
+    }
+}
+
+pub fn follow_streamer_while_approaching_for_subscriber(
+    streamer_info: Query<(&StreamerStatus, &Path), Without<SubscriberStatus>>,
+    mut subscriber_info: Query<(&SubscriberStatus, &TilePos, &mut Path), Without<StreamerStatus>>,
+    air_graph_info: Query<(&NodeEdges, &GraphType)>,
+    map_info: Query<&TilemapSize>,
+) {
+    if streamer_info.is_empty() || subscriber_info.is_empty() || map_info.is_empty() {
+        return;
+    }
+
+    let map_size = map_info
+        .iter()
+        .last()
+        .expect("follow_streamer_while_approaching: Map should be spawned by now.");
+
+    let (streamer_status, streamer_path) = streamer_info
+        .get_single()
+        .expect("follow_streamer_while_approaching: Streamer should exist by now.");
+
+    if *streamer_status != StreamerStatus::Moving {
+        return;
+    }
+
+    if streamer_path.0.is_empty() {
+        return;
+    }
+
+    let air_graph_edges = air_graph_info
+        .iter()
+        .filter(|graph_info| *graph_info.1 == GraphType::Air)
+        .map(|graph_info| graph_info.0)
+        .next()
+        .expect("follow_streamer_while_approaching: Exactly one air graph should exist by now.");
+
+    let water_graph_edges = air_graph_info
+        .iter()
+        .filter(|graph_info| *graph_info.1 == GraphType::Water)
+        .map(|graph_info| graph_info.0)
+        .next()
+        .expect("follow_streamer_while_approaching: Exactly one water graph should exist by now.");
+
+    for (subscriber_status, subscriber_pos, mut subscriber_path) in &mut subscriber_info {
+        if *subscriber_status != SubscriberStatus::Approaching || subscriber_path.0.is_empty() {
+            continue;
+        }
+
+        let streamer_destination = streamer_path
+            .0
+            .iter()
+            .last()
+            .expect("follow_streamer_while_approaching: Streamer Path should be populated.");
+        let streamer_destination_tilepos = idx_to_tilepos(*streamer_destination, map_size.y);
+        let current_subscriber_destination =
+            idx_to_tilepos(*subscriber_path.0.iter().last().unwrap(), map_size.y);
+
+        let path_to_streamer = get_path(
+            subscriber_pos,
+            &streamer_destination_tilepos,
+            map_size,
+            air_graph_edges,
+        );
+
+        let path_to_shore = include_nodes_only_from(path_to_streamer, water_graph_edges);
+
+        let next_subscriber_destination_idx = path_to_shore
+            .0
+            .iter()
+            .last()
+            .expect("follow_streamer_while_approaching_from_subscriber: New path to Streamer does not exist.");
+
+        if path_to_shore.0.is_empty() {
+            continue;
+        }
+
+        let next_subscriber_destination =
+            idx_to_tilepos(*next_subscriber_destination_idx, map_size.y);
+
+        // We do not want to re-populate the path if the Subscriber is already
+        // going to the desired destination.
+        if current_subscriber_destination == next_subscriber_destination {
+            continue;
+        }
+
+        // This accounts for the situation when the Subscriber
+        // arrives before the Streamer does, and the Subscriber
+        // is just waiting.
+        if *subscriber_pos == next_subscriber_destination {
+            continue;
+        }
+
+        *subscriber_path = path_to_shore;
     }
 }

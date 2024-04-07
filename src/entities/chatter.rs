@@ -320,7 +320,7 @@ pub fn follow_streamer_while_speaking(
     }
 }
 
-pub fn follow_streamer_while_approaching(
+pub fn follow_streamer_while_approaching_for_chatter(
     streamer_info: Query<(&StreamerStatus, &Path), Without<ChatterStatus>>,
     mut chatter_info: Query<(&ChatterStatus, &TilePos, &mut Path), Without<StreamerStatus>>,
     air_graph_info: Query<(&NodeEdges, &GraphType)>,
