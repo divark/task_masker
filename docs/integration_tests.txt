@@ -1,0 +1,27 @@
+Entity Type:
+    Streamer.       [property Streamer]
+    Chatter.        [property Chatter]
+    Subscriber.     [property Subscriber]
+
+Entity Action:
+    Walking.        [property Walking]
+    Speaking.
+    Retrieving.     [if Streamer][property Retrieving]
+
+Destination Feasibility:
+    Reachable.      [if (Retrieving || Walking)]
+    Unreachable.    [if (Retrieving || Walking)]
+
+Destination Height:
+    Higher.         [if (Retrieving || Walking)]
+    # The Subscriber is already at the lowest level (the sea for my implementation).
+    Lower.          [if (Retrieving || Walking) && !Subscriber][else][error]
+    # Streamer cannot be at the same level as a Subscriber, since
+    # a Streamer cannot swim at this time.
+    Equal.          [if (Retrieving || Walking) && !Subscriber][else][error]
+
+Destination Type:
+    Streamer.       [if Walking && (Chatter || Subscriber)]
+    Fruit.          [if Retrieving]
+    Crop.           [if Retrieving]
+    Tile.           [if Walking]

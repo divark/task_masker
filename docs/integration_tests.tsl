@@ -1,0 +1,304 @@
+
+Test Case 1  		<error>  (follows [else])
+   Destination Height :  Lower
+
+
+Test Case 2  		<error>  (follows [else])
+   Destination Height :  Equal
+
+
+Test Case 3  		(Key = 1.1.1.1.4.)
+   Entity Type             :  Streamer
+   Entity Action           :  Walking
+   Destination Feasibility :  Reachable
+   Destination Height      :  Higher
+   Destination Type        :  Tile
+
+
+Test Case 4  		(Key = 1.1.1.2.4.)
+   Entity Type             :  Streamer
+   Entity Action           :  Walking
+   Destination Feasibility :  Reachable
+   Destination Height      :  Lower
+   Destination Type        :  Tile
+
+
+Test Case 5  		(Key = 1.1.1.3.4.)
+   Entity Type             :  Streamer
+   Entity Action           :  Walking
+   Destination Feasibility :  Reachable
+   Destination Height      :  Equal
+   Destination Type        :  Tile
+
+
+Test Case 6  		(Key = 1.1.2.1.4.)
+   Entity Type             :  Streamer
+   Entity Action           :  Walking
+   Destination Feasibility :  Unreachable
+   Destination Height      :  Higher
+   Destination Type        :  Tile
+
+
+Test Case 7  		(Key = 1.1.2.2.4.)
+   Entity Type             :  Streamer
+   Entity Action           :  Walking
+   Destination Feasibility :  Unreachable
+   Destination Height      :  Lower
+   Destination Type        :  Tile
+
+
+Test Case 8  		(Key = 1.1.2.3.4.)
+   Entity Type             :  Streamer
+   Entity Action           :  Walking
+   Destination Feasibility :  Unreachable
+   Destination Height      :  Equal
+   Destination Type        :  Tile
+
+
+Test Case 9  		(Key = 1.2.0.0.0.)
+   Entity Type             :  Streamer
+   Entity Action           :  Speaking
+   Destination Feasibility :  <n/a>
+   Destination Height      :  <n/a>
+   Destination Type        :  <n/a>
+
+
+Test Case 10 		(Key = 1.3.1.1.2.)
+   Entity Type             :  Streamer
+   Entity Action           :  Retrieving
+   Destination Feasibility :  Reachable
+   Destination Height      :  Higher
+   Destination Type        :  Fruit
+
+
+Test Case 11 		(Key = 1.3.1.1.3.)
+   Entity Type             :  Streamer
+   Entity Action           :  Retrieving
+   Destination Feasibility :  Reachable
+   Destination Height      :  Higher
+   Destination Type        :  Crop
+
+
+Test Case 12 		(Key = 1.3.1.2.2.)
+   Entity Type             :  Streamer
+   Entity Action           :  Retrieving
+   Destination Feasibility :  Reachable
+   Destination Height      :  Lower
+   Destination Type        :  Fruit
+
+
+Test Case 13 		(Key = 1.3.1.2.3.)
+   Entity Type             :  Streamer
+   Entity Action           :  Retrieving
+   Destination Feasibility :  Reachable
+   Destination Height      :  Lower
+   Destination Type        :  Crop
+
+
+Test Case 14 		(Key = 1.3.1.3.2.)
+   Entity Type             :  Streamer
+   Entity Action           :  Retrieving
+   Destination Feasibility :  Reachable
+   Destination Height      :  Equal
+   Destination Type        :  Fruit
+
+
+Test Case 15 		(Key = 1.3.1.3.3.)
+   Entity Type             :  Streamer
+   Entity Action           :  Retrieving
+   Destination Feasibility :  Reachable
+   Destination Height      :  Equal
+   Destination Type        :  Crop
+
+
+Test Case 16 		(Key = 1.3.2.1.2.)
+   Entity Type             :  Streamer
+   Entity Action           :  Retrieving
+   Destination Feasibility :  Unreachable
+   Destination Height      :  Higher
+   Destination Type        :  Fruit
+
+
+Test Case 17 		(Key = 1.3.2.1.3.)
+   Entity Type             :  Streamer
+   Entity Action           :  Retrieving
+   Destination Feasibility :  Unreachable
+   Destination Height      :  Higher
+   Destination Type        :  Crop
+
+
+Test Case 18 		(Key = 1.3.2.2.2.)
+   Entity Type             :  Streamer
+   Entity Action           :  Retrieving
+   Destination Feasibility :  Unreachable
+   Destination Height      :  Lower
+   Destination Type        :  Fruit
+
+
+Test Case 19 		(Key = 1.3.2.2.3.)
+   Entity Type             :  Streamer
+   Entity Action           :  Retrieving
+   Destination Feasibility :  Unreachable
+   Destination Height      :  Lower
+   Destination Type        :  Crop
+
+
+Test Case 20 		(Key = 1.3.2.3.2.)
+   Entity Type             :  Streamer
+   Entity Action           :  Retrieving
+   Destination Feasibility :  Unreachable
+   Destination Height      :  Equal
+   Destination Type        :  Fruit
+
+
+Test Case 21 		(Key = 1.3.2.3.3.)
+   Entity Type             :  Streamer
+   Entity Action           :  Retrieving
+   Destination Feasibility :  Unreachable
+   Destination Height      :  Equal
+   Destination Type        :  Crop
+
+
+Test Case 22 		(Key = 2.1.1.1.1.)
+   Entity Type             :  Chatter
+   Entity Action           :  Walking
+   Destination Feasibility :  Reachable
+   Destination Height      :  Higher
+   Destination Type        :  Streamer
+
+
+Test Case 23 		(Key = 2.1.1.1.4.)
+   Entity Type             :  Chatter
+   Entity Action           :  Walking
+   Destination Feasibility :  Reachable
+   Destination Height      :  Higher
+   Destination Type        :  Tile
+
+
+Test Case 24 		(Key = 2.1.1.2.1.)
+   Entity Type             :  Chatter
+   Entity Action           :  Walking
+   Destination Feasibility :  Reachable
+   Destination Height      :  Lower
+   Destination Type        :  Streamer
+
+
+Test Case 25 		(Key = 2.1.1.2.4.)
+   Entity Type             :  Chatter
+   Entity Action           :  Walking
+   Destination Feasibility :  Reachable
+   Destination Height      :  Lower
+   Destination Type        :  Tile
+
+
+Test Case 26 		(Key = 2.1.1.3.1.)
+   Entity Type             :  Chatter
+   Entity Action           :  Walking
+   Destination Feasibility :  Reachable
+   Destination Height      :  Equal
+   Destination Type        :  Streamer
+
+
+Test Case 27 		(Key = 2.1.1.3.4.)
+   Entity Type             :  Chatter
+   Entity Action           :  Walking
+   Destination Feasibility :  Reachable
+   Destination Height      :  Equal
+   Destination Type        :  Tile
+
+
+Test Case 28 		(Key = 2.1.2.1.1.)
+   Entity Type             :  Chatter
+   Entity Action           :  Walking
+   Destination Feasibility :  Unreachable
+   Destination Height      :  Higher
+   Destination Type        :  Streamer
+
+
+Test Case 29 		(Key = 2.1.2.1.4.)
+   Entity Type             :  Chatter
+   Entity Action           :  Walking
+   Destination Feasibility :  Unreachable
+   Destination Height      :  Higher
+   Destination Type        :  Tile
+
+
+Test Case 30 		(Key = 2.1.2.2.1.)
+   Entity Type             :  Chatter
+   Entity Action           :  Walking
+   Destination Feasibility :  Unreachable
+   Destination Height      :  Lower
+   Destination Type        :  Streamer
+
+
+Test Case 31 		(Key = 2.1.2.2.4.)
+   Entity Type             :  Chatter
+   Entity Action           :  Walking
+   Destination Feasibility :  Unreachable
+   Destination Height      :  Lower
+   Destination Type        :  Tile
+
+
+Test Case 32 		(Key = 2.1.2.3.1.)
+   Entity Type             :  Chatter
+   Entity Action           :  Walking
+   Destination Feasibility :  Unreachable
+   Destination Height      :  Equal
+   Destination Type        :  Streamer
+
+
+Test Case 33 		(Key = 2.1.2.3.4.)
+   Entity Type             :  Chatter
+   Entity Action           :  Walking
+   Destination Feasibility :  Unreachable
+   Destination Height      :  Equal
+   Destination Type        :  Tile
+
+
+Test Case 34 		(Key = 2.2.0.0.0.)
+   Entity Type             :  Chatter
+   Entity Action           :  Speaking
+   Destination Feasibility :  <n/a>
+   Destination Height      :  <n/a>
+   Destination Type        :  <n/a>
+
+
+Test Case 35 		(Key = 3.1.1.1.1.)
+   Entity Type             :  Subscriber
+   Entity Action           :  Walking
+   Destination Feasibility :  Reachable
+   Destination Height      :  Higher
+   Destination Type        :  Streamer
+
+
+Test Case 36 		(Key = 3.1.1.1.4.)
+   Entity Type             :  Subscriber
+   Entity Action           :  Walking
+   Destination Feasibility :  Reachable
+   Destination Height      :  Higher
+   Destination Type        :  Tile
+
+
+Test Case 37 		(Key = 3.1.2.1.1.)
+   Entity Type             :  Subscriber
+   Entity Action           :  Walking
+   Destination Feasibility :  Unreachable
+   Destination Height      :  Higher
+   Destination Type        :  Streamer
+
+
+Test Case 38 		(Key = 3.1.2.1.4.)
+   Entity Type             :  Subscriber
+   Entity Action           :  Walking
+   Destination Feasibility :  Unreachable
+   Destination Height      :  Higher
+   Destination Type        :  Tile
+
+
+Test Case 39 		(Key = 3.2.0.0.0.)
+   Entity Type             :  Subscriber
+   Entity Action           :  Speaking
+   Destination Feasibility :  <n/a>
+   Destination Height      :  <n/a>
+   Destination Type        :  <n/a>
+
