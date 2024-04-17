@@ -19,17 +19,26 @@ use std::sync::Arc;
 use bevy::{
     asset::{io::Reader, AssetLoader, AssetPath, AsyncReadExt},
     log,
-    prelude::{
-        Added, Asset, AssetApp, AssetEvent, AssetId, Assets, Bundle, Commands, Component,
-        DespawnRecursiveExt, Entity, EventReader, GlobalTransform, Handle, Image, Plugin, Query,
-        Res, Transform, Update,
-    },
+    prelude::*,
     reflect::TypePath,
     utils::{BoxedFuture, HashMap},
 };
 use bevy_ecs_tilemap::prelude::*;
 
 use thiserror::Error;
+
+pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let map_handle: Handle<TiledMap> = asset_server.load("TM_v3.tmx");
+
+    commands.spawn(TiledMapBundle {
+        tiled_map: map_handle,
+        render_settings: TilemapRenderSettings {
+            render_chunk_size: UVec2::new(1280, 1),
+            y_sort: true,
+        },
+        ..Default::default()
+    });
+}
 
 #[derive(Default)]
 pub struct TiledMapPlugin;

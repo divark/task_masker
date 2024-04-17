@@ -11,4 +11,3 @@ bevy_ecs_tilemap = { git = "https://github.com/StarArawn/bevy_ecs_tilemap.git", 
 thiserror = "^1.0"
 tiled = "^0.11"
 rand = "^0.8"
-#bevy-inspector-egui = "^0.19"

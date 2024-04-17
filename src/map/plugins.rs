@@ -3,10 +3,10 @@ use bevy_ecs_tilemap::tiles::TilePos;
 
 use super::{
     path_finding::*,
-    tiled::{process_loaded_maps, TiledLoader, TiledMap},
+    tiled::{process_loaded_maps, spawn_map, TiledLoader, TiledMap},
 };
 use crate::map::camera::*;
-use crate::{spawn_map, GameState};
+use crate::GameState;
 
 #[derive(Event)]
 pub struct TilePosEvent {

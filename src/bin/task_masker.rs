@@ -1,37 +1,13 @@
+use bevy::prelude::*;
+use task_masker::*;
+
 use audio::plugins::BackgroundMusicPlugin;
-use bevy::{prelude::*, window::WindowResolution};
+use bevy::window::WindowResolution;
 use bevy_ecs_tilemap::prelude::*;
 use entities::plugins::{ChatterPlugin, CropPlugin, FruitPlugin, StreamerPlugin, SubscriberPlugin};
 use map::plugins::TiledCameraPlugin;
 use ui::plugins::{ChattingPlugin, StartupScreenPlugin};
 use visual::plugins::AnimationPlugin;
-
-mod audio;
-mod entities;
-mod map;
-mod ui;
-mod visual;
-
-#[derive(Default, Debug, Hash, PartialEq, Eq, Clone, Copy, States)]
-pub enum GameState {
-    #[default]
-    Start,
-    InGame,
-    End,
-}
-
-fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let map_handle: Handle<map::tiled::TiledMap> = asset_server.load("TM_v3.tmx");
-
-    commands.spawn(map::tiled::TiledMapBundle {
-        tiled_map: map_handle,
-        render_settings: TilemapRenderSettings {
-            render_chunk_size: UVec2::new(1280, 1),
-            y_sort: true,
-        },
-        ..Default::default()
-    });
-}
 
 fn main() {
     App::new()
