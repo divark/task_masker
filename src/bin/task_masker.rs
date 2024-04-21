@@ -5,7 +5,7 @@ use audio::plugins::BackgroundMusicPlugin;
 use bevy::window::WindowResolution;
 use bevy_ecs_tilemap::prelude::*;
 use entities::plugins::{ChatterPlugin, CropPlugin, FruitPlugin, StreamerPlugin, SubscriberPlugin};
-use map::plugins::TiledCameraPlugin;
+use map::plugins::{PathFindingPlugin, TiledCameraPlugin, TiledMapPlugin};
 use ui::plugins::{ChattingPlugin, StartupScreenPlugin};
 use visual::plugins::AnimationPlugin;
 
@@ -29,8 +29,8 @@ fn main() {
         )
         .init_state::<GameState>()
         .add_plugins(TilemapPlugin)
-        .add_plugins(map::plugins::TiledMapPlugin)
-        .add_plugins(map::plugins::PathFindingPlugin)
+        .add_plugins(TiledMapPlugin)
+        .add_plugins(PathFindingPlugin)
         .add_plugins(StartupScreenPlugin)
         .add_plugins(ChattingPlugin)
         .add_plugins(BackgroundMusicPlugin)
