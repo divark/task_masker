@@ -7,7 +7,7 @@ use bevy_ecs_tilemap::tiles::{TilePos, TileTextureIndex};
 use rand::seq::IteratorRandom;
 
 use crate::map::plugins::TilePosEvent;
-use crate::map::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
+use crate::map::tiled::{tiled_to_tile_pos, to_bevy_transform, LayerNumber, TiledMapInformation};
 
 use super::fruit::TriggerQueue;
 use super::streamer::StreamerLabel;
@@ -75,7 +75,7 @@ pub fn replace_crop_tiles(
         commands.entity(_entity).despawn_recursive();
         commands.spawn((
             crop_sprite,
-            *tile_pos,
+            tiled_to_tile_pos(tile_pos.x, tile_pos.y, world_size),
             CropState::Growing,
             CropEndIdx(tile_texture_index.0 as usize + CROP_NUM_STAGES - 1),
             TriggerQueue(VecDeque::new()),
