@@ -11,9 +11,10 @@
 // Functional limitations:
 //   * When the 'atlas' feature is enabled tilesets using a collection of images will be skipped.
 //   * Only finite tile layers are loaded. Infinite tile layers and object layers will be skipped.
+use tiled::Loader;
 
 use std::io::{Cursor, ErrorKind};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use bevy::{
@@ -267,7 +268,7 @@ pub fn process_loaded_maps(
     )>,
     new_maps: Query<&Handle<TiledMap>, Added<Handle<TiledMap>>>,
 ) {
-    // Collect all TiledMap references that have been changed
+    // NOTE: Collect all TiledMap references that have been changed
     let mut changed_maps = Vec::<AssetId<TiledMap>>::default();
     for event in map_events.read() {
         match event {
@@ -289,8 +290,8 @@ pub fn process_loaded_maps(
         }
     }
 
-    // Include all TiledMap references that have been added as well.
-    // ###
+    // NOTE: Include all TiledMap references that have been added as well.
+    //
     // If we have new map entities add them to the changed_maps list.
     for new_map_handle in new_maps.iter() {
         changed_maps.push(new_map_handle.id());
@@ -500,6 +501,164 @@ pub fn process_loaded_maps(
                     }
                 }
             }
+        }
+    }
+}
+
+/// Returns a loaded Tiled Map from
+/// the provided Path.
+fn load_tmx_map(tiled_map_path: &Path) -> TiledMap {
+    let mut loader = Loader::new();
+    let map = loader
+        .load_tmx_map(tiled_map_path)
+        .expect("load_tmx_map: Unable to load tmx map.");
+
+    let tilemap_textures = HashMap::default();
+    #[cfg(not(feature = "atlas"))]
+    let tile_image_offsets = HashMap::default();
+
+    TiledMap {
+        map,
+        tilemap_textures,
+        #[cfg(not(feature = "atlas"))]
+        tile_image_offsets,
+    }
+}
+
+/// Loads all necessary information to represent
+/// each Tile from a Tiled (.tmx) file.
+/// NOTE: For Integration Testing purposes only.
+pub fn spawn_tiles_from_tiledmap(mut commands: Commands) {
+    // NOTE: Get the TiledMap instance from all known
+    // Assets.
+    let mut tiled_map_path = PathBuf::new();
+    tiled_map_path.push(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    tiled_map_path.push("assets/TM_v3.tmx");
+
+    let tiled_map = load_tmx_map(&tiled_map_path);
+    for (tileset_index, tileset) in tiled_map.map.tilesets().iter().enumerate() {
+        // NOTE: Define the Tile Size based on the Tile Set used.
+        let tile_size = TilemapTileSize {
+            x: tileset.tile_width as f32,
+            y: tileset.tile_height as f32,
+        };
+
+        // NOTE: Record the Spacing between Tiles
+        // based on the Tile Set used.
+        let tile_spacing = TilemapSpacing {
+            x: tileset.spacing as f32,
+            y: tileset.spacing as f32,
+        };
+
+        // Once materials have been created/added we need to then create the layers.
+        //
+        // NOTE: For each Layer,
+        for (layer_index, layer) in tiled_map.map.layers().enumerate() {
+            let offset_x = layer.offset_x;
+            let offset_y = layer.offset_y;
+
+            // NOTE: Filter for all Layers with type Tiles from the Tiled Map.
+            let tiled::LayerType::Tiles(tile_layer) = layer.layer_type() else {
+                log::info!(
+                    "Skipping layer {} because only tile layers are supported.",
+                    layer.id()
+                );
+                continue;
+            };
+
+            // NOTE: Filter for all Finite Tile Layers.
+            let tiled::TileLayer::Finite(layer_data) = tile_layer else {
+                log::info!(
+                    "Skipping layer {} because only finite layers are supported.",
+                    layer.id()
+                );
+                continue;
+            };
+
+            // NOTE: Capture the size of the current Tile Map,
+            // where Width and Height are measured in Number
+            // of Tiles.
+            let map_size = TilemapSize {
+                x: tiled_map.map.width,
+                y: tiled_map.map.height,
+            };
+
+            // NOTE: Capture the maximum size of each Tile from
+            // the current Tile Map in pixels.
+            let grid_size = TilemapGridSize {
+                x: tiled_map.map.tile_width as f32,
+                y: tiled_map.map.tile_height as f32,
+            };
+
+            // NOTE: Determine the Orientation of the Tile Map.
+            let map_type = match tiled_map.map.orientation {
+                tiled::Orientation::Hexagonal => TilemapType::Hexagon(HexCoordSystem::Row),
+                tiled::Orientation::Isometric => TilemapType::Isometric(IsoCoordSystem::Diamond),
+                tiled::Orientation::Staggered => TilemapType::Isometric(IsoCoordSystem::Staggered),
+                tiled::Orientation::Orthogonal => TilemapType::Square,
+            };
+
+            let layer_entity = commands.spawn_empty().id();
+
+            for x in 0..map_size.x {
+                for y in 0..map_size.y {
+                    // Transform TMX coords into bevy coords.
+                    //
+                    // NOTE: Flip the Y-Axis from what Bevy expects
+                    // to coordinate with Tiled handles coordinates.
+                    let mapped_y = tiled_map.map.height - 1 - y;
+
+                    let mapped_x = x as i32;
+                    let mapped_y = mapped_y as i32;
+
+                    // NOTE: Pull the Tile from the Tiled Map.
+                    let layer_tile = match layer_data.get_tile(mapped_x, mapped_y) {
+                        Some(t) => t,
+                        None => {
+                            continue;
+                        }
+                    };
+                    // NOTE: Filter out all Layer Tiles that are not
+                    // dealing with the currently loaded Tile Set (Palette).
+                    if tileset_index != layer_tile.tileset_index() {
+                        continue;
+                    }
+                    // NOTE: Pulls Properties about Layer Tile.
+                    let layer_tile_data = match layer_data.get_tile_data(mapped_x, mapped_y) {
+                        Some(d) => d,
+                        None => {
+                            continue;
+                        }
+                    };
+
+                    // NOTE: Spawn the Layer Tile in Bevy Coordinates.
+                    let tile_pos = TilePos { x, y };
+                    commands.spawn((
+                        TileBundle {
+                            position: tile_pos,
+                            tilemap_id: TilemapId(layer_entity),
+                            flip: TileFlip {
+                                x: layer_tile_data.flip_h,
+                                y: layer_tile_data.flip_v,
+                                d: layer_tile_data.flip_d,
+                            },
+                            ..Default::default()
+                        },
+                        LayerNumber(layer_index),
+                    ));
+                }
+            }
+
+            // NOTE: Spawn the Tiled Map Layer as a whole.
+            commands.entity(layer_entity).insert((
+                grid_size,
+                map_size,
+                tile_size,
+                tile_spacing,
+                get_tilemap_center_transform(&map_size, &grid_size, &map_type, layer_index as f32)
+                    * Transform::from_xyz(offset_x, -offset_y, 0.0),
+                map_type,
+            ));
         }
     }
 }

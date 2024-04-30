@@ -81,6 +81,44 @@ pub fn spawn_player(
     ));
 }
 
+/// Spawns Player without any component related to rendering
+/// for Integration Testing purposes.
+pub fn mock_spawn_player(
+    mut commands: Commands,
+    map_information: Query<
+        (&Transform, &TilemapType, &TilemapGridSize, &TilemapSize),
+        Added<TilemapType>,
+    >,
+    streamer_query: Query<(), With<StreamerLabel>>,
+) {
+    if !streamer_query.is_empty() {
+        return;
+    }
+
+    if map_information.is_empty() {
+        return;
+    }
+
+    let (map_transform, map_type, grid_size, map_size) = map_information
+        .iter()
+        .nth(6)
+        .expect("Could not load map information. Is world loaded?");
+    let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
+
+    let streamer_location = TilePos { x: 38, y: 59 }; //{ x: 42, y: 59 };
+    let streamer_transform = tiled_to_bevy_transform(&streamer_location, map_info);
+
+    commands.spawn((
+        (
+            StreamerLabel,
+            MovementType::Walk,
+            StreamerStatus::Idle,
+            streamer_transform,
+        ),
+        streamer_location,
+    ));
+}
+
 pub fn move_streamer(
     mut streamer_entity: Query<
         (

@@ -98,6 +98,50 @@ pub fn replace_chatter(
     }
 }
 
+/// Respawns Chatter without rendering components
+/// for Integration Testing only.
+pub fn mock_replace_chatter(
+    mut tiles_query: Query<(Entity, &LayerNumber, &TilePos)>,
+    map_info_query: Query<
+        (&Transform, &TilemapGridSize, &TilemapSize, &TilemapType),
+        Added<TilemapGridSize>,
+    >,
+    mut commands: Commands,
+) {
+    let map_information = map_info_query
+        .iter()
+        .find(|map_info| map_info.0.translation.z == CHATTER_LAYER_NUM as f32);
+
+    if map_information.is_none() {
+        return;
+    }
+
+    let (map_transform, grid_size, map_size, map_type) =
+        map_information.expect("mock_replace_chatter: Map information should exist by now.");
+
+    for (chatter_entity, layer_number, tile_pos) in &mut tiles_query {
+        if layer_number.0 != CHATTER_LAYER_NUM {
+            continue;
+        }
+
+        let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
+        let tile_transform = to_bevy_transform(tile_pos, map_info);
+
+        let chatter_tilepos = tiled_to_tile_pos(tile_pos.x, tile_pos.y, map_size);
+
+        commands.entity(chatter_entity).despawn_recursive();
+        commands.spawn((
+            (
+                ChatterLabel,
+                tile_transform,
+                MovementType::Fly,
+                ChatterStatus::Idle,
+            ),
+            chatter_tilepos,
+        ));
+    }
+}
+
 pub fn trigger_flying_to_streamer(
     mut chatter_msg: EventWriter<ChatMsg>,
     pressed_key: Res<ButtonInput<KeyCode>>,

@@ -97,6 +97,50 @@ pub fn replace_subscriber(
     }
 }
 
+/// Respawns Subscriber without rendering components
+/// for Integration Testing purposes.
+pub fn mock_replace_subscriber(
+    mut tiles_query: Query<(Entity, &LayerNumber, &TilePos)>,
+    map_info_query: Query<
+        (&Transform, &TilemapGridSize, &TilemapSize, &TilemapType),
+        Added<TilemapGridSize>,
+    >,
+    mut commands: Commands,
+) {
+    let map_information = map_info_query
+        .iter()
+        .find(|map_info| map_info.0.translation.z == SUBSCRIBER_LAYER_NUM as f32);
+
+    if map_information.is_none() {
+        return;
+    }
+
+    let (map_transform, grid_size, map_size, map_type) =
+        map_information.expect("mock_replace_subscriber: Map information should exist by now.");
+
+    for (subscriber_entity, layer_number, tile_pos) in &mut tiles_query {
+        if layer_number.0 != SUBSCRIBER_LAYER_NUM {
+            continue;
+        }
+
+        let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
+        let tile_transform = to_bevy_transform(tile_pos, map_info);
+
+        let subscriber_tilepos = tiled_to_tile_pos(tile_pos.x, tile_pos.y, map_size);
+
+        commands.entity(subscriber_entity).despawn_recursive();
+        commands.spawn((
+            (
+                SubscriberLabel,
+                MovementType::Swim,
+                tile_transform,
+                SubscriberStatus::Idle,
+            ),
+            subscriber_tilepos,
+        ));
+    }
+}
+
 pub fn trigger_swimming_to_streamer(
     mut subscriber_msg: EventWriter<SubscriberMsg>,
     pressed_key: Res<ButtonInput<KeyCode>>,
