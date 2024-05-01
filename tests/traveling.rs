@@ -106,19 +106,85 @@ impl GameWorld {
             MovementType::Walk => {
                 self.app.add_plugins(MockStreamerPlugin);
 
-                todo!()
+                self.app.update();
+
+                return self
+                    .app
+                    .world
+                    .query::<(Entity, &StreamerLabel)>()
+                    .iter(&self.app.world)
+                    .map(|entry| entry.0)
+                    .next()
+                    .expect("spawn: Streamer was not found after trying to spawn it.");
             }
             MovementType::Swim => {
                 self.app.add_plugins(MockSubscriberPlugin);
 
-                todo!()
+                self.app.update();
+
+                return self
+                    .app
+                    .world
+                    .query::<(Entity, &SubscriberLabel)>()
+                    .iter(&self.app.world)
+                    .map(|entry| entry.0)
+                    .next()
+                    .expect("spawn: Subscriber was not found after trying to spawn it.");
             }
             MovementType::Fly => {
                 self.app.add_plugins(MockChatterPlugin);
 
-                todo!()
+                self.app.update();
+
+                return self
+                    .app
+                    .world
+                    .query::<(Entity, &ChatterLabel)>()
+                    .iter(&self.app.world)
+                    .map(|entry| entry.0)
+                    .next()
+                    .expect("spawn: Chatter was not found after trying to spawn it.");
             }
         }
+    }
+
+    /// Returns the Height represented as the Z value
+    /// for some given Entity.
+    pub fn height_of(&mut self, entity: Entity) -> f32 {
+        self.app
+            .world
+            .query::<(Entity, &Transform)>()
+            .iter(&self.app.world)
+            .find(|entry| entry.0 == entity)
+            .map(|entry| entry.1)
+            .unwrap()
+            .translation
+            .z
+    }
+
+    /// Triggers the Source Entity to move to the location
+    /// of the Target Entity.
+    pub fn travel_to(&mut self, source_entity: Entity, target_entity: Entity) {
+        let source_entity_type = self
+            .app
+            .world
+            .query::<(Entity, &MovementType)>()
+            .iter(&self.app.world)
+            .find(|entry| entry.0 == source_entity)
+            .map(|entry| entry.1)
+            .unwrap();
+
+        match source_entity_type {
+            MovementType::Walk => todo!(),
+            MovementType::Fly => todo!(),
+            MovementType::Swim => todo!(),
+        }
+    }
+
+    /// Returns a boolean representing whether two Entities
+    /// co-exist in the same location.
+    pub fn has_reached(&mut self, source_entity: Entity, target_entity: Entity) -> bool {
+        todo!()
     }
 }
 
@@ -135,4 +201,24 @@ fn creating_gameworld_does_not_crash() {
             .len(),
         0
     );
+}
+
+#[test]
+fn chatter_higher_than_streamer() {
+    let mut world = GameWorld::new();
+
+    let streamer = world.spawn(MovementType::Walk);
+    let chatter = world.spawn(MovementType::Fly);
+
+    assert!(world.height_of(chatter) > world.height_of(streamer));
+}
+
+#[test]
+fn subscriber_lower_than_streamer() {
+    let mut world = GameWorld::new();
+
+    let streamer = world.spawn(MovementType::Walk);
+    let subscriber = world.spawn(MovementType::Swim);
+
+    assert!(world.height_of(subscriber) < world.height_of(streamer));
 }
