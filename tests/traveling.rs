@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use bevy_ecs_tilemap::prelude::*;
-use task_masker::entities::{chatter::*, streamer::*, subscriber::*, MovementType};
+use task_masker::entities::{chatter::*, streamer::*, subscriber::*};
 use task_masker::map::plugins::PathFindingPlugin;
 use task_masker::map::tiled::spawn_tiles_from_tiledmap;
 use task_masker::ui::plugins::ChattingPlugin;
@@ -76,6 +76,15 @@ impl Plugin for MockChatterPlugin {
     }
 }
 
+enum EntityType {
+    Streamer,
+    Chatter,
+    Subscriber,
+    Fruit,
+    Crop,
+    //Tile,
+}
+
 /// A convenience abstraction of Task Masker
 /// represented as what is needed to create
 /// one of its worlds.
@@ -101,9 +110,9 @@ impl GameWorld {
 
     /// Returns a reference to the Entity just created
     /// based on its type.
-    pub fn spawn(&mut self, entity_type: MovementType) -> Entity {
+    pub fn spawn(&mut self, entity_type: EntityType) -> Entity {
         match entity_type {
-            MovementType::Walk => {
+            EntityType::Streamer => {
                 self.app.add_plugins(MockStreamerPlugin);
 
                 self.app.update();
@@ -112,12 +121,11 @@ impl GameWorld {
                     .app
                     .world
                     .query::<(Entity, &StreamerLabel)>()
-                    .iter(&self.app.world)
-                    .map(|entry| entry.0)
-                    .next()
-                    .expect("spawn: Streamer was not found after trying to spawn it.");
+                    .get_single(&self.app.world)
+                    .expect("spawn: Streamer was not found after trying to spawn it.")
+                    .0;
             }
-            MovementType::Swim => {
+            EntityType::Subscriber => {
                 self.app.add_plugins(MockSubscriberPlugin);
 
                 self.app.update();
@@ -126,12 +134,11 @@ impl GameWorld {
                     .app
                     .world
                     .query::<(Entity, &SubscriberLabel)>()
-                    .iter(&self.app.world)
-                    .map(|entry| entry.0)
-                    .next()
-                    .expect("spawn: Subscriber was not found after trying to spawn it.");
+                    .get_single(&self.app.world)
+                    .expect("spawn: Subscriber was not found after trying to spawn it.")
+                    .0;
             }
-            MovementType::Fly => {
+            EntityType::Chatter => {
                 self.app.add_plugins(MockChatterPlugin);
 
                 self.app.update();
@@ -140,11 +147,11 @@ impl GameWorld {
                     .app
                     .world
                     .query::<(Entity, &ChatterLabel)>()
-                    .iter(&self.app.world)
-                    .map(|entry| entry.0)
-                    .next()
-                    .expect("spawn: Chatter was not found after trying to spawn it.");
+                    .get_single(&self.app.world)
+                    .expect("spawn: Chatter was not found after trying to spawn it.")
+                    .0;
             }
+            _ => todo!(),
         }
     }
 
@@ -153,10 +160,8 @@ impl GameWorld {
     pub fn height_of(&mut self, entity: Entity) -> f32 {
         self.app
             .world
-            .query::<(Entity, &Transform)>()
-            .iter(&self.app.world)
-            .find(|entry| entry.0 == entity)
-            .map(|entry| entry.1)
+            .query::<&Transform>()
+            .get(&self.app.world, entity)
             .unwrap()
             .translation
             .z
@@ -165,20 +170,7 @@ impl GameWorld {
     /// Triggers the Source Entity to move to the location
     /// of the Target Entity.
     pub fn travel_to(&mut self, source_entity: Entity, target_entity: Entity) {
-        let source_entity_type = self
-            .app
-            .world
-            .query::<(Entity, &MovementType)>()
-            .iter(&self.app.world)
-            .find(|entry| entry.0 == source_entity)
-            .map(|entry| entry.1)
-            .unwrap();
-
-        match source_entity_type {
-            MovementType::Walk => todo!(),
-            MovementType::Fly => todo!(),
-            MovementType::Swim => todo!(),
-        }
+        todo!();
     }
 
     /// Returns a boolean representing whether two Entities
@@ -207,8 +199,8 @@ fn creating_gameworld_does_not_crash() {
 fn chatter_higher_than_streamer() {
     let mut world = GameWorld::new();
 
-    let streamer = world.spawn(MovementType::Walk);
-    let chatter = world.spawn(MovementType::Fly);
+    let streamer = world.spawn(EntityType::Streamer);
+    let chatter = world.spawn(EntityType::Chatter);
 
     assert!(world.height_of(chatter) > world.height_of(streamer));
 }
@@ -217,8 +209,8 @@ fn chatter_higher_than_streamer() {
 fn subscriber_lower_than_streamer() {
     let mut world = GameWorld::new();
 
-    let streamer = world.spawn(MovementType::Walk);
-    let subscriber = world.spawn(MovementType::Swim);
+    let streamer = world.spawn(EntityType::Streamer);
+    let subscriber = world.spawn(EntityType::Subscriber);
 
     assert!(world.height_of(subscriber) < world.height_of(streamer));
 }
