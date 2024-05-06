@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use bevy_ecs_tilemap::prelude::*;
 use task_masker::entities::{chatter::*, streamer::*, subscriber::*};
+use task_masker::map::path_finding::{tilepos_to_idx, GraphType, NodeEdges};
 use task_masker::map::plugins::PathFindingPlugin;
 use task_masker::map::tiled::spawn_tiles_from_tiledmap;
 use task_masker::ui::plugins::ChattingPlugin;
@@ -176,8 +177,130 @@ impl GameWorld {
     /// Returns a boolean representing whether two Entities
     /// co-exist in the same location.
     pub fn has_reached(&mut self, source_entity: Entity, target_entity: Entity) -> bool {
-        todo!()
+        let source_pos = self.get_tile_pos_from(source_entity);
+        let target_pos = self.get_tile_pos_from(target_entity);
+        match self.get_entity_type(source_entity) {
+            EntityType::Subscriber => return self.next_to_land(source_pos),
+            EntityType::Chatter => {
+                return distance_of(source_pos, target_pos) == DIST_AWAY_FROM_STREAMER
+            }
+            _ => return distance_of(source_pos, target_pos) == 0,
+        }
     }
+
+    /// Returns true when the source position has any Ground Tile neighboring
+    /// it, where neighbors are left-to-right, or top-to-bottom only.
+    fn next_to_land(&mut self, source_pos: TilePos) -> bool {
+        let neighbors = self.get_tile_neighbors(&source_pos);
+
+        let ground_nodes = self
+            .app
+            .world
+            .query::<(&NodeEdges, &GraphType)>()
+            .iter(&self.app.world)
+            .find(|entry| *entry.1 == GraphType::Ground)
+            .map(|entry| entry.0)
+            .expect(
+                "next_to_land: Ground Nodes were expected to be loaded, but they were not found",
+            );
+
+        let mut next_to_land = false;
+        for neighbor in neighbors {
+            next_to_land = !ground_nodes.0[neighbor].is_empty();
+            if next_to_land {
+                break;
+            }
+        }
+
+        next_to_land
+    }
+
+    /// Returns the Tiles neighboring the source position.
+    fn get_tile_neighbors(&mut self, source_pos: &TilePos) -> Vec<usize> {
+        let world_size = self
+            .app
+            .world
+            .query::<&TilemapSize>()
+            .iter(&self.app.world)
+            .max_by(|&x, &y| {
+                let x_world_area = x.x * x.y;
+                let y_world_area = y.x * y.y;
+
+                x_world_area.cmp(&y_world_area)
+            })
+            .expect("get_tile_neighbors: Could not find largest world size. Is the map loaded?");
+
+        let left_tilepos = TilePos::new(source_pos.x - 1, source_pos.y);
+        let top_tilepos = TilePos::new(source_pos.x, source_pos.y + 1);
+        let right_tilepos = TilePos::new(source_pos.x + 1, source_pos.y);
+        let bottom_tilepos = TilePos::new(source_pos.x, source_pos.y - 1);
+
+        vec![left_tilepos, top_tilepos, right_tilepos, bottom_tilepos]
+            .iter_mut()
+            .map(|tile_pos| tilepos_to_idx(tile_pos.x, tile_pos.y, world_size.x))
+            .collect::<Vec<usize>>()
+    }
+
+    /// Returns the TilePos for some given Entity.
+    fn get_tile_pos_from(&mut self, entity: Entity) -> TilePos {
+        self.app
+            .world
+            .query::<&TilePos>()
+            .get(&self.app.world, entity)
+            .unwrap()
+            .clone()
+    }
+
+    /// Returns an EntityType based on what was found for the
+    /// given entity.
+    fn get_entity_type(&mut self, entity: Entity) -> EntityType {
+        let is_streamer = self
+            .app
+            .world
+            .query::<&StreamerLabel>()
+            .get(&self.app.world, entity)
+            .is_ok();
+
+        if is_streamer {
+            return EntityType::Streamer;
+        }
+
+        let is_subscriber = self
+            .app
+            .world
+            .query::<&SubscriberLabel>()
+            .get(&self.app.world, entity)
+            .is_ok();
+
+        if is_subscriber {
+            return EntityType::Subscriber;
+        }
+
+        let is_chatter = self
+            .app
+            .world
+            .query::<&ChatterLabel>()
+            .get(&self.app.world, entity)
+            .is_ok();
+
+        if is_chatter {
+            return EntityType::Chatter;
+        }
+
+        panic!("get_entity_type: Entity given unknown type.");
+    }
+}
+
+/// Returns the approximate number of Tiles away the target_pos
+/// is from source_pos
+fn distance_of(source_pos: TilePos, target_pos: TilePos) -> usize {
+    let x1 = source_pos.x as f32;
+    let x2 = target_pos.x as f32;
+
+    let y1 = source_pos.y as f32;
+    let y2 = target_pos.y as f32;
+
+    ((x2 - x1).powi(2) + (y2 - y1).powi(2)).sqrt().floor() as usize
 }
 
 #[test]
@@ -213,4 +336,18 @@ fn subscriber_lower_than_streamer() {
     let subscriber = world.spawn(EntityType::Subscriber);
 
     assert!(world.height_of(subscriber) < world.height_of(streamer));
+}
+
+#[test]
+fn streamer_and_subscriber_far_away_by_default() {
+    let mut world = GameWorld::new();
+
+    let streamer = world.spawn(EntityType::Streamer);
+    let subscriber = world.spawn(EntityType::Subscriber);
+
+    let streamer_pos = world.get_tile_pos_from(streamer);
+    let subscriber_pos = world.get_tile_pos_from(subscriber);
+
+    assert_ne!(streamer_pos, subscriber_pos);
+    assert!(distance_of(streamer_pos, subscriber_pos) > 0);
 }

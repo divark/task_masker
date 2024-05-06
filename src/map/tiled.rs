@@ -532,7 +532,11 @@ pub fn spawn_tiles_from_tiledmap(mut commands: Commands) {
     // NOTE: Get the TiledMap instance from all known
     // Assets.
     let mut tiled_map_path = PathBuf::new();
-    tiled_map_path.push(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    // This has to happen in situations where we're running with the debugger after doing something like
+    // `ln -s ~/path/to/task_masker/assets assets`
+    if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
+        tiled_map_path.push(manifest_dir);
+    }
     tiled_map_path.push("assets/TM_v3.tmx");
 
     let tiled_map = load_tmx_map(&tiled_map_path);
