@@ -660,10 +660,12 @@ pub fn move_entities(
         &mut Target,
         &mut MovementTimer,
         &mut StartingPoint,
+        &mut TilePos,
     )>,
     time: Res<Time>,
 ) {
-    for (mut current_pos, mut target, mut movement_timer, mut starting_point) in &mut moving_entity
+    for (mut current_pos, mut target, mut movement_timer, mut starting_point, mut tile_pos) in
+        &mut moving_entity
     {
         movement_timer.tick(time.delta());
         if !movement_timer.just_finished() {
@@ -679,6 +681,7 @@ pub fn move_entities(
 
         if *current_pos == target_pos {
             *starting_point = StartingPoint(target_vec, target_tile_pos);
+            *tile_pos = target_tile_pos;
             target.0 = None;
             continue;
         }

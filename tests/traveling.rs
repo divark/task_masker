@@ -1,8 +1,10 @@
+use std::time::Duration;
+
 use bevy::prelude::*;
 
 use bevy_ecs_tilemap::prelude::*;
 use task_masker::entities::{chatter::*, streamer::*, subscriber::*};
-use task_masker::map::path_finding::{tilepos_to_idx, GraphType, NodeEdges, Path};
+use task_masker::map::path_finding::{tilepos_to_idx, GraphType, MovementTimer, NodeEdges, Path};
 use task_masker::map::plugins::{PathFindingPlugin, TilePosEvent};
 use task_masker::map::tiled::spawn_tiles_from_tiledmap;
 use task_masker::GameState;
@@ -83,6 +85,12 @@ enum EntityType {
     //Tile,
 }
 
+fn intercept_movement_timer(mut timer_query: Query<&mut MovementTimer, Added<MovementTimer>>) {
+    for mut movement_timer in &mut timer_query {
+        movement_timer.0 = Timer::new(Duration::from_secs(0), TimerMode::Repeating);
+    }
+}
+
 /// A convenience abstraction of Task Masker
 /// represented as what is needed to create
 /// one of its worlds.
@@ -98,8 +106,9 @@ impl GameWorld {
         app.insert_state(GameState::InGame);
         app.add_plugins(MinimalPlugins);
         app.add_plugins(MockTiledMapPlugin);
-        // TODO: MovementTimer should update every 0 seconds for instant results.
         app.add_plugins(PathFindingPlugin);
+
+        app.add_systems(Update, intercept_movement_timer);
 
         app.update();
 
@@ -165,13 +174,13 @@ impl GameWorld {
             .z
     }
 
-    /// Triggers the Source Entity to move to the location
-    /// of the Target Entity.
-    pub fn travel_to(&mut self, source_entity: Entity, target_entity: Entity) {
-        let target_pos = self.get_tile_pos_from(target_entity);
+    fn get_path_from(&mut self, source_entity: Entity, target_pos: TilePos) -> &Path {
         let source_path = match self.get_entity_type(source_entity) {
             EntityType::Streamer => {
-                self.app.world.send_event(TilePosEvent::new(target_pos));
+                self.app
+                    .world
+                    .send_event(TilePosEvent::new(target_pos))
+                    .unwrap();
 
                 self.app.update();
                 self.app.update();
@@ -212,9 +221,19 @@ impl GameWorld {
             _ => panic!("travel_to: Incompatiable Entity passed for Traveling."),
         };
 
-        for _i in 0..=source_path.len() {
+        source_path
+    }
+
+    /// Triggers the Source Entity to move to the location
+    /// of the Target Entity.
+    pub fn travel_to(&mut self, source_entity: Entity, target_entity: Entity) {
+        let target_pos = self.get_tile_pos_from(target_entity);
+
+        while self.get_path_from(source_entity, target_pos).len() > 0 {
             self.app.update();
         }
+
+        self.app.update();
     }
 
     /// Returns a boolean representing whether two Entities

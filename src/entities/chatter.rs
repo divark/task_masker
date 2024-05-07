@@ -199,7 +199,7 @@ pub fn fly_to_streamer_to_speak(
         // The chatter should not be directly on top of the
         // streamer, so we provide some distance by adjusting
         // the path to not go straight to the streamer.
-        for _i in 0..DIST_AWAY_FROM_STREAMER {
+        for _i in 1..DIST_AWAY_FROM_STREAMER {
             path_to_streamer.pop_back();
         }
 
