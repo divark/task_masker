@@ -2,10 +2,9 @@ use bevy::prelude::*;
 
 use bevy_ecs_tilemap::prelude::*;
 use task_masker::entities::{chatter::*, streamer::*, subscriber::*};
-use task_masker::map::path_finding::{tilepos_to_idx, GraphType, NodeEdges};
-use task_masker::map::plugins::PathFindingPlugin;
+use task_masker::map::path_finding::{tilepos_to_idx, GraphType, NodeEdges, Path};
+use task_masker::map::plugins::{PathFindingPlugin, TilePosEvent};
 use task_masker::map::tiled::spawn_tiles_from_tiledmap;
-use task_masker::ui::plugins::ChattingPlugin;
 use task_masker::GameState;
 
 #[derive(Default)]
@@ -46,7 +45,6 @@ impl Plugin for MockSubscriberPlugin {
                 mock_replace_subscriber,
                 //trigger_swimming_to_streamer,
                 swim_to_streamer_to_speak,
-                speak_to_streamer_from_subscriber,
                 leave_from_streamer_from_subscriber,
                 return_subscriber_to_idle,
                 follow_streamer_while_approaching_for_subscriber,
@@ -67,7 +65,6 @@ impl Plugin for MockChatterPlugin {
                 mock_replace_chatter,
                 //trigger_flying_to_streamer,
                 fly_to_streamer_to_speak,
-                speak_to_streamer_from_chatter,
                 leave_from_streamer_from_chatter,
                 return_chatter_to_idle,
                 follow_streamer_while_speaking,
@@ -98,11 +95,11 @@ impl GameWorld {
         let mut app = App::new();
 
         app.init_state::<GameState>();
+        app.insert_state(GameState::InGame);
         app.add_plugins(MinimalPlugins);
         app.add_plugins(MockTiledMapPlugin);
         // TODO: MovementTimer should update every 0 seconds for instant results.
         app.add_plugins(PathFindingPlugin);
-        app.add_plugins(ChattingPlugin);
 
         app.update();
 
@@ -171,7 +168,53 @@ impl GameWorld {
     /// Triggers the Source Entity to move to the location
     /// of the Target Entity.
     pub fn travel_to(&mut self, source_entity: Entity, target_entity: Entity) {
-        todo!();
+        let target_pos = self.get_tile_pos_from(target_entity);
+        let source_path = match self.get_entity_type(source_entity) {
+            EntityType::Streamer => {
+                self.app.world.send_event(TilePosEvent::new(target_pos));
+
+                self.app.update();
+                self.app.update();
+                self.app
+                    .world
+                    .query::<&Path>()
+                    .get(&self.app.world, source_entity)
+                    .expect("travel_to: Path for Streamer not populated yet.")
+            }
+            EntityType::Chatter => {
+                self.app.world.send_event(ChatMsg {
+                    name: "Chatter".to_string(),
+                    msg: "Hello Caveman!".to_string(),
+                });
+
+                self.app.update();
+                self.app.update();
+                self.app
+                    .world
+                    .query::<&Path>()
+                    .get(&self.app.world, source_entity)
+                    .expect("travel_to: Path for Streamer not populated yet.")
+            }
+            EntityType::Subscriber => {
+                self.app.world.send_event(SubscriberMsg {
+                    name: String::from("Subscriber"),
+                    msg: String::from("'Ello Caveman!"),
+                });
+
+                self.app.update();
+                self.app.update();
+                self.app
+                    .world
+                    .query::<&Path>()
+                    .get(&self.app.world, source_entity)
+                    .expect("travel_to: Path for Streamer not populated yet.")
+            }
+            _ => panic!("travel_to: Incompatiable Entity passed for Traveling."),
+        };
+
+        for _i in 0..=source_path.len() {
+            self.app.update();
+        }
     }
 
     /// Returns a boolean representing whether two Entities
@@ -351,3 +394,223 @@ fn streamer_and_subscriber_far_away_by_default() {
     assert_ne!(streamer_pos, subscriber_pos);
     assert!(distance_of(streamer_pos, subscriber_pos) > 0);
 }
+
+//  		(Key = 1.2.1.1.)
+#[test]
+fn test_case_1() {
+    let mut world = GameWorld::new();
+    let source_entity = world.spawn(EntityType::Streamer);
+    let target_entity = world.spawn(EntityType::Fruit);
+    assert!(world.height_of(target_entity) > world.height_of(source_entity));
+    world.travel_to(source_entity, target_entity);
+    assert!(world.has_reached(source_entity, target_entity));
+}
+
+//  		(Key = 1.2.2.1.)
+#[test]
+fn test_case_2() {
+    let mut world = GameWorld::new();
+    let source_entity = world.spawn(EntityType::Streamer);
+    let target_entity = world.spawn(EntityType::Fruit);
+    assert!(world.height_of(target_entity) < world.height_of(source_entity));
+    world.travel_to(source_entity, target_entity);
+    assert!(world.has_reached(source_entity, target_entity));
+}
+
+//  		(Key = 1.2.3.1.)
+#[test]
+fn test_case_3() {
+    let mut world = GameWorld::new();
+    let source_entity = world.spawn(EntityType::Streamer);
+    let target_entity = world.spawn(EntityType::Fruit);
+    assert!(world.height_of(target_entity) == world.height_of(source_entity));
+    world.travel_to(source_entity, target_entity);
+    assert!(world.has_reached(source_entity, target_entity));
+}
+
+//  		(Key = 1.3.1.1.)
+#[test]
+fn test_case_4() {
+    let mut world = GameWorld::new();
+    let source_entity = world.spawn(EntityType::Streamer);
+    let target_entity = world.spawn(EntityType::Crop);
+    assert!(world.height_of(target_entity) > world.height_of(source_entity));
+    world.travel_to(source_entity, target_entity);
+    assert!(world.has_reached(source_entity, target_entity));
+}
+
+//  		(Key = 1.3.2.1.)
+#[test]
+fn test_case_5() {
+    let mut world = GameWorld::new();
+    let source_entity = world.spawn(EntityType::Streamer);
+    let target_entity = world.spawn(EntityType::Crop);
+    assert!(world.height_of(target_entity) < world.height_of(source_entity));
+    world.travel_to(source_entity, target_entity);
+    assert!(world.has_reached(source_entity, target_entity));
+}
+
+//  		(Key = 1.3.3.1.)
+#[test]
+fn test_case_6() {
+    let mut world = GameWorld::new();
+    let source_entity = world.spawn(EntityType::Streamer);
+    let target_entity = world.spawn(EntityType::Crop);
+    assert!(world.height_of(target_entity) == world.height_of(source_entity));
+    world.travel_to(source_entity, target_entity);
+    assert!(world.has_reached(source_entity, target_entity));
+}
+
+////  		(Key = 1.4.1.1.)
+//#[test]
+//fn test_case_7() {
+//   let mut world = GameWorld::new();
+//    let source_entity = world.spawn(EntityType::Streamer);
+//   Destination Entity      :  Tile
+//   assert!(world.height_of(target_entity) > world.height_of(source_entity));
+//   world.travel_to(source_entity, target_entity);
+//    assert!(world.has_reached(source_entity, target_entity));
+//}
+//
+////  		(Key = 1.4.1.2.)
+//#[test]
+//fn test_case_8() {
+//   let mut world = GameWorld::new();
+//    let source_entity = world.spawn(EntityType::Streamer);
+//   Destination Entity      :  Tile
+//   assert!(world.height_of(target_entity) > world.height_of(source_entity));
+//   world.travel_to(source_entity, target_entity);
+//    assert!(!world.has_reached(source_entity, target_entity));
+//}
+//
+////  		(Key = 1.4.2.1.)
+//#[test]
+//fn test_case_9() {
+//   let mut world = GameWorld::new();
+//    let source_entity = world.spawn(EntityType::Streamer);
+//   Destination Entity      :  Tile
+//   assert!(world.height_of(target_entity) < world.height_of(source_entity));
+//   world.travel_to(source_entity, target_entity);
+//    assert!(world.has_reached(source_entity, target_entity));
+//}
+//
+//// 		(Key = 1.4.2.2.)
+//#[test]
+//fn test_case_10() {
+//   let mut world = GameWorld::new();
+//    let source_entity = world.spawn(EntityType::Streamer);
+//   Destination Entity      :  Tile
+//   assert!(world.height_of(target_entity) < world.height_of(source_entity));
+//   world.travel_to(source_entity, target_entity);
+//    assert!(!world.has_reached(source_entity, target_entity));
+//}
+//
+//// 		(Key = 1.4.3.1.)
+//#[test]
+//fn test_case_11() {
+//   let mut world = GameWorld::new();
+//    let source_entity = world.spawn(EntityType::Streamer);
+//   Destination Entity      :  Tile
+//   assert!(world.height_of(target_entity) == world.height_of(source_entity));
+//   world.travel_to(source_entity, target_entity);
+//    assert!(world.has_reached(source_entity, target_entity));
+//}
+//
+//// 		(Key = 1.4.3.2.)
+//#[test]
+//fn test_case_12() {
+//   let mut world = GameWorld::new();
+//    let source_entity = world.spawn(EntityType::Streamer);
+//   Destination Entity      :  Tile
+//   assert!(world.height_of(target_entity) == world.height_of(source_entity));
+//   world.travel_to(source_entity, target_entity);
+//    assert!(!world.has_reached(source_entity, target_entity));
+//}
+
+// 		(Key = 2.1.2.1.)
+#[test]
+fn test_case_13() {
+    let mut world = GameWorld::new();
+    let source_entity = world.spawn(EntityType::Chatter);
+    let target_entity = world.spawn(EntityType::Streamer);
+    assert!(world.height_of(target_entity) < world.height_of(source_entity));
+    world.travel_to(source_entity, target_entity);
+    assert!(world.has_reached(source_entity, target_entity));
+}
+
+// 		(Key = 2.1.3.1.)
+#[test]
+fn test_case_14() {
+    let mut world = GameWorld::new();
+    let source_entity = world.spawn(EntityType::Chatter);
+    let target_entity = world.spawn(EntityType::Streamer);
+    assert!(world.height_of(target_entity) == world.height_of(source_entity));
+    world.travel_to(source_entity, target_entity);
+    assert!(world.has_reached(source_entity, target_entity));
+}
+
+//// 		(Key = 2.4.2.1.)
+//#[test]
+//fn test_case_15() {
+//   let mut world = GameWorld::new();
+//    let source_entity = world.spawn(EntityType::Chatter);
+//   Destination Entity      :  Tile
+//   assert!(world.height_of(target_entity) < world.height_of(source_entity));
+//   world.travel_to(source_entity, target_entity);
+//    assert!(world.has_reached(source_entity, target_entity));
+//}
+//
+//// 		(Key = 2.4.3.1.)
+//#[test]
+//fn test_case_16() {
+//   let mut world = GameWorld::new();
+//    let source_entity = world.spawn(EntityType::Chatter);
+//   Destination Entity      :  Tile
+//   assert!(world.height_of(target_entity) == world.height_of(source_entity));
+//   world.travel_to(source_entity, target_entity);
+//    assert!(world.has_reached(source_entity, target_entity));
+//}
+
+// 		(Key = 3.1.1.2.)
+#[test]
+fn test_case_17() {
+    let mut world = GameWorld::new();
+    let source_entity = world.spawn(EntityType::Subscriber);
+    let target_entity = world.spawn(EntityType::Streamer);
+    assert!(world.height_of(target_entity) > world.height_of(source_entity));
+    world.travel_to(source_entity, target_entity);
+    assert!(!world.has_reached(source_entity, target_entity));
+}
+
+// 		(Key = 3.1.3.2.)
+#[test]
+fn test_case_18() {
+    let mut world = GameWorld::new();
+    let source_entity = world.spawn(EntityType::Subscriber);
+    let target_entity = world.spawn(EntityType::Streamer);
+    assert!(world.height_of(target_entity) == world.height_of(source_entity));
+    world.travel_to(source_entity, target_entity);
+    assert!(!world.has_reached(source_entity, target_entity));
+}
+
+//// 		(Key = 3.4.1.2.)
+//#[test]
+//fn test_case_19() {
+//   let mut world = GameWorld::new();
+//    let source_entity = world.spawn(EntityType::Subscriber);
+//   Destination Entity      :  Tile
+//   assert!(world.height_of(target_entity) > world.height_of(source_entity));
+//   world.travel_to(source_entity, target_entity);
+//    assert!(!world.has_reached(source_entity, target_entity));
+//}
+//
+//// 		(Key = 3.4.3.2.)
+//#[test]
+//fn test_case_20() {
+//   let mut world = GameWorld::new();
+//    let source_entity = world.spawn(EntityType::Subscriber);
+//   Destination Entity      :  Tile
+//   assert!(world.height_of(target_entity) == world.height_of(source_entity));
+//   world.travel_to(source_entity, target_entity);
+//    assert!(!world.has_reached(source_entity, target_entity));
+//}

@@ -2,6 +2,8 @@ use bevy::prelude::*;
 
 use super::chatting::*;
 use super::screens::*;
+use crate::entities::chatter::speak_to_streamer_from_chatter;
+use crate::entities::subscriber::speak_to_streamer_from_subscriber;
 use crate::GameState;
 
 #[derive(Default)]
@@ -43,6 +45,8 @@ impl Plugin for ChattingPlugin {
             (
                 insert_chatting_information,
                 setup_chatting_from_msg,
+                speak_to_streamer_from_chatter,
+                speak_to_streamer_from_subscriber,
                 teletype_current_message,
                 activate_waiting_timer,
                 clear_current_msg_on_time_up,
