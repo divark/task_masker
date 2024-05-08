@@ -200,7 +200,9 @@ impl GameWorld {
                 .get(&self.app.world, entity)
                 .unwrap()
                 .1
-                 .0 as f32
+                // A Layer Number is only equivalent to a Translation's z value
+                // when it is doubled after some observation in a debugger.
+                 .0 as f32 * 2.0
         } else {
             self.app
                 .world
