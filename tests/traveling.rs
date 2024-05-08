@@ -6,7 +6,7 @@ use bevy_ecs_tilemap::prelude::*;
 use task_masker::entities::{chatter::*, streamer::*, subscriber::*};
 use task_masker::map::path_finding::{tilepos_to_idx, GraphType, MovementTimer, NodeEdges, Path};
 use task_masker::map::plugins::{PathFindingPlugin, TilePosEvent};
-use task_masker::map::tiled::spawn_tiles_from_tiledmap;
+use task_masker::map::tiled::{spawn_tiles_from_tiledmap, tiled_to_tile_pos, LayerNumber};
 use task_masker::GameState;
 
 #[derive(Default)]
@@ -76,13 +76,14 @@ impl Plugin for MockChatterPlugin {
     }
 }
 
+#[derive(PartialEq)]
 enum EntityType {
     Streamer,
     Chatter,
     Subscriber,
     Fruit,
     Crop,
-    //Tile,
+    Tile,
 }
 
 fn intercept_movement_timer(mut timer_query: Query<&mut MovementTimer, Added<MovementTimer>>) {
@@ -162,16 +163,55 @@ impl GameWorld {
         }
     }
 
+    /// Returns a reference to the Tile Entity found
+    /// at the desired position.
+    pub fn tile_at_position(&mut self, tile_pos: TilePos, height: u32) -> Entity {
+        let map_size = self
+            .app
+            .world
+            .query::<&TilemapSize>()
+            .iter(&self.app.world)
+            .nth(height as usize)
+            .expect("tile_at_position: Could not get map size given the specified height.")
+            .clone();
+
+        self.app
+            .world
+            .query::<(Entity, &TilePos, &LayerNumber)>()
+            .iter(&self.app.world)
+            .find(|tile_entry| {
+                *tile_entry.1 == tiled_to_tile_pos(tile_pos.x, tile_pos.y, &map_size)
+                    && tile_entry.2 .0 == height as usize
+            })
+            .map(|tile_entry| tile_entry.0)
+            .expect("tile_at_position: Could not find Tile at given Tile Pos and height.")
+    }
+
     /// Returns the Height represented as the Z value
     /// for some given Entity.
     pub fn height_of(&mut self, entity: Entity) -> f32 {
-        self.app
-            .world
-            .query::<&Transform>()
-            .get(&self.app.world, entity)
-            .unwrap()
-            .translation
-            .z
+        // Did you know that Tiles by default do not have
+        // a Transform? Because of that, we have to interpret
+        // height based on its Layer Number.
+        let found_height = if self.get_entity_type(entity) == EntityType::Tile {
+            self.app
+                .world
+                .query::<(&TilePos, &LayerNumber)>()
+                .get(&self.app.world, entity)
+                .unwrap()
+                .1
+                 .0 as f32
+        } else {
+            self.app
+                .world
+                .query::<&Transform>()
+                .get(&self.app.world, entity)
+                .unwrap()
+                .translation
+                .z
+        };
+
+        found_height
     }
 
     fn get_path_from(&mut self, source_entity: Entity, target_pos: TilePos) -> &Path {
@@ -349,7 +389,7 @@ impl GameWorld {
             return EntityType::Chatter;
         }
 
-        panic!("get_entity_type: Entity given unknown type.");
+        return EntityType::Tile;
     }
 }
 
@@ -480,17 +520,17 @@ fn test_case_6() {
     assert!(world.has_reached(source_entity, target_entity));
 }
 
-////  		(Key = 1.4.1.1.)
-//#[test]
-//fn test_case_7() {
-//   let mut world = GameWorld::new();
-//    let source_entity = world.spawn(EntityType::Streamer);
-//   Destination Entity      :  Tile
-//   assert!(world.height_of(target_entity) > world.height_of(source_entity));
-//   world.travel_to(source_entity, target_entity);
-//    assert!(world.has_reached(source_entity, target_entity));
-//}
-//
+//  		(Key = 1.4.1.1.)
+#[test]
+fn test_case_7() {
+    let mut world = GameWorld::new();
+    let source_entity = world.spawn(EntityType::Streamer);
+    let target_entity = world.tile_at_position(TilePos::new(44, 64), 7);
+    assert!(world.height_of(target_entity) > world.height_of(source_entity));
+    world.travel_to(source_entity, target_entity);
+    assert!(world.has_reached(source_entity, target_entity));
+}
+
 ////  		(Key = 1.4.1.2.)
 //#[test]
 //fn test_case_8() {
