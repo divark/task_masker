@@ -55,7 +55,8 @@ impl Plugin for StreamerPlugin {
         app.add_systems(
             Update,
             (
-                spawn_player,
+                spawn_player_sprite,
+                spawn_player_tile,
                 move_streamer,
                 move_streamer_on_spacebar,
                 test_streamer_msg,

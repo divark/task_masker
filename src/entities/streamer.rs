@@ -32,60 +32,40 @@ pub struct Streamer {
 
 pub const STREAMER_LAYER_NUM: usize = 6;
 
-pub fn spawn_player(
+pub fn spawn_player_sprite(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
-    map_information: Query<
-        (&Transform, &TilemapType, &TilemapGridSize, &TilemapSize),
-        Added<TilemapType>,
-    >,
-    streamer_query: Query<(), With<StreamerLabel>>,
+    streamer_query: Query<(Entity, &Transform), Added<StreamerLabel>>,
 ) {
     if !streamer_query.is_empty() {
         return;
     }
 
+    let (streamer_entity, streamer_transform) = streamer_query
+        .get_single()
+        .expect("spawn_player: Could not find Streamer.");
+
     let texture_handle = asset_server.load("caveman/caveman-sheet.png");
     let texture_atlas = TextureAtlasLayout::from_grid(Vec2::new(16.0, 16.0), 4, 9, None, None);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
-    if map_information.is_empty() {
-        return;
-    }
-
-    let (map_transform, map_type, grid_size, map_size) = map_information
-        .iter()
-        .nth(STREAMER_LAYER_NUM)
-        .expect("Could not load map information. Is world loaded?");
-    let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
-
-    let streamer_location = TilePos { x: 38, y: 59 }; //{ x: 42, y: 59 };
-    let streamer_transform = tiled_to_bevy_transform(&streamer_location, map_info);
-
-    commands.spawn((
-        Streamer {
-            label: StreamerLabel,
-            sprites: SpriteSheetBundle {
-                sprite: Sprite::default(),
-                atlas: TextureAtlas {
-                    layout: texture_atlas_handle,
-                    index: 0,
-                },
-                texture: texture_handle,
-                transform: streamer_transform,
-                ..default()
-            },
-            movement_type: MovementType::Walk,
-            status: StreamerStatus::Idle,
+    commands.entity(streamer_entity).remove::<Transform>();
+    commands.entity(streamer_entity).insert((SpriteSheetBundle {
+        sprite: Sprite::default(),
+        atlas: TextureAtlas {
+            layout: texture_atlas_handle,
+            index: 0,
         },
-        streamer_location,
-    ));
+        transform: *streamer_transform,
+        texture: texture_handle,
+        ..default()
+    },));
 }
 
 /// Spawns Player without any component related to rendering
 /// for Integration Testing purposes.
-pub fn mock_spawn_player(
+pub fn spawn_player_tile(
     mut commands: Commands,
     map_information: Query<
         (&Transform, &TilemapType, &TilemapGridSize, &TilemapSize),

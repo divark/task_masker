@@ -3,7 +3,7 @@ use std::time::Duration;
 use bevy::prelude::*;
 
 use bevy_ecs_tilemap::prelude::*;
-use task_masker::entities::{chatter::*, streamer::*, subscriber::*};
+use task_masker::entities::{chatter::*, crop::*, fruit::*, streamer::*, subscriber::*};
 use task_masker::map::path_finding::{tilepos_to_idx, GraphType, MovementTimer, NodeEdges, Path};
 use task_masker::map::plugins::{PathFindingPlugin, TilePosEvent};
 use task_masker::map::tiled::{spawn_tiles_from_tiledmap, tiled_to_tile_pos, LayerNumber};
@@ -26,7 +26,7 @@ impl Plugin for MockStreamerPlugin {
         app.add_systems(
             Update,
             (
-                mock_spawn_player,
+                spawn_player_tile,
                 move_streamer,
                 queue_destination_for_streamer,
                 update_status_when_speaking,
@@ -167,6 +167,42 @@ impl GameWorld {
                     .query::<(Entity, &ChatterLabel)>()
                     .get_single(&self.app.world)
                     .expect("spawn: Chatter was not found after trying to spawn it.")
+                    .0;
+            }
+            _ => todo!(),
+        }
+    }
+
+    /// Returns a reference to the Entity just created
+    /// based on its type and location.
+    pub fn find_at(&mut self, entity_type: EntityType, position: TilePos) -> Entity {
+        match entity_type {
+            EntityType::Fruit => {
+                self.app.add_plugins(MockStreamerPlugin);
+
+                self.app.update();
+
+                return self
+                    .app
+                    .world
+                    .query_filtered::<(Entity, &TilePos), With<FruitState>>()
+                    .iter(&self.app.world)
+                    .find(|fruit_entry| *fruit_entry.1 == position)
+                    .expect("find: Fruit was not found after trying to spawn it.")
+                    .0;
+            }
+            EntityType::Crop => {
+                self.app.add_plugins(MockSubscriberPlugin);
+
+                self.app.update();
+
+                return self
+                    .app
+                    .world
+                    .query_filtered::<(Entity, &TilePos), With<CropState>>()
+                    .iter(&self.app.world)
+                    .find(|crop_entry| *crop_entry.1 == position)
+                    .expect("find: Crop was not found after trying to spawn it.")
                     .0;
             }
             _ => todo!(),
