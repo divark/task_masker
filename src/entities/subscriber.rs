@@ -9,7 +9,7 @@ use crate::ui::chatting::Msg;
 
 use super::MovementType;
 
-pub const SUBSCRIBER_LAYER_NUM: usize = 19;
+pub const SUBSCRIBER_LAYER_NUM: usize = 1;
 
 #[derive(Component)]
 pub struct SubscriberLabel;

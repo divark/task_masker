@@ -9,7 +9,7 @@ use crate::ui::chatting::Msg;
 
 use super::MovementType;
 
-pub const CHATTER_LAYER_NUM: usize = 18;
+pub const CHATTER_LAYER_NUM: usize = 19;
 pub const DIST_AWAY_FROM_STREAMER: usize = 2;
 
 #[derive(Component)]
@@ -127,7 +127,7 @@ pub fn mock_replace_chatter(
         let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
         let tile_transform = to_bevy_transform(tile_pos, map_info);
 
-        let chatter_tilepos = tiled_to_tile_pos(tile_pos.x, tile_pos.y, map_size);
+        let chatter_tilepos = tile_pos.clone(); //tiled_to_tile_pos(tile_pos.x, tile_pos.y, map_size);
 
         commands.entity(chatter_entity).despawn_recursive();
         commands.spawn((

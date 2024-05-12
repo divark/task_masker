@@ -25,6 +25,9 @@ pub enum FruitState {
 #[derive(Component)]
 pub struct RespawnPoint(pub StartingPoint);
 
+const FRUIT_LAYER_NUM: usize = 18;
+const FALLEN_FRUIT_LAYER_NUM: usize = FRUIT_LAYER_NUM - 4;
+
 pub fn replace_fruit_tiles(
     mut tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,
     map_info_query: Query<
@@ -35,11 +38,9 @@ pub fn replace_fruit_tiles(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
-    let fruit_tiles_layer_num = 17;
-
     let map_information = map_info_query
         .iter()
-        .find(|map_info| map_info.0.translation.z == fruit_tiles_layer_num as f32);
+        .find(|map_info| map_info.0.translation.z == FRUIT_LAYER_NUM as f32);
 
     if map_information.is_none() {
         return;
@@ -53,7 +54,7 @@ pub fn replace_fruit_tiles(
         TextureAtlasLayout::from_grid(Vec2::new(16.0, 16.0), 38, 6, None, None);
     let fruit_texture_atlas_handle = texture_atlases.add(fruit_texture_atlas);
     for (_entity, layer_number, tile_pos, tile_texture_index) in &mut tiles_query {
-        if layer_number.0 != fruit_tiles_layer_num {
+        if layer_number.0 != FRUIT_LAYER_NUM {
             continue;
         }
 
@@ -104,11 +105,10 @@ pub fn make_fruit_fall(
     }
 
     let ground_graph_nodes = ground_graph.unwrap().0;
-    let fallen_fruit_tiles_layer_num = 16 - 4;
 
     let map_information = map_info_query
         .iter()
-        .find(|map_info| map_info.0.translation.z == fallen_fruit_tiles_layer_num as f32);
+        .find(|map_info| map_info.0.translation.z == FALLEN_FRUIT_LAYER_NUM as f32);
 
     if map_information.is_none() {
         return;

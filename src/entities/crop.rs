@@ -25,6 +25,7 @@ pub struct CropEndIdx(usize);
 pub struct NewSubscriber;
 
 const CROP_NUM_STAGES: usize = 7;
+const CROP_LAYER_NUM: usize = 14;
 
 pub fn replace_crop_tiles(
     mut tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,
@@ -36,11 +37,9 @@ pub fn replace_crop_tiles(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
-    let crop_tiles_layer_num = 13;
-
     let map_information = map_info_query
         .iter()
-        .find(|map_info| map_info.0.translation.z == crop_tiles_layer_num as f32);
+        .find(|map_info| map_info.0.translation.z == CROP_LAYER_NUM as f32);
 
     if map_information.is_none() {
         return;
@@ -54,7 +53,7 @@ pub fn replace_crop_tiles(
         TextureAtlasLayout::from_grid(Vec2::new(16.0, 16.0), 16, 16, None, None);
     let crop_texture_atlas_handle = texture_atlases.add(crop_texture_atlas);
     for (_entity, layer_number, tile_pos, tile_texture_index) in &mut tiles_query {
-        if layer_number.0 != crop_tiles_layer_num {
+        if layer_number.0 != CROP_LAYER_NUM {
             continue;
         }
 
