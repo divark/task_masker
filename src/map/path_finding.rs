@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
@@ -23,16 +23,116 @@ pub struct NodeEdges(pub Vec<Vec<usize>>);
 /// Returns the Length, Width, and Height derived from
 /// some collection of Heighted Tile Positions.
 fn dimensions_from(heighted_tiles: &Vec<HeightedTilePos>) -> (u32, u32, u32) {
-    todo!()
+    let (mut min_x, mut max_x) = (0, 0);
+    let (mut min_y, mut max_y) = (0, 0);
+    let (mut min_z, mut max_z) = (0, 0);
+
+    for heighted_tile in heighted_tiles {
+        let x = heighted_tile.x();
+        let y = heighted_tile.y();
+        let z = heighted_tile.z();
+
+        min_x = min_x.min(x);
+        max_x = max_x.max(x);
+
+        min_y = min_y.min(y);
+        max_y = max_x.max(y);
+
+        min_z = min_z.min(z);
+        max_z = max_z.max(z);
+    }
+
+    let length = max_x - min_x + 1;
+    let width = max_y - min_y + 1;
+    let height = max_z - min_z + 1;
+
+    (length, width, height)
+}
+
+/// Returns a 1 Dimensional Height Map calculated from some
+/// collection of Heighted Tile Positions with respect to
+/// the desired length and width.
+fn height_map_from(ground_tiles: &Vec<HeightedTilePos>) -> Vec<usize> {
+    let (length, width, _height) = dimensions_from(ground_tiles);
+    let mut height_map: Vec<usize> = vec![0; length as usize * width as usize];
+
+    // Sorting by Tile Position and Layer number ensures that we won't add
+    // a previous node, whether above or to the left, that does not exist
+    // yet.
+    let mut ground_tiles_sorted = ground_tiles.to_vec();
+    ground_tiles_sorted.sort_unstable();
+
+    for heighted_tile in ground_tiles_sorted.iter() {
+        let height_idx = tilepos_to_idx(heighted_tile.x(), heighted_tile.y(), length);
+        let height_entry = height_map[height_idx];
+
+        // The difference of 1 here allows for tiles that are not
+        // connected to the ground to be ignored. Think scenery
+        // that obscures the vision from the camera that the
+        // player can pass through.
+        if heighted_tile.z() as usize - height_entry == 1 {
+            height_map[height_idx] += 1;
+        }
+    }
+
+    height_map
+}
+
+/// Returns a collection of Tile Positions sorted and extracted
+/// from Heighted Tile Positions.
+fn unique_tiles_from(tiles: Vec<HeightedTilePos>) -> Vec<TilePos> {
+    let mut unique_tiles = HashSet::new();
+
+    for tile in tiles {
+        unique_tiles.insert(tile.xy);
+    }
+
+    let mut unique_tiles_no_dups = Vec::from_iter(unique_tiles);
+    unique_tiles_no_dups
+        .sort_by(|source, other| source.x.cmp(&other.x).then(source.y.cmp(&other.y)));
+
+    unique_tiles_no_dups
 }
 
 impl NodeEdges {
     /// Returns a set of Node Edges derived from a collection of Tiles
     /// designated for Ground traversal.
     pub fn from_ground_tiles(ground_tiles: Vec<HeightedTilePos>) -> NodeEdges {
-        let mut node_edges = Vec::with_capacity(ground_tiles.len());
+        let mut directed_graph_edges: Vec<Vec<usize>> = Vec::with_capacity(ground_tiles.len());
 
-        NodeEdges(node_edges)
+        let height_map: Vec<usize> = height_map_from(&ground_tiles);
+        let (length, _width, _height) = dimensions_from(&ground_tiles);
+
+        let tile_positions_no_layers = unique_tiles_from(ground_tiles);
+
+        for tile_position in tile_positions_no_layers {
+            let tile_idx = tilepos_to_idx(tile_position.x, tile_position.y, length);
+            let tile_height = height_map[tile_idx];
+
+            let mut current_node_edges = Vec::new();
+
+            if tile_position.x > 0 && tile_height > 0 {
+                let top_node_idx = tilepos_to_idx(tile_position.x - 1, tile_position.y, length);
+                let height_difference: i32 = height_map[top_node_idx] as i32 - tile_height as i32;
+                if height_difference.abs() <= 1 {
+                    current_node_edges.push(top_node_idx);
+                    directed_graph_edges[top_node_idx].push(tile_idx);
+                }
+            }
+
+            if tile_position.y > 0 && tile_height > 0 {
+                let left_node_idx = tilepos_to_idx(tile_position.x, tile_position.y - 1, length);
+                let height_difference: i32 = height_map[left_node_idx] as i32 - tile_height as i32;
+                if height_difference.abs() <= 1 {
+                    current_node_edges.push(left_node_idx);
+                    directed_graph_edges[left_node_idx].push(tile_idx);
+                }
+            }
+
+            directed_graph_edges.push(current_node_edges);
+        }
+
+        NodeEdges(directed_graph_edges)
     }
 
     /// Returns a Single Shortest Path between a source and target Tile
@@ -731,9 +831,19 @@ pub fn update_current_tilepos(
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd)]
 pub struct HeightedTilePos {
     xy: TilePos,
     z: u32,
+}
+
+impl Ord for HeightedTilePos {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.z()
+            .cmp(&other.z())
+            .then(self.y().cmp(&other.y()))
+            .then(self.x().cmp(&other.x()))
+    }
 }
 
 impl HeightedTilePos {
@@ -785,7 +895,7 @@ pub mod tests {
                 let mut tiles = Vec::new();
 
                 tiles.append(&mut spawn_tiles_with_height(length, width, 0));
-                tiles.append(&mut spawn_tiles_with_height(length - 1, width - 1, 1));
+                tiles.append(&mut spawn_tiles_with_height(length / 2, width / 2, 1));
 
                 tiles
             }
@@ -1217,5 +1327,48 @@ pub mod tests {
         assert_eq!(expected_length, actual_length);
         assert_eq!(expected_width, actual_width);
         assert_eq!(expected_height, actual_height);
+    }
+
+    #[test]
+    fn height_map_from_heighted_tiles() {
+        let square_island_tiles = create_island(IslandType::Square(4, 4));
+
+        let expected_height_map = vec![1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let actual_height_map = height_map_from(&square_island_tiles);
+
+        assert_eq!(expected_height_map, actual_height_map);
+    }
+
+    #[test]
+    fn sorted_heighted_tiles() {
+        let heighted_tiles = create_island(IslandType::Square(2, 2));
+
+        let expected_sorted_tiles = vec![
+            HeightedTilePos::new(TilePos::new(0, 0), 0),
+            HeightedTilePos::new(TilePos::new(0, 0), 1),
+            HeightedTilePos::new(TilePos::new(0, 1), 0),
+            HeightedTilePos::new(TilePos::new(1, 0), 0),
+            HeightedTilePos::new(TilePos::new(1, 1), 0),
+        ];
+
+        let mut actual_sorted_tiles = heighted_tiles.to_vec();
+        actual_sorted_tiles.sort_unstable();
+
+        assert_eq!(expected_sorted_tiles, actual_sorted_tiles);
+    }
+
+    #[test]
+    fn unique_tiles_from_heighted_tiles() {
+        let heighted_tiles = create_island(IslandType::Square(2, 2));
+
+        let expected_tiles = vec![
+            TilePos::new(0, 0),
+            TilePos::new(0, 1),
+            TilePos::new(1, 0),
+            TilePos::new(1, 1),
+        ];
+        let actual_tiles = unique_tiles_from(heighted_tiles);
+
+        assert_eq!(expected_tiles, actual_tiles);
     }
 }
