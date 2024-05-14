@@ -36,9 +36,9 @@ pub fn spawn_player_sprite(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
-    streamer_query: Query<(Entity, &Transform), Added<StreamerLabel>>,
+    streamer_query: Query<(Entity, &Transform), (With<StreamerLabel>, Without<TextureAtlas>)>,
 ) {
-    if !streamer_query.is_empty() {
+    if streamer_query.is_empty() {
         return;
     }
 
@@ -51,7 +51,7 @@ pub fn spawn_player_sprite(
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     commands.entity(streamer_entity).remove::<Transform>();
-    commands.entity(streamer_entity).insert((SpriteSheetBundle {
+    commands.entity(streamer_entity).insert(SpriteSheetBundle {
         sprite: Sprite::default(),
         atlas: TextureAtlas {
             layout: texture_atlas_handle,
@@ -60,7 +60,7 @@ pub fn spawn_player_sprite(
         transform: *streamer_transform,
         texture: texture_handle,
         ..default()
-    },));
+    });
 }
 
 /// Spawns Player without any component related to rendering
@@ -87,7 +87,7 @@ pub fn spawn_player_tile(
         .expect("Could not load map information. Is world loaded?");
     let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
 
-    let streamer_location = TilePos { x: 38, y: 59 }; //{ x: 42, y: 59 };
+    let streamer_location = TilePos { x: 42, y: 59 }; //{ x: 42, y: 59 };
     let streamer_bevy_tilepos =
         tiled_to_tile_pos(streamer_location.x, streamer_location.y, map_size);
     let streamer_transform = tiled_to_bevy_transform(&streamer_location, map_info);

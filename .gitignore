@@ -2,6 +2,7 @@
 .sublimetext/*
 .vscode/*
 .DS_Store
+.cargo/*
 
 assets/*
 

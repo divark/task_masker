@@ -443,6 +443,32 @@ impl GameWorld {
 
         return EntityType::Tile;
     }
+
+    /// Returns whether a Tiled-based Tile Position exists in
+    /// a populated Graph based on its type.
+    pub fn tile_has_neighbors(&mut self, graph_type: GraphType, tiled_tile_pos: TilePos) -> bool {
+        let bevy_tile_pos = tiled_to_tile_pos(tiled_tile_pos.x, tiled_tile_pos.y, &self.map_size);
+
+        let node_edges = self
+            .app
+            .world
+            .query::<(&NodeEdges, &GraphType)>()
+            .iter(&self.app.world)
+            .filter(|graph_entry| *graph_entry.1 == graph_type)
+            .map(|graph_entry| graph_entry.0)
+            .next()
+            .unwrap();
+
+        //.find(|graph_entry| {
+        let node_idx = tilepos_to_idx(bevy_tile_pos.x, bevy_tile_pos.y, self.map_size.x);
+
+        let graph_edges = &node_edges.0;
+        let is_not_isolated = graph_edges[node_idx].len() > 0;
+
+        is_not_isolated
+        //})
+        //.is_some()
+    }
 }
 
 /// Returns the approximate number of Tiles away the target_pos
@@ -500,7 +526,7 @@ fn streamer_spawned_at_right_tilepos() {
 
     let streamer = world.find(EntityType::Streamer);
 
-    let expected_tilepos = TilePos::new(38, 59);
+    let expected_tilepos = TilePos::new(42, 59);
     let streamer_tilepos = world.get_tile_pos_from(streamer);
 
     assert_eq!(expected_tilepos, streamer_tilepos);
@@ -542,6 +568,36 @@ fn streamer_and_subscriber_far_away_by_default() {
 
     assert_ne!(streamer_pos, subscriber_pos);
     assert!(distance_of(streamer_pos, subscriber_pos) > 0);
+}
+
+#[test]
+fn path_exists_for_streamer_when_reachable() {
+    let mut game = GameWorld::new();
+    let tiled_tile_pos = TilePos::new(63, 49);
+
+    let source_entity = game.find(EntityType::Streamer);
+
+    let path = game.get_path_from(source_entity, tiled_tile_pos);
+    assert_ne!(path.len(), 0);
+}
+
+#[test]
+fn path_exists_for_chatter_when_reachable() {
+    let mut game = GameWorld::new();
+    let tiled_tile_pos = TilePos::new(63, 49);
+
+    let source_entity = game.find(EntityType::Chatter);
+
+    let path = game.get_path_from(source_entity, tiled_tile_pos);
+    assert_ne!(path.len(), 0);
+}
+
+#[test]
+fn tile_pos_exists_in_ground_graph() {
+    let mut game = GameWorld::new();
+    let tiled_tile_pos = TilePos::new(63, 49);
+
+    assert!(game.tile_has_neighbors(GraphType::Ground, tiled_tile_pos));
 }
 
 //  		(Key = 1.2.1.1.)

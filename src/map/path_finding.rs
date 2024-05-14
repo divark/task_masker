@@ -20,6 +20,28 @@ pub struct NodeData(pub Vec<Vec3>);
 #[derive(Component, PartialEq, Debug)]
 pub struct NodeEdges(pub Vec<Vec<usize>>);
 
+/// Returns the Length, Width, and Height derived from
+/// some collection of Heighted Tile Positions.
+fn dimensions_from(heighted_tiles: &Vec<HeightedTilePos>) -> (u32, u32, u32) {
+    todo!()
+}
+
+impl NodeEdges {
+    /// Returns a set of Node Edges derived from a collection of Tiles
+    /// designated for Ground traversal.
+    pub fn from_ground_tiles(ground_tiles: Vec<HeightedTilePos>) -> NodeEdges {
+        let mut node_edges = Vec::with_capacity(ground_tiles.len());
+
+        NodeEdges(node_edges)
+    }
+
+    /// Returns a Single Shortest Path between a source and target Tile
+    /// Position, or nothing if none were found.
+    pub fn shortest_path(&self, source_pos: TilePos, target_pos: TilePos) -> Option<Path> {
+        todo!()
+    }
+}
+
 #[derive(Bundle)]
 pub struct Graph {
     graph_type: GraphType,
@@ -709,6 +731,32 @@ pub fn update_current_tilepos(
     }
 }
 
+pub struct HeightedTilePos {
+    xy: TilePos,
+    z: u32,
+}
+
+impl HeightedTilePos {
+    pub fn new(tile_pos: TilePos, height: u32) -> Self {
+        Self {
+            xy: tile_pos,
+            z: height,
+        }
+    }
+
+    pub fn x(&self) -> u32 {
+        self.xy.x
+    }
+
+    pub fn y(&self) -> u32 {
+        self.xy.y
+    }
+
+    pub fn z(&self) -> u32 {
+        self.z
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
     use super::{Direction, *};
@@ -722,6 +770,39 @@ pub mod tests {
                 app.world.spawn_empty().insert((TilePos::new(i, j), *layer));
             }
         }
+    }
+
+    enum IslandType {
+        Square(u32, u32),
+    }
+
+    /// Returns a list of Tiles created to make an island, where
+    /// an island consists of water, and land that is at least 1
+    /// tile smaller to still show water.
+    fn create_island(shape: IslandType) -> Vec<HeightedTilePos> {
+        match shape {
+            IslandType::Square(length, width) => {
+                let mut tiles = Vec::new();
+
+                tiles.append(&mut spawn_tiles_with_height(length, width, 0));
+                tiles.append(&mut spawn_tiles_with_height(length - 1, width - 1, 1));
+
+                tiles
+            }
+        }
+    }
+
+    /// Returns a rectangle or square of Tile Positions formed specified by the
+    /// given length, width, and height.
+    fn spawn_tiles_with_height(length: u32, width: u32, height: u32) -> Vec<HeightedTilePos> {
+        let mut tiles = Vec::with_capacity(length as usize * width as usize * height as usize);
+        for i in 0..length {
+            for j in 0..width {
+                tiles.push(HeightedTilePos::new(TilePos::new(i, j), height));
+            }
+        }
+
+        tiles
     }
 
     fn spawn_map_information(
@@ -1110,5 +1191,31 @@ pub mod tests {
         let actual_direction = get_direction(source_transform, destination_transform).unwrap();
 
         assert_eq!(expected_direction, actual_direction);
+    }
+
+    #[test]
+    fn path_exists_for_source_and_target() {
+        let square_island_tiles = create_island(IslandType::Square(4, 4));
+        let graph_edges = NodeEdges::from_ground_tiles(square_island_tiles);
+
+        let source_pos = TilePos::new(1, 1);
+        let target_pos = TilePos::new(1, 3);
+
+        let path = graph_edges.shortest_path(source_pos, target_pos);
+
+        assert!(path.is_some());
+        assert_eq!(path.unwrap().len(), 2);
+    }
+
+    #[test]
+    fn dimensions_from_heighted_tiles() {
+        let square_island_tiles = create_island(IslandType::Square(4, 4));
+
+        let (expected_length, expected_width, expected_height) = (4, 4, 2);
+        let (actual_length, actual_width, actual_height) = dimensions_from(&square_island_tiles);
+
+        assert_eq!(expected_length, actual_length);
+        assert_eq!(expected_width, actual_width);
+        assert_eq!(expected_height, actual_height);
     }
 }
