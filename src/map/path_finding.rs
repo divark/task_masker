@@ -5,7 +5,7 @@ use bevy_ecs_tilemap::prelude::*;
 
 use crate::entities::{chatter::CHATTER_LAYER_NUM, subscriber::SUBSCRIBER_LAYER_NUM, MovementType};
 
-use super::tiled::{tiled_to_bevy_transform, tiled_to_tile_pos, LayerNumber, TiledMapInformation};
+use super::tiled::{tiled_to_bevy_transform, tiled_to_tile_pos, to_bevy_transform, LayerNumber, TiledMapInformation};
 
 #[derive(Component, PartialEq, Debug)]
 pub enum GraphType {
@@ -864,6 +864,15 @@ impl HeightedTilePos {
 
     pub fn z(&self) -> u32 {
         self.z
+    }
+
+    /// Returns the position in Pixels (Using a Transform) of the Heighted
+    /// Tile Position with respect to the size of the grid in pixels holding
+    /// this tile.
+    pub fn transform(&self, map_info: TiledMapInformation) -> Transform {
+        let tile_pos = self.xy.clone();
+
+        to_bevy_transform(&tile_pos, map_info)
     }
 }
 

@@ -4,9 +4,9 @@ use bevy::prelude::*;
 
 use bevy_ecs_tilemap::prelude::*;
 use task_masker::entities::{chatter::*, crop::*, fruit::*, streamer::*, subscriber::*};
-use task_masker::map::path_finding::{tilepos_to_idx, GraphType, MovementTimer, NodeEdges, Path};
+use task_masker::map::path_finding::{tilepos_to_idx, HeightedTilePos, GraphType, MovementTimer, NodeEdges, Path};
 use task_masker::map::plugins::{PathFindingPlugin, TilePosEvent};
-use task_masker::map::tiled::{spawn_tiles_from_tiledmap, tiled_to_tile_pos, LayerNumber};
+use task_masker::map::tiled::{spawn_tiles_from_tiledmap, tiled_to_tile_pos, to_bevy_transform, LayerNumber, TiledMapInformation};
 use task_masker::GameState;
 
 #[derive(Default)]
@@ -221,12 +221,13 @@ impl GameWorld {
             .expect("tile_at_position: Could not get map size given the specified height.")
             .clone();
 
+        let flipped_tile_pos = tiled_to_tile_pos(tile_pos.x, tile_pos.y, &map_size);
         self.app
             .world
             .query::<(Entity, &TilePos, &LayerNumber)>()
             .iter(&self.app.world)
             .find(|tile_entry| {
-                *tile_entry.1 == tiled_to_tile_pos(tile_pos.x, tile_pos.y, &map_size)
+                *tile_entry.1 == flipped_tile_pos
                     && tile_entry.2 .0 == height as usize
             })
             .map(|tile_entry| tile_entry.0)
@@ -469,6 +470,20 @@ impl GameWorld {
         //})
         //.is_some()
     }
+
+    /// Returns Map Measurement Information based on the specified
+    /// Tile Layer Height.
+    pub fn map_info(&mut self, height: usize) -> TiledMapInformation {
+        let (grid_size, map_size, map_type, map_transform) = self
+            .app
+            .world
+            .query::<(&TilemapGridSize, &TilemapSize, &TilemapType, &Transform)>()
+            .iter(&self.app.world)
+            .nth(height)
+            .expect("map_info: Could not generate TiledMapInformation since all required components are missing.");
+
+        TiledMapInformation::new(grid_size, map_size, map_type, map_transform)
+    }
 }
 
 /// Returns the approximate number of Tiles away the target_pos
@@ -598,6 +613,21 @@ fn tile_pos_exists_in_ground_graph() {
     let tiled_tile_pos = TilePos::new(63, 49);
 
     assert!(game.tile_has_neighbors(GraphType::Ground, tiled_tile_pos));
+}
+
+#[test]
+fn heighted_tile_transform_matches_tile_transform() {
+    let mut game = GameWorld::new();
+
+    let tile_pos = TilePos::new(69, 20);
+    let tile_height: usize = 19;
+
+    let heighted_tile_pos = HeightedTilePos::new(tile_pos.clone(), tile_height as u32);
+
+    let expected_transform = to_bevy_transform(&tile_pos, game.map_info(tile_height));
+    let actual_transform = heighted_tile_pos.transform(game.map_info(tile_height));
+
+    assert_eq!(expected_transform, actual_transform);
 }
 
 //  		(Key = 1.2.1.1.)
