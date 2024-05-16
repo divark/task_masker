@@ -67,7 +67,7 @@ fn flip_heighted_tiles(heighted_tiles: &Vec<HeightedTilePos>) -> Vec<HeightedTil
 /// the desired length and width.
 fn height_map_from(ground_tiles: &Vec<HeightedTilePos>, starting_height: usize) -> Vec<usize> {
     let (length, width, _height) = dimensions_from(ground_tiles);
-    let mut height_map: Vec<usize> = vec![starting_height; length as usize * width as usize];
+    let mut height_map: Vec<usize> = vec![0; length as usize * width as usize];
 
     // Sorting by Tile Position and Layer number ensures that we won't add
     // a previous node, whether above or to the left, that does not exist
@@ -83,7 +83,7 @@ fn height_map_from(ground_tiles: &Vec<HeightedTilePos>, starting_height: usize) 
         // connected to the ground to be ignored. Think scenery
         // that obscures the vision from the camera that the
         // player can pass through.
-        let tile_height = heighted_tile.z() as usize;
+        let tile_height = heighted_tile.z() as usize + starting_height;
         if tile_height >= starting_height && tile_height - height_entry == 1 {
             height_map[height_idx] += 1;
         }

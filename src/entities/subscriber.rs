@@ -39,6 +39,8 @@ pub struct SubscriberBundle {
     status: SubscriberStatus,
 }
 
+// TODO: Mimic separation done from Streamer, doing replace_subscriber_sprite
+// and replace_subscriber_tile
 pub fn replace_subscriber(
     mut tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,
     map_info_query: Query<

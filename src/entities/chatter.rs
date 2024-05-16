@@ -40,6 +40,8 @@ pub struct ChatterBundle {
     status: ChatterStatus,
 }
 
+// TODO: Mimic separation done from Streamer, doing replace_chatter_sprite
+// and replace_chatter_tile
 pub fn replace_chatter(
     mut tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,
     map_info_query: Query<
@@ -127,7 +129,7 @@ pub fn mock_replace_chatter(
         let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
         let tile_transform = to_bevy_transform(tile_pos, map_info);
 
-        let chatter_tilepos = tile_pos.clone(); //tiled_to_tile_pos(tile_pos.x, tile_pos.y, map_size);
+        let chatter_tilepos = tiled_to_tile_pos(tile_pos.x, tile_pos.y, map_size);
 
         commands.entity(chatter_entity).despawn_recursive();
         commands.spawn((
@@ -199,7 +201,7 @@ pub fn fly_to_streamer_to_speak(
         // The chatter should not be directly on top of the
         // streamer, so we provide some distance by adjusting
         // the path to not go straight to the streamer.
-        for _i in 1..DIST_AWAY_FROM_STREAMER {
+        for _i in 0..DIST_AWAY_FROM_STREAMER {
             path_to_streamer.pop_back();
         }
 

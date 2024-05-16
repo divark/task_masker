@@ -4,9 +4,9 @@ use bevy_ecs_tilemap::{
     tiles::TilePos,
 };
 
+use crate::map::path_finding::*;
 use crate::map::plugins::TilePosEvent;
 use crate::map::tiled::{tiled_to_bevy_transform, TiledMapInformation};
-use crate::map::{path_finding::*, tiled::tiled_to_tile_pos};
 use crate::ui::chatting::{ChattingStatus, Msg};
 
 use super::MovementType;
@@ -87,10 +87,8 @@ pub fn spawn_player_tile(
         .expect("Could not load map information. Is world loaded?");
     let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
 
-    let streamer_location = TilePos { x: 42, y: 59 }; //{ x: 42, y: 59 };
-    let streamer_bevy_tilepos =
-        tiled_to_tile_pos(streamer_location.x, streamer_location.y, map_size);
-    let streamer_transform = tiled_to_bevy_transform(&streamer_location, map_info);
+    let streamer_bevy_tilepos = TilePos { x: 42, y: 59 };
+    let streamer_transform = tiled_to_bevy_transform(&streamer_bevy_tilepos, map_info);
 
     commands.spawn((
         (
@@ -162,14 +160,13 @@ pub fn move_streamer(
         return;
     }
 
-    *streamer_path = get_path(
-        &streamer_tile_pos.1,
-        &streamer_destination_queue.pop_front().expect(
-            "move_streamer: Destination queue for streamer should have been filled with something.",
-        ),
-        map_size,
-        edges,
+    let streamer_target = streamer_destination_queue.pop_front().expect(
+        "move_streamer: Destination queue for streamer should have been filled with something.",
     );
+    if let Some(found_path) = edges.shortest_path(streamer_tile_pos.1, streamer_target, map_size.x)
+    {
+        *streamer_path = found_path;
+    }
 
     *streamer_status = StreamerStatus::Moving;
 }
