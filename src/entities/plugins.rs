@@ -15,7 +15,8 @@ impl Plugin for ChatterPlugin {
         app.add_systems(
             Update,
             (
-                replace_chatter,
+                replace_chatter_tile,
+                replace_chatter_sprite,
                 trigger_flying_to_streamer,
                 fly_to_streamer_to_speak,
                 leave_from_streamer_from_chatter,

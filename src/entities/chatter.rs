@@ -40,40 +40,17 @@ pub struct ChatterBundle {
     status: ChatterStatus,
 }
 
-// TODO: Mimic separation done from Streamer, doing replace_chatter_sprite
-// and replace_chatter_tile
-pub fn replace_chatter(
-    mut tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,
-    map_info_query: Query<
-        (&Transform, &TilemapGridSize, &TilemapSize, &TilemapType),
-        Added<TilemapGridSize>,
-    >,
+pub fn replace_chatter_sprite(
+    chatter: Query<(Entity, &Transform, &TileTextureIndex), Added<ChatterLabel>>,
     mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
-    let map_information = map_info_query
-        .iter()
-        .find(|map_info| map_info.0.translation.z == CHATTER_LAYER_NUM as f32);
-
-    if map_information.is_none() {
-        return;
-    }
-
-    let (map_transform, grid_size, map_size, map_type) =
-        map_information.expect("replace_chatter: Map information should exist by now.");
-
-    let texture_handle = asset_server.load("chatters/animation.png");
-    let chatter_texture_atlas =
-        TextureAtlasLayout::from_grid(Vec2::new(16.0, 16.0), 8, 2, None, None);
-    let chatter_texture_atlas_handle = texture_atlases.add(chatter_texture_atlas);
-    for (chatter_entity, layer_number, tile_pos, tile_texture_index) in &mut tiles_query {
-        if layer_number.0 != CHATTER_LAYER_NUM {
-            continue;
-        }
-
-        let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
-        let tile_transform = to_bevy_transform(tile_pos, map_info);
+    for (chatter_entity, chatter_transform, tile_texture_index) in &chatter {
+        let texture_handle = asset_server.load("chatters/animation.png");
+        let chatter_texture_atlas =
+            TextureAtlasLayout::from_grid(Vec2::new(16.0, 16.0), 8, 2, None, None);
+        let chatter_texture_atlas_handle = texture_atlases.add(chatter_texture_atlas);
 
         let chatter_sprite = SpriteSheetBundle {
             sprite: Sprite::default(),
@@ -82,28 +59,18 @@ pub fn replace_chatter(
                 index: tile_texture_index.0 as usize,
             },
             texture: texture_handle.clone(),
-            transform: tile_transform,
+            transform: *chatter_transform,
             ..default()
         };
-        let chatter_tilepos = tiled_to_tile_pos(tile_pos.x, tile_pos.y, map_size);
 
-        commands.entity(chatter_entity).despawn_recursive();
-        commands.spawn((
-            ChatterBundle {
-                label: ChatterLabel,
-                sprite: chatter_sprite,
-                movement_type: MovementType::Fly,
-                status: ChatterStatus::Idle,
-            },
-            chatter_tilepos,
-        ));
+        commands.entity(chatter_entity).remove::<Transform>();
+        commands.entity(chatter_entity).insert(chatter_sprite);
     }
 }
 
 /// Respawns Chatter without rendering components
-/// for Integration Testing only.
-pub fn mock_replace_chatter(
-    mut tiles_query: Query<(Entity, &LayerNumber, &TilePos)>,
+pub fn replace_chatter_tile(
+    tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,
     map_info_query: Query<
         (&Transform, &TilemapGridSize, &TilemapSize, &TilemapType),
         Added<TilemapGridSize>,
@@ -121,7 +88,7 @@ pub fn mock_replace_chatter(
     let (map_transform, grid_size, map_size, map_type) =
         map_information.expect("mock_replace_chatter: Map information should exist by now.");
 
-    for (chatter_entity, layer_number, tile_pos) in &mut tiles_query {
+    for (chatter_entity, layer_number, tile_pos, tile_texture_index) in &tiles_query {
         if layer_number.0 != CHATTER_LAYER_NUM {
             continue;
         }
@@ -138,6 +105,7 @@ pub fn mock_replace_chatter(
                 tile_transform,
                 MovementType::Fly,
                 ChatterStatus::Idle,
+                *tile_texture_index,
             ),
             chatter_tilepos,
         ));
