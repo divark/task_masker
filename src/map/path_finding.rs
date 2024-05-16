@@ -5,7 +5,9 @@ use bevy_ecs_tilemap::prelude::*;
 
 use crate::entities::{chatter::CHATTER_LAYER_NUM, subscriber::SUBSCRIBER_LAYER_NUM, MovementType};
 
-use super::tiled::{tiled_to_bevy_transform, tiled_to_tile_pos, to_bevy_transform, LayerNumber, TiledMapInformation};
+use super::tiled::{
+    tiled_to_bevy_transform, tiled_to_tile_pos, to_bevy_transform, LayerNumber, TiledMapInformation,
+};
 
 #[derive(Component, PartialEq, Debug)]
 pub enum GraphType {
@@ -49,12 +51,23 @@ fn dimensions_from(heighted_tiles: &Vec<HeightedTilePos>) -> (u32, u32, u32) {
     (length, width, height)
 }
 
+/// Returns a collection of Heighted Tiles with their y-axes
+/// flipped.
+fn flip_heighted_tiles(heighted_tiles: &Vec<HeightedTilePos>) -> Vec<HeightedTilePos> {
+    let (_length, width, _height) = dimensions_from(heighted_tiles);
+
+    heighted_tiles
+        .iter()
+        .map(|tile| tile.flip(width))
+        .collect::<Vec<HeightedTilePos>>()
+}
+
 /// Returns a 1 Dimensional Height Map calculated from some
 /// collection of Heighted Tile Positions with respect to
 /// the desired length and width.
-fn height_map_from(ground_tiles: &Vec<HeightedTilePos>) -> Vec<usize> {
+fn height_map_from(ground_tiles: &Vec<HeightedTilePos>, starting_height: usize) -> Vec<usize> {
     let (length, width, _height) = dimensions_from(ground_tiles);
-    let mut height_map: Vec<usize> = vec![0; length as usize * width as usize];
+    let mut height_map: Vec<usize> = vec![starting_height; length as usize * width as usize];
 
     // Sorting by Tile Position and Layer number ensures that we won't add
     // a previous node, whether above or to the left, that does not exist
@@ -70,7 +83,8 @@ fn height_map_from(ground_tiles: &Vec<HeightedTilePos>) -> Vec<usize> {
         // connected to the ground to be ignored. Think scenery
         // that obscures the vision from the camera that the
         // player can pass through.
-        if heighted_tile.z() as usize - height_entry == 1 {
+        let tile_height = heighted_tile.z() as usize;
+        if tile_height >= starting_height && tile_height - height_entry == 1 {
             height_map[height_idx] += 1;
         }
     }
@@ -100,7 +114,7 @@ impl NodeEdges {
     pub fn from_ground_tiles(ground_tiles: Vec<HeightedTilePos>) -> NodeEdges {
         let mut directed_graph_edges: Vec<Vec<usize>> = Vec::with_capacity(ground_tiles.len());
 
-        let height_map: Vec<usize> = height_map_from(&ground_tiles);
+        let height_map: Vec<usize> = height_map_from(&ground_tiles, 1);
         let (length, _width, _height) = dimensions_from(&ground_tiles);
 
         let tile_positions_no_layers = unique_tiles_from(ground_tiles);
@@ -137,8 +151,59 @@ impl NodeEdges {
 
     /// Returns a Single Shortest Path between a source and target Tile
     /// Position, or nothing if none were found.
-    pub fn shortest_path(&self, source_pos: TilePos, target_pos: TilePos) -> Option<Path> {
-        todo!()
+    pub fn shortest_path(&self, source: TilePos, target: TilePos, length: u32) -> Option<Path> {
+        let graph_node_edges = &self.0;
+
+        let mut node_distances = vec![0; graph_node_edges.len()];
+        let mut node_parents = vec![-1; graph_node_edges.len()];
+        let mut node_visited = vec![false; graph_node_edges.len()];
+
+        let mapped_source_idx = tilepos_to_idx(source.x, source.y, length);
+        let mut mapped_target_idx = tilepos_to_idx(target.x, target.y, length);
+
+        let mut bfs_queue = VecDeque::from([mapped_source_idx]);
+        while !bfs_queue.is_empty() {
+            let current_node_idx = bfs_queue.pop_front().unwrap();
+            if current_node_idx == mapped_target_idx {
+                node_visited[current_node_idx] = true;
+                break;
+            }
+
+            if node_visited[current_node_idx] {
+                continue;
+            }
+
+            node_visited[current_node_idx] = true;
+
+            for node_edge in &graph_node_edges[current_node_idx] {
+                if node_visited[*node_edge] {
+                    continue;
+                }
+
+                node_parents[*node_edge] = current_node_idx as i32;
+                node_distances[*node_edge] = node_distances[current_node_idx] + 1;
+
+                bfs_queue.push_back(*node_edge);
+            }
+        }
+
+        if !node_visited[mapped_target_idx] {
+            return None;
+        }
+
+        let mut path = VecDeque::from([mapped_target_idx]);
+        while mapped_source_idx != mapped_target_idx {
+            let node_parent = node_parents[mapped_target_idx];
+            if node_parent == -1 {
+                break;
+            }
+
+            mapped_target_idx = node_parent as usize;
+
+            path.push_front(mapped_target_idx);
+        }
+
+        Some(Path(path))
     }
 }
 
@@ -184,129 +249,36 @@ pub fn create_ground_graph(
         return;
     }
 
-    // Each Tile Layer has its own World and Grid size should someone decide
-    // to change tilesets for the layer. However, I will not do that, so
-    // both the world size and grid size should be the same.
-    let world_size = map_information
+    let heighted_tiles = tile_positions
         .iter()
-        .map(|sizes| sizes.0)
-        .max_by(|&x, &y| {
-            let x_world_area = x.x * x.y;
-            let y_world_area = y.x * y.y;
+        .map(|tile| HeightedTilePos::new(*tile.0, tile.1 .0 as u32))
+        .collect::<Vec<HeightedTilePos>>();
 
-            x_world_area.cmp(&y_world_area)
-        })
-        .expect("Could not find largest world size. Is the map loaded?");
-
-    let grid_size = map_information
+    let heighted_tile_translations = heighted_tiles
         .iter()
-        .map(|sizes| sizes.1)
-        .max_by(|&x, &y| {
-            let x_grid_area = x.x * x.y;
-            let y_grid_area = y.x * y.y;
-
-            x_grid_area.partial_cmp(&y_grid_area).unwrap()
-        })
-        .expect("Could not find largest grid size. Is the map loaded?");
-
-    // I'm not sure how a map type could change based on the layer, but
-    // the Tiled loader insists it could happen, but I won't do that for
-    // my own maps, so they should all be equal.
-    let map_type = map_information
-        .iter()
-        .next()
-        .map(|x| x.2)
-        .expect("Could not get map type. Is the map loaded?");
-
-    let mut height_map: Vec<usize> = vec![0; (world_size.x * world_size.y) as usize];
-
-    // Sorting by Tile Position and Layer number ensures that we won't add
-    // a previous node, whether above or to the left, that does not exist
-    // yet.
-    let mut tile_positions_sorted = tile_positions
-        .iter()
-        .map(|tile_pair| {
-            (
-                tiled_to_tile_pos(tile_pair.0.x, tile_pair.0.y, world_size),
-                tile_pair.1,
+        .map(|heighted_tile| {
+            let (map_size, grid_size, map_type, map_transform) = map_information
+                .iter()
+                .nth(heighted_tile.z() as usize)
+                .unwrap();
+            let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
+            to_bevy_transform(
+                &TilePos::new(heighted_tile.x(), heighted_tile.y()),
+                map_info,
             )
+            .translation
         })
-        .collect::<Vec<(TilePos, &LayerNumber)>>();
-    tile_positions_sorted.sort_by(|&pos1, &pos2| {
-        let pos1_converted = tilepos_to_idx(pos1.0.x, pos1.0.y, world_size.x);
-        let pos2_converted = tilepos_to_idx(pos2.0.x, pos2.0.y, world_size.x);
+        .collect::<Vec<Vec3>>();
 
-        let pos1_layer = pos1.1;
-        let pos2_layer = pos2.1;
+    let flipped_heighted_tiles = flip_heighted_tiles(&heighted_tiles);
 
-        pos1_converted
-            .cmp(&pos2_converted)
-            .then(pos1_layer.cmp(pos2_layer))
-    });
-
-    for (tile_position, &layer_number) in tile_positions_sorted.iter() {
-        let height_idx = tilepos_to_idx(tile_position.x, tile_position.y, world_size.x);
-        let height_entry = height_map[height_idx];
-
-        // The difference of 1 here allows for tiles that are not
-        // connected to the ground to be ignored. Think scenery
-        // that obscures the vision from the camera that the
-        // player can pass through.
-        if layer_number.0 - height_entry == 1 {
-            height_map[height_idx] += 1;
-        }
-    }
-
-    let mut directed_graph_data: Vec<Vec3> = Vec::new();
-    let mut directed_graph_edges: Vec<Vec<usize>> = Vec::new();
-
-    let mut tile_positions_no_layers = tile_positions_sorted
-        .iter()
-        .map(|x| x.0)
-        .collect::<Vec<TilePos>>();
-    tile_positions_no_layers.dedup();
-
-    for tile_position in tile_positions_no_layers {
-        let tile_idx = tilepos_to_idx(tile_position.x, tile_position.y, world_size.x);
-        let tile_height = height_map[tile_idx];
-
-        let map_transform = map_information
-            .iter()
-            .nth(tile_height)
-            .expect("Tile should be on this layer.")
-            .3;
-
-        let map_info = TiledMapInformation::new(grid_size, world_size, map_type, map_transform);
-        let tiled_transform = tiled_to_bevy_transform(&tile_position, map_info);
-        let node_data = tiled_transform.translation;
-        let mut node_edges = Vec::new();
-
-        if tile_position.x > 0 && tile_height > 0 {
-            let top_node_idx = tilepos_to_idx(tile_position.x - 1, tile_position.y, world_size.x);
-            let height_difference: i32 = height_map[top_node_idx] as i32 - tile_height as i32;
-            if height_difference.abs() <= 1 {
-                node_edges.push(top_node_idx);
-                directed_graph_edges[top_node_idx].push(tile_idx);
-            }
-        }
-
-        if tile_position.y > 0 && tile_height > 0 {
-            let left_node_idx = tilepos_to_idx(tile_position.x, tile_position.y - 1, world_size.x);
-            let height_difference: i32 = height_map[left_node_idx] as i32 - tile_height as i32;
-            if height_difference.abs() <= 1 {
-                node_edges.push(left_node_idx);
-                directed_graph_edges[left_node_idx].push(tile_idx);
-            }
-        }
-
-        directed_graph_data.push(node_data);
-        directed_graph_edges.push(node_edges);
-    }
+    let node_data = NodeData(heighted_tile_translations);
+    let node_edges = NodeEdges::from_ground_tiles(flipped_heighted_tiles);
 
     spawner.spawn(Graph {
         graph_type: GraphType::Ground,
-        node_data: NodeData(directed_graph_data),
-        node_edges: NodeEdges(directed_graph_edges),
+        node_data,
+        node_edges,
     });
 }
 
@@ -874,6 +846,13 @@ impl HeightedTilePos {
 
         to_bevy_transform(&tile_pos, map_info)
     }
+
+    /// Returns a new instance of a HeightedTilePos with its y axis flipped.
+    pub fn flip(&self, width: u32) -> HeightedTilePos {
+        let mapped_y = width - 1 - self.y();
+
+        HeightedTilePos::new(TilePos::new(self.x(), mapped_y), self.z())
+    }
 }
 
 #[cfg(test)]
@@ -1315,12 +1294,14 @@ pub mod tests {
     #[test]
     fn path_exists_for_source_and_target() {
         let square_island_tiles = create_island(IslandType::Square(4, 4));
+        let (length, _width, _height) = dimensions_from(&square_island_tiles);
+
         let graph_edges = NodeEdges::from_ground_tiles(square_island_tiles);
 
-        let source_pos = TilePos::new(1, 1);
-        let target_pos = TilePos::new(1, 3);
+        let source_pos = TilePos::new(0, 0);
+        let target_pos = TilePos::new(0, 1);
 
-        let path = graph_edges.shortest_path(source_pos, target_pos);
+        let path = graph_edges.shortest_path(source_pos, target_pos, length);
 
         assert!(path.is_some());
         assert_eq!(path.unwrap().len(), 2);
@@ -1343,7 +1324,7 @@ pub mod tests {
         let square_island_tiles = create_island(IslandType::Square(4, 4));
 
         let expected_height_map = vec![1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        let actual_height_map = height_map_from(&square_island_tiles);
+        let actual_height_map = height_map_from(&square_island_tiles, 0);
 
         assert_eq!(expected_height_map, actual_height_map);
     }
@@ -1379,5 +1360,37 @@ pub mod tests {
         let actual_tiles = unique_tiles_from(heighted_tiles);
 
         assert_eq!(expected_tiles, actual_tiles);
+    }
+
+    #[test]
+    fn heighted_tiles_correctly_flipped() {
+        let square_island_tiles = create_island(IslandType::Square(4, 4));
+        let (_length, width, _height) = dimensions_from(&square_island_tiles);
+
+        let expected_heighted_tiles = square_island_tiles
+            .iter()
+            .map(|tile| tile.flip(width))
+            .collect::<Vec<HeightedTilePos>>();
+        let actual_heighted_tiles = flip_heighted_tiles(&square_island_tiles);
+
+        assert_eq!(expected_heighted_tiles, actual_heighted_tiles);
+    }
+
+    #[test]
+    fn heighted_tile_can_flip() {
+        let square_island_tiles = create_island(IslandType::Square(4, 4));
+        let (_length, width, _height) = dimensions_from(&square_island_tiles);
+
+        // Why 15? That's because the tile (3, 3) is found as the last entry,
+        // and since the island is 4x4, and we start by zero, it's 4*4 - 1,
+        // or 15.
+        let tile_idx = 15;
+
+        let heighted_tile = &square_island_tiles[tile_idx];
+
+        let expected_flipped_tile = HeightedTilePos::new(TilePos::new(3, 0), 0);
+        let actual_flipped_tile = heighted_tile.flip(width);
+
+        assert_eq!(expected_flipped_tile, actual_flipped_tile);
     }
 }

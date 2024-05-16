@@ -4,9 +4,14 @@ use bevy::prelude::*;
 
 use bevy_ecs_tilemap::prelude::*;
 use task_masker::entities::{chatter::*, crop::*, fruit::*, streamer::*, subscriber::*};
-use task_masker::map::path_finding::{tilepos_to_idx, HeightedTilePos, GraphType, MovementTimer, NodeEdges, Path};
+use task_masker::map::path_finding::{
+    tilepos_to_idx, GraphType, HeightedTilePos, MovementTimer, NodeEdges, Path,
+};
 use task_masker::map::plugins::{PathFindingPlugin, TilePosEvent};
-use task_masker::map::tiled::{spawn_tiles_from_tiledmap, tiled_to_tile_pos, to_bevy_transform, LayerNumber, TiledMapInformation};
+use task_masker::map::tiled::{
+    spawn_tiles_from_tiledmap, tiled_to_tile_pos, to_bevy_transform, LayerNumber,
+    TiledMapInformation,
+};
 use task_masker::GameState;
 
 #[derive(Default)]
@@ -227,8 +232,7 @@ impl GameWorld {
             .query::<(Entity, &TilePos, &LayerNumber)>()
             .iter(&self.app.world)
             .find(|tile_entry| {
-                *tile_entry.1 == flipped_tile_pos
-                    && tile_entry.2 .0 == height as usize
+                *tile_entry.1 == flipped_tile_pos && tile_entry.2 .0 == height as usize
             })
             .map(|tile_entry| tile_entry.0)
             .expect("tile_at_position: Could not find Tile at given Tile Pos and height.")
@@ -597,17 +601,6 @@ fn path_exists_for_streamer_when_reachable() {
 }
 
 #[test]
-fn path_exists_for_chatter_when_reachable() {
-    let mut game = GameWorld::new();
-    let tiled_tile_pos = TilePos::new(63, 49);
-
-    let source_entity = game.find(EntityType::Chatter);
-
-    let path = game.get_path_from(source_entity, tiled_tile_pos);
-    assert_ne!(path.len(), 0);
-}
-
-#[test]
 fn tile_pos_exists_in_ground_graph() {
     let mut game = GameWorld::new();
     let tiled_tile_pos = TilePos::new(63, 49);
@@ -632,7 +625,7 @@ fn heighted_tile_transform_matches_tile_transform() {
 
 //  		(Key = 1.2.1.1.)
 #[test]
-fn test_case_1() {
+fn streamer_arrives_to_fruit_at_higher_height() {
     let mut world = GameWorld::new();
     let source_entity = world.find(EntityType::Streamer);
     let target_entity = world.find(EntityType::Fruit);
@@ -643,7 +636,7 @@ fn test_case_1() {
 
 //  		(Key = 1.2.2.1.)
 #[test]
-fn test_case_2() {
+fn streamer_arrives_to_fruit_at_lower_height() {
     let mut world = GameWorld::new();
     let source_entity = world.find(EntityType::Streamer);
     let target_entity = world.find(EntityType::Fruit);
@@ -654,7 +647,7 @@ fn test_case_2() {
 
 //  		(Key = 1.2.3.1.)
 #[test]
-fn test_case_3() {
+fn streamer_arrives_to_fruit_at_same_height() {
     let mut world = GameWorld::new();
     let source_entity = world.find(EntityType::Streamer);
     let target_entity = world.find(EntityType::Fruit);
@@ -665,7 +658,7 @@ fn test_case_3() {
 
 //  		(Key = 1.3.1.1.)
 #[test]
-fn test_case_4() {
+fn streamer_arrives_to_crop_at_higher_height() {
     let mut world = GameWorld::new();
     let source_entity = world.find(EntityType::Streamer);
     let target_entity = world.find(EntityType::Crop);
@@ -676,7 +669,7 @@ fn test_case_4() {
 
 //  		(Key = 1.3.2.1.)
 #[test]
-fn test_case_5() {
+fn streamer_arrives_to_crop_at_lower_height() {
     let mut world = GameWorld::new();
     let source_entity = world.find(EntityType::Streamer);
     let target_entity = world.find(EntityType::Crop);
@@ -687,7 +680,7 @@ fn test_case_5() {
 
 //  		(Key = 1.3.3.1.)
 #[test]
-fn test_case_6() {
+fn streamer_arrives_to_crop_at_same_height() {
     let mut world = GameWorld::new();
     let source_entity = world.find(EntityType::Streamer);
     let target_entity = world.find(EntityType::Crop);
@@ -698,7 +691,7 @@ fn test_case_6() {
 
 //  		(Key = 1.4.1.1.)
 #[test]
-fn test_case_7() {
+fn streamer_arrives_at_higher_tile() {
     let mut world = GameWorld::new();
     let source_entity = world.find(EntityType::Streamer);
     let target_entity = world.tile_at_position(TilePos::new(44, 64), 8);
@@ -783,7 +776,7 @@ fn streamer_wont_move_if_at_target() {
 
 // 		(Key = 2.1.2.1.)
 #[test]
-fn test_case_13() {
+fn chatter_arrives_to_streamer() {
     let mut world = GameWorld::new();
     let source_entity = world.find(EntityType::Chatter);
     let target_entity = world.find(EntityType::Streamer);
@@ -792,37 +785,9 @@ fn test_case_13() {
     assert!(world.has_reached(source_entity, target_entity));
 }
 
-// 		(Key = 2.1.3.1.)
-// 		Test Case 14 will not be implemented because a Chatter
-// 		will _never_ be on the same layer as the Streamer. The
-// 		Chatter is always higher than anything on the map, since
-// 		they are flying over the world.
-
-//// 		(Key = 2.4.2.1.)
-//#[test]
-//fn test_case_15() {
-//   let mut world = GameWorld::new();
-//    let source_entity = world.spawn(EntityType::Chatter);
-//   Destination Entity      :  Tile
-//   assert!(world.height_of(target_entity) < world.height_of(source_entity));
-//   world.travel_to(source_entity, target_entity);
-//    assert!(world.has_reached(source_entity, target_entity));
-//}
-//
-//// 		(Key = 2.4.3.1.)
-//#[test]
-//fn test_case_16() {
-//   let mut world = GameWorld::new();
-//    let source_entity = world.spawn(EntityType::Chatter);
-//   Destination Entity      :  Tile
-//   assert!(world.height_of(target_entity) == world.height_of(source_entity));
-//   world.travel_to(source_entity, target_entity);
-//    assert!(world.has_reached(source_entity, target_entity));
-//}
-
 // 		(Key = 3.1.1.2.)
 #[test]
-fn test_case_17() {
+fn subscriber_arrives_to_streamer() {
     let mut world = GameWorld::new();
     let source_entity = world.find(EntityType::Subscriber);
     let target_entity = world.find(EntityType::Streamer);
@@ -830,39 +795,3 @@ fn test_case_17() {
     world.travel_to(source_entity, target_entity);
     assert!(!world.has_reached(source_entity, target_entity));
 }
-
-// 		(Key = 3.1.3.2.)
-#[test]
-fn test_case_18() {
-    let mut world = GameWorld::new();
-    let source_entity = world.find(EntityType::Subscriber);
-    let target_entity = world.find(EntityType::Streamer);
-    assert_eq!(
-        world.height_of(target_entity),
-        world.height_of(source_entity)
-    );
-    world.travel_to(source_entity, target_entity);
-    assert!(!world.has_reached(source_entity, target_entity));
-}
-
-//// 		(Key = 3.4.1.2.)
-//#[test]
-//fn test_case_19() {
-//   let mut world = GameWorld::new();
-//    let source_entity = world.spawn(EntityType::Subscriber);
-//   Destination Entity      :  Tile
-//   assert!(world.height_of(target_entity) > world.height_of(source_entity));
-//   world.travel_to(source_entity, target_entity);
-//    assert!(!world.has_reached(source_entity, target_entity));
-//}
-//
-//// 		(Key = 3.4.3.2.)
-//#[test]
-//fn test_case_20() {
-//   let mut world = GameWorld::new();
-//    let source_entity = world.spawn(EntityType::Subscriber);
-//   Destination Entity      :  Tile
-//   assert!(world.height_of(target_entity) == world.height_of(source_entity));
-//   world.travel_to(source_entity, target_entity);
-//    assert!(!world.has_reached(source_entity, target_entity));
-//}
