@@ -370,15 +370,15 @@ impl GameWorld {
 
     /// Returns a boolean representing whether two Entities
     /// co-exist in the same location.
-    pub fn has_reached_tile(&mut self, source_entity: Entity, target_entity: Entity) -> bool {
+    pub fn has_reached_tile(&mut self, source_entity: Entity, target_entity: Entity) {
         let source_pos = self.get_tile_pos_from(source_entity);
         let target_pos = self.get_tile_pos_from(target_entity);
         match self.get_entity_type(source_entity) {
-            EntityType::Subscriber => return !self.next_to_land(source_pos),
+            EntityType::Subscriber => assert!(self.next_to_land(source_pos)),
             EntityType::Chatter => {
-                return distance_of(source_pos, target_pos) == DIST_AWAY_FROM_STREAMER
+                assert_eq!(distance_of(source_pos, target_pos), DIST_AWAY_FROM_STREAMER)
             }
-            _ => return distance_of(source_pos, target_pos) == 0,
+            _ => assert_eq!(distance_of(source_pos, target_pos), 0),
         }
     }
 
@@ -602,7 +602,7 @@ fn tile_spawned_at_right_tilepos() {
     let mut world = GameWorld::new();
 
     let expected_tilepos = TilePos::new(46, 58);
-    let expected_tile_height = 7;
+    let expected_tile_height = 6;
 
     let tile = world.tile_at_position(expected_tilepos, expected_tile_height);
 
@@ -677,7 +677,7 @@ fn streamer_arrives_to_fruit_at_higher_height() {
     let target_entity = world.find(EntityType::Fruit);
     assert!(world.height_of(target_entity) > world.height_of(source_entity));
     world.travel_to(source_entity, target_entity);
-    assert!(world.has_reached_tile(source_entity, target_entity));
+    world.has_reached_tile(source_entity, target_entity);
 }
 
 //  		(Key = 1.2.2.1.)
@@ -688,7 +688,7 @@ fn streamer_arrives_to_fruit_at_lower_height() {
     let target_entity = world.find(EntityType::Fruit);
     assert!(world.height_of(target_entity) < world.height_of(source_entity));
     world.travel_to(source_entity, target_entity);
-    assert!(world.has_reached_tile(source_entity, target_entity));
+    world.has_reached_tile(source_entity, target_entity);
 }
 
 //  		(Key = 1.2.3.1.)
@@ -699,7 +699,7 @@ fn streamer_arrives_to_fruit_at_same_height() {
     let target_entity = world.find(EntityType::Fruit);
     assert!(world.height_of(target_entity) == world.height_of(source_entity));
     world.travel_to(source_entity, target_entity);
-    assert!(world.has_reached_tile(source_entity, target_entity));
+    world.has_reached_tile(source_entity, target_entity);
 }
 
 //  		(Key = 1.3.1.1.)
@@ -710,7 +710,7 @@ fn streamer_arrives_to_crop_at_higher_height() {
     let target_entity = world.find(EntityType::Crop);
     assert!(world.height_of(target_entity) > world.height_of(source_entity));
     world.travel_to(source_entity, target_entity);
-    assert!(world.has_reached_tile(source_entity, target_entity));
+    world.has_reached_tile(source_entity, target_entity);
 }
 
 //  		(Key = 1.3.2.1.)
@@ -721,7 +721,7 @@ fn streamer_arrives_to_crop_at_lower_height() {
     let target_entity = world.find(EntityType::Crop);
     assert!(world.height_of(target_entity) < world.height_of(source_entity));
     world.travel_to(source_entity, target_entity);
-    assert!(world.has_reached_tile(source_entity, target_entity));
+    world.has_reached_tile(source_entity, target_entity);
 }
 
 //  		(Key = 1.3.3.1.)
@@ -732,7 +732,7 @@ fn streamer_arrives_to_crop_at_same_height() {
     let target_entity = world.find(EntityType::Crop);
     assert!(world.height_of(target_entity) == world.height_of(source_entity));
     world.travel_to(source_entity, target_entity);
-    assert!(world.has_reached_tile(source_entity, target_entity));
+    world.has_reached_tile(source_entity, target_entity);
 }
 
 //  		(Key = 1.4.1.1.)
@@ -740,10 +740,10 @@ fn streamer_arrives_to_crop_at_same_height() {
 fn streamer_arrives_at_higher_tile() {
     let mut world = GameWorld::new();
     let source_entity = world.find(EntityType::Streamer);
-    let target_entity = world.tile_at_position(TilePos::new(44, 64), 8);
+    let target_entity = world.tile_at_position(TilePos::new(44, 64), STREAMER_LAYER_NUM as u32 + 1);
     assert!(world.height_of(target_entity) > world.height_of(source_entity));
     world.travel_to(source_entity, target_entity);
-    assert!(world.has_reached_tile(source_entity, target_entity));
+    world.has_reached_tile(source_entity, target_entity);
 }
 
 #[test]
@@ -762,7 +762,7 @@ fn streamer_wont_move_if_at_target() {
 
     world.travel_to(source_entity, target_entity);
     assert_eq!(world.get_tile_pos_from(source_entity), source_tilepos);
-    assert!(world.has_reached_tile(source_entity, target_entity));
+    world.has_reached_tile(source_entity, target_entity);
 }
 
 ////  		(Key = 1.4.1.2.)
@@ -828,7 +828,7 @@ fn chatter_arrives_to_streamer() {
     let target_entity = world.find(EntityType::Streamer);
     assert!(world.height_of(target_entity) < world.height_of(source_entity));
     world.travel_to(source_entity, target_entity);
-    assert!(world.has_reached_tile(source_entity, target_entity));
+    world.has_reached_tile(source_entity, target_entity);
 }
 
 // 		(Key = 3.1.1.2.)
@@ -839,5 +839,5 @@ fn subscriber_arrives_to_streamer() {
     let target_entity = world.find(EntityType::Streamer);
     assert!(world.height_of(target_entity) > world.height_of(source_entity));
     world.travel_to(source_entity, target_entity);
-    assert!(!world.has_reached_tile(source_entity, target_entity));
+    world.has_reached_tile(source_entity, target_entity);
 }

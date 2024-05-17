@@ -25,7 +25,7 @@ pub struct CropEndIdx(usize);
 pub struct NewSubscriber;
 
 const CROP_NUM_STAGES: usize = 7;
-const CROP_LAYER_NUM: usize = 14;
+const CROP_LAYER_NUM: usize = 13;
 
 pub fn replace_crop_tiles(
     tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,

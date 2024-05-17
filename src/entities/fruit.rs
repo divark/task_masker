@@ -25,7 +25,7 @@ pub enum FruitState {
 #[derive(Component)]
 pub struct RespawnPoint(pub StartingPoint);
 
-const FRUIT_LAYER_NUM: usize = 18;
+const FRUIT_LAYER_NUM: usize = 17;
 const FALLEN_FRUIT_LAYER_NUM: usize = FRUIT_LAYER_NUM - 4;
 
 pub fn replace_fruit_tiles(

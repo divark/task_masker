@@ -9,7 +9,8 @@ use crate::ui::chatting::Msg;
 
 use super::MovementType;
 
-pub const SUBSCRIBER_LAYER_NUM: usize = 1;
+pub const SUBSCRIBER_LAYER_NUM: usize = 18;
+pub const DESIRED_SUBSCRIBER_LAYER_NUM: usize = 1;
 
 #[derive(Component)]
 pub struct SubscriberLabel;
@@ -53,7 +54,7 @@ pub fn replace_subscriber(
 ) {
     let map_information = map_info_query
         .iter()
-        .find(|map_info| map_info.0.translation.z == SUBSCRIBER_LAYER_NUM as f32);
+        .find(|map_info| map_info.0.translation.z == DESIRED_SUBSCRIBER_LAYER_NUM as f32);
 
     if map_information.is_none() {
         return;
@@ -111,7 +112,7 @@ pub fn mock_replace_subscriber(
 ) {
     let map_information = map_info_query
         .iter()
-        .find(|map_info| map_info.0.translation.z == SUBSCRIBER_LAYER_NUM as f32);
+        .find(|map_info| map_info.0.translation.z == DESIRED_SUBSCRIBER_LAYER_NUM as f32);
 
     if map_information.is_none() {
         return;

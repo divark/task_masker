@@ -3,7 +3,7 @@ use std::collections::{HashSet, VecDeque};
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
-use crate::entities::{chatter::CHATTER_LAYER_NUM, subscriber::SUBSCRIBER_LAYER_NUM, MovementType};
+use crate::entities::{subscriber::SUBSCRIBER_LAYER_NUM, MovementType};
 
 use super::tiled::{
     tiled_to_bevy_transform, tiled_to_tile_pos, to_bevy_transform, LayerNumber, TiledMapInformation,
@@ -65,7 +65,7 @@ fn flip_heighted_tiles(heighted_tiles: &Vec<HeightedTilePos>) -> Vec<HeightedTil
 /// Returns a 1 Dimensional Height Map calculated from some
 /// collection of Heighted Tile Positions with respect to
 /// the desired length and width.
-fn height_map_from(ground_tiles: &Vec<HeightedTilePos>, starting_height: usize) -> Vec<usize> {
+fn height_map_from(ground_tiles: &Vec<HeightedTilePos>) -> Vec<usize> {
     let (length, width, _height) = dimensions_from(ground_tiles);
     let mut height_map: Vec<usize> = vec![0; length as usize * width as usize];
 
@@ -83,8 +83,8 @@ fn height_map_from(ground_tiles: &Vec<HeightedTilePos>, starting_height: usize) 
         // connected to the ground to be ignored. Think scenery
         // that obscures the vision from the camera that the
         // player can pass through.
-        let tile_height = heighted_tile.z() as usize + starting_height;
-        if tile_height >= starting_height && tile_height - height_entry == 1 {
+        let tile_height = heighted_tile.z() as usize;
+        if tile_height - height_entry == 1 {
             height_map[height_idx] += 1;
         }
     }
@@ -114,7 +114,7 @@ impl NodeEdges {
     pub fn from_ground_tiles(ground_tiles: Vec<HeightedTilePos>) -> NodeEdges {
         let mut directed_graph_edges: Vec<Vec<usize>> = Vec::with_capacity(ground_tiles.len());
 
-        let height_map: Vec<usize> = height_map_from(&ground_tiles, 1);
+        let height_map: Vec<usize> = height_map_from(&ground_tiles);
         let (length, _width, _height) = dimensions_from(&ground_tiles);
 
         let tile_positions_no_layers = unique_tiles_from(ground_tiles);
@@ -506,7 +506,9 @@ pub fn create_air_graph(
 
         let map_transform = map_information
             .iter()
-            .nth(CHATTER_LAYER_NUM)
+            // The chatter is a Bird, so we want to consider the sky, which
+            // happens to be the highest layer of tiles.
+            .last()
             .expect("Tile should be on this layer.")
             .3;
 
@@ -1330,7 +1332,7 @@ pub mod tests {
         let square_island_tiles = create_island(IslandType::Square(4, 4));
 
         let expected_height_map = vec![1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        let actual_height_map = height_map_from(&square_island_tiles, 0);
+        let actual_height_map = height_map_from(&square_island_tiles);
 
         assert_eq!(expected_height_map, actual_height_map);
     }
