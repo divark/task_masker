@@ -78,6 +78,7 @@ impl Plugin for FruitPlugin {
             Update,
             (
                 replace_fruit_tiles,
+                replace_fruit_sprites,
                 make_fruit_fall,
                 make_fruit_dropped,
                 pathfind_streamer_to_fruit,
@@ -99,6 +100,7 @@ impl Plugin for CropPlugin {
             Update,
             (
                 replace_crop_tiles,
+                replace_crop_sprites,
                 grow_crop_on_c_key,
                 grow_crops,
                 pathfind_streamer_to_crops,

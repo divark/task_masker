@@ -28,14 +28,12 @@ const CROP_NUM_STAGES: usize = 7;
 const CROP_LAYER_NUM: usize = 14;
 
 pub fn replace_crop_tiles(
-    mut tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,
+    tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,
     map_info_query: Query<
         (&Transform, &TilemapGridSize, &TilemapSize, &TilemapType),
         Added<TilemapGridSize>,
     >,
-    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
 ) {
     let map_information = map_info_query
         .iter()
@@ -48,17 +46,37 @@ pub fn replace_crop_tiles(
     let (map_transform, grid_size, world_size, map_type) =
         map_information.expect("replace_crop_tiles: Map information should exist by now.");
 
-    let texture_handle = asset_server.load("farming crops 1(16x16).png");
-    let crop_texture_atlas =
-        TextureAtlasLayout::from_grid(Vec2::new(16.0, 16.0), 16, 16, None, None);
-    let crop_texture_atlas_handle = texture_atlases.add(crop_texture_atlas);
-    for (_entity, layer_number, tile_pos, tile_texture_index) in &mut tiles_query {
+    for (_entity, layer_number, tile_pos, tile_texture_index) in &tiles_query {
         if layer_number.0 != CROP_LAYER_NUM {
             continue;
         }
 
         let map_info = TiledMapInformation::new(grid_size, world_size, map_type, map_transform);
         let tile_transform = to_bevy_transform(tile_pos, map_info);
+
+        commands.entity(_entity).despawn_recursive();
+        commands.spawn((
+            tile_transform,
+            *tile_texture_index,
+            tiled_to_tile_pos(tile_pos.x, tile_pos.y, world_size),
+            CropState::Growing,
+            CropEndIdx(tile_texture_index.0 as usize + CROP_NUM_STAGES - 1),
+            TriggerQueue(VecDeque::new()),
+        ));
+    }
+}
+
+pub fn replace_crop_sprites(
+    crops: Query<(Entity, &Transform, &TileTextureIndex), Added<CropState>>,
+    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) {
+    for (crop_entity, crop_transform, tile_texture_index) in &crops {
+        let texture_handle = asset_server.load("farming crops 1(16x16).png");
+        let crop_texture_atlas =
+            TextureAtlasLayout::from_grid(Vec2::new(16.0, 16.0), 16, 16, None, None);
+        let crop_texture_atlas_handle = texture_atlases.add(crop_texture_atlas);
 
         let crop_sprite = SpriteSheetBundle {
             sprite: Sprite::default(),
@@ -67,18 +85,12 @@ pub fn replace_crop_tiles(
                 index: tile_texture_index.0 as usize,
             },
             texture: texture_handle.clone(),
-            transform: tile_transform,
+            transform: *crop_transform,
             ..default()
         };
 
-        commands.entity(_entity).despawn_recursive();
-        commands.spawn((
-            crop_sprite,
-            tiled_to_tile_pos(tile_pos.x, tile_pos.y, world_size),
-            CropState::Growing,
-            CropEndIdx(tile_texture_index.0 as usize + CROP_NUM_STAGES - 1),
-            TriggerQueue(VecDeque::new()),
-        ));
+        commands.entity(crop_entity).remove::<Transform>();
+        commands.entity(crop_entity).insert(crop_sprite);
     }
 }
 

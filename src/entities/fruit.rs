@@ -29,7 +29,7 @@ const FRUIT_LAYER_NUM: usize = 18;
 const FALLEN_FRUIT_LAYER_NUM: usize = FRUIT_LAYER_NUM - 4;
 
 pub fn replace_fruit_tiles(
-    mut tiles_query: Query<(Entity, &LayerNumber, &TilePos)>,
+    mut tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,
     map_info_query: Query<
         (&Transform, &TilemapGridSize, &TilemapSize, &TilemapType),
         Added<TilemapGridSize>,
@@ -47,7 +47,7 @@ pub fn replace_fruit_tiles(
     let (map_transform, grid_size, map_size, map_type) =
         map_information.expect("replace_fruit_tiles: Map information should exist by now.");
 
-    for (_entity, layer_number, tile_pos) in &mut tiles_query {
+    for (_entity, layer_number, tile_pos, tile_texture_index) in &mut tiles_query {
         if layer_number.0 != FRUIT_LAYER_NUM {
             continue;
         }
@@ -58,6 +58,8 @@ pub fn replace_fruit_tiles(
         commands.entity(_entity).despawn_recursive();
         commands.spawn((
             *tile_pos,
+            *tile_texture_index,
+            tile_transform,
             FruitState::Hanging,
             StartingPoint(tile_transform.translation, *tile_pos),
             RespawnPoint(StartingPoint(tile_transform.translation, *tile_pos)),
@@ -69,37 +71,16 @@ pub fn replace_fruit_tiles(
 }
 
 pub fn replace_fruit_sprites(
-    mut tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,
-    map_info_query: Query<
-        (&Transform, &TilemapGridSize, &TilemapSize, &TilemapType),
-        Added<TilemapGridSize>,
-    >,
+    fruit: Query<(Entity, &Transform, &TileTextureIndex), Added<FruitState>>,
     mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
-    let map_information = map_info_query
-        .iter()
-        .find(|map_info| map_info.0.translation.z == FRUIT_LAYER_NUM as f32);
-
-    if map_information.is_none() {
-        return;
-    }
-
-    let (map_transform, grid_size, map_size, map_type) =
-        map_information.expect("replace_fruit_tiles: Map information should exist by now.");
-
-    let texture_handle = asset_server.load("Fruit(16x16).png");
-    let fruit_texture_atlas =
-        TextureAtlasLayout::from_grid(Vec2::new(16.0, 16.0), 38, 6, None, None);
-    let fruit_texture_atlas_handle = texture_atlases.add(fruit_texture_atlas);
-    for (_entity, layer_number, tile_pos, tile_texture_index) in &mut tiles_query {
-        if layer_number.0 != FRUIT_LAYER_NUM {
-            continue;
-        }
-
-        let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
-        let tile_transform = to_bevy_transform(tile_pos, map_info);
+    for (fruit_entity, fruit_transform, tile_texture_index) in &fruit {
+        let texture_handle = asset_server.load("Fruit(16x16).png");
+        let fruit_texture_atlas =
+            TextureAtlasLayout::from_grid(Vec2::new(16.0, 16.0), 38, 6, None, None);
+        let fruit_texture_atlas_handle = texture_atlases.add(fruit_texture_atlas);
 
         let fruit_sprite = SpriteSheetBundle {
             sprite: Sprite::default(),
@@ -108,21 +89,12 @@ pub fn replace_fruit_sprites(
                 index: tile_texture_index.0 as usize,
             },
             texture: texture_handle.clone(),
-            transform: tile_transform,
+            transform: *fruit_transform,
             ..default()
         };
 
-        commands.entity(_entity).despawn_recursive();
-        commands.spawn((
-            fruit_sprite,
-            *tile_pos,
-            FruitState::Hanging,
-            StartingPoint(tile_transform.translation, *tile_pos),
-            RespawnPoint(StartingPoint(tile_transform.translation, *tile_pos)),
-            Target(None),
-            MovementTimer(Timer::from_seconds(0.05, TimerMode::Repeating)),
-            TriggerQueue(VecDeque::new()),
-        ));
+        commands.entity(fruit_entity).remove::<Transform>();
+        commands.entity(fruit_entity).insert(fruit_sprite);
     }
 }
 

@@ -81,6 +81,43 @@ impl Plugin for MockChatterPlugin {
     }
 }
 
+#[derive(Default)]
+pub struct MockFruitPlugin;
+
+impl Plugin for MockFruitPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            (
+                replace_fruit_tiles,
+                make_fruit_fall,
+                make_fruit_dropped,
+                pathfind_streamer_to_fruit,
+                claim_fruit_from_streamer,
+                respawn_fruit,
+            ),
+        );
+    }
+}
+
+#[derive(Default)]
+pub struct MockCropPlugin;
+
+impl Plugin for MockCropPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_event::<NewSubscriber>();
+        app.add_systems(
+            Update,
+            (
+                replace_crop_tiles,
+                grow_crops,
+                pathfind_streamer_to_crops,
+                pick_up_crops,
+            ),
+        );
+    }
+}
+
 #[derive(PartialEq)]
 enum EntityType {
     Streamer,
@@ -113,10 +150,15 @@ impl GameWorld {
         app.init_state::<GameState>();
         app.insert_state(GameState::InGame);
         app.add_plugins(MinimalPlugins);
+
         app.add_plugins(MockTiledMapPlugin);
         app.add_plugins(MockStreamerPlugin);
         app.add_plugins(MockSubscriberPlugin);
         app.add_plugins(MockChatterPlugin);
+        // TODO: Split generating sound effects for each change
+        // in state for both Fruit and Crops.
+        //app.add_plugins(MockFruitPlugin);
+        //app.add_plugins(MockCropPlugin);
         app.add_plugins(PathFindingPlugin);
 
         app.add_systems(Update, intercept_movement_timer);
@@ -176,8 +218,6 @@ impl GameWorld {
     pub fn find_at(&mut self, entity_type: EntityType, position: TilePos) -> Entity {
         match entity_type {
             EntityType::Fruit => {
-                self.app.add_plugins(MockStreamerPlugin);
-
                 self.app.update();
 
                 return self
@@ -190,8 +230,6 @@ impl GameWorld {
                     .0;
             }
             EntityType::Crop => {
-                self.app.add_plugins(MockSubscriberPlugin);
-
                 self.app.update();
 
                 return self
