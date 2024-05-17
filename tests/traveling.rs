@@ -114,6 +114,9 @@ impl GameWorld {
         app.insert_state(GameState::InGame);
         app.add_plugins(MinimalPlugins);
         app.add_plugins(MockTiledMapPlugin);
+        app.add_plugins(MockStreamerPlugin);
+        app.add_plugins(MockSubscriberPlugin);
+        app.add_plugins(MockChatterPlugin);
         app.add_plugins(PathFindingPlugin);
 
         app.add_systems(Update, intercept_movement_timer);
@@ -134,12 +137,10 @@ impl GameWorld {
     /// Returns a reference to the Entity just created
     /// based on its type.
     pub fn find(&mut self, entity_type: EntityType) -> Entity {
+        self.app.update();
+
         match entity_type {
             EntityType::Streamer => {
-                self.app.add_plugins(MockStreamerPlugin);
-
-                self.app.update();
-
                 return self
                     .app
                     .world
@@ -149,10 +150,6 @@ impl GameWorld {
                     .0;
             }
             EntityType::Subscriber => {
-                self.app.add_plugins(MockSubscriberPlugin);
-
-                self.app.update();
-
                 return self
                     .app
                     .world
@@ -162,10 +159,6 @@ impl GameWorld {
                     .0;
             }
             EntityType::Chatter => {
-                self.app.add_plugins(MockChatterPlugin);
-
-                self.app.update();
-
                 return self
                     .app
                     .world
@@ -328,13 +321,12 @@ impl GameWorld {
         }
 
         loop {
-            let target = self.app.world.get::<Target>(source_entity).unwrap();
+            self.app.update();
 
+            let target = self.app.world.get::<Target>(source_entity).unwrap();
             if target.is_none() {
                 break;
             }
-
-            self.app.update();
         }
     }
 

@@ -803,18 +803,24 @@ pub fn update_current_tilepos(
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct HeightedTilePos {
     xy: TilePos,
     z: u32,
 }
 
+impl PartialOrd for HeightedTilePos {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 impl Ord for HeightedTilePos {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.z()
-            .cmp(&other.z())
+        self.x()
+            .cmp(&other.x())
             .then(self.y().cmp(&other.y()))
-            .then(self.x().cmp(&other.x()))
+            .then(self.z().cmp(&other.z()))
     }
 }
 
