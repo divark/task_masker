@@ -215,7 +215,7 @@ impl AssetLoader for TiledLoader {
     }
 }
 
-pub fn tiled_to_tile_pos(x: u32, y: u32, map_size: &TilemapSize) -> TilePos {
+pub fn flip_y_axis_for_tile_pos(x: u32, y: u32, map_size: &TilemapSize) -> TilePos {
     let mapped_y = map_size.y - 1 - y;
 
     TilePos::new(x, mapped_y)
@@ -245,7 +245,7 @@ impl<'a> TiledMapInformation<'a> {
 }
 
 pub fn tiled_to_bevy_transform(tile_pos: &TilePos, map_info: TiledMapInformation) -> Transform {
-    let tiled_to_bevy_pos = tiled_to_tile_pos(tile_pos.x, tile_pos.y, map_info.map_size);
+    let tiled_to_bevy_pos = flip_y_axis_for_tile_pos(tile_pos.x, tile_pos.y, map_info.map_size);
     to_bevy_transform(&tiled_to_bevy_pos, map_info)
 }
 

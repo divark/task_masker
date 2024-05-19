@@ -4,7 +4,9 @@ use std::collections::VecDeque;
 
 use crate::entities::streamer::{StreamerLabel, StreamerStatus};
 use crate::map::path_finding::*;
-use crate::map::tiled::{tiled_to_tile_pos, to_bevy_transform, LayerNumber, TiledMapInformation};
+use crate::map::tiled::{
+    flip_y_axis_for_tile_pos, to_bevy_transform, LayerNumber, TiledMapInformation,
+};
 use crate::ui::chatting::Msg;
 
 use super::MovementType;
@@ -85,7 +87,7 @@ pub fn replace_subscriber(
             transform: tile_transform,
             ..default()
         };
-        let subscriber_tilepos = tiled_to_tile_pos(tile_pos.x, tile_pos.y, map_size);
+        let subscriber_tilepos = flip_y_axis_for_tile_pos(tile_pos.x, tile_pos.y, map_size);
 
         commands.entity(subscriber_entity).despawn_recursive();
         commands.spawn((
@@ -129,7 +131,7 @@ pub fn mock_replace_subscriber(
         let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
         let tile_transform = to_bevy_transform(tile_pos, map_info);
 
-        let subscriber_tilepos = tiled_to_tile_pos(tile_pos.x, tile_pos.y, map_size);
+        let subscriber_tilepos = flip_y_axis_for_tile_pos(tile_pos.x, tile_pos.y, map_size);
 
         commands.entity(subscriber_entity).despawn_recursive();
         commands.spawn((

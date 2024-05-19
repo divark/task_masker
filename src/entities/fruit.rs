@@ -141,7 +141,8 @@ pub fn make_fruit_fall(
         }
 
         let tile_target_pos = TilePos::new(fruit_tile_pos.x + 3, fruit_tile_pos.y - 3);
-        let tiled_target_pos = tiled_to_tile_pos(tile_target_pos.x, tile_target_pos.y, world_size);
+        let tiled_target_pos =
+            flip_y_axis_for_tile_pos(tile_target_pos.x, tile_target_pos.y, world_size);
         let tile_translation: Vec3 = ground_graph_nodes.0
             [tilepos_to_idx(tiled_target_pos.x, tiled_target_pos.y, world_size.x)];
         let tile_transform = Transform::from_translation(tile_translation);

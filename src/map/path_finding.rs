@@ -6,7 +6,8 @@ use bevy_ecs_tilemap::prelude::*;
 use crate::entities::{subscriber::SUBSCRIBER_LAYER_NUM, MovementType};
 
 use super::tiled::{
-    tiled_to_bevy_transform, tiled_to_tile_pos, to_bevy_transform, LayerNumber, TiledMapInformation,
+    flip_y_axis_for_tile_pos, tiled_to_bevy_transform, to_bevy_transform, LayerNumber,
+    TiledMapInformation,
 };
 
 #[derive(Component, PartialEq, Debug)]
@@ -383,7 +384,7 @@ pub fn create_water_graph(
         .iter()
         .map(|tile_pair| {
             (
-                tiled_to_tile_pos(tile_pair.0.x, tile_pair.0.y, world_size),
+                flip_y_axis_for_tile_pos(tile_pair.0.x, tile_pair.0.y, world_size),
                 tile_pair.1,
             )
         })
@@ -523,7 +524,7 @@ pub fn create_air_graph(
     // yet.
     let mut tile_positions_sorted = tile_positions
         .iter()
-        .map(|tile_pair| tiled_to_tile_pos(tile_pair.x, tile_pair.y, world_size))
+        .map(|tile_pair| flip_y_axis_for_tile_pos(tile_pair.x, tile_pair.y, world_size))
         .collect::<Vec<TilePos>>();
     tile_positions_sorted.sort_by(|&pos1, &pos2| {
         let pos1_converted = tilepos_to_idx(pos1.x, pos1.y, world_size.x);
@@ -872,6 +873,11 @@ impl HeightedTilePos {
             xy: tile_pos,
             z: height,
         }
+    }
+
+    /// Returns a Tile Pos excluding the z value.
+    pub fn truncate(&self) -> TilePos {
+        self.xy
     }
 
     pub fn x(&self) -> u32 {

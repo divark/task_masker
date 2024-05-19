@@ -10,7 +10,7 @@ use task_masker::map::path_finding::{
 };
 use task_masker::map::plugins::{PathFindingPlugin, TilePosEvent};
 use task_masker::map::tiled::{
-    spawn_tiles_from_tiledmap, tiled_to_tile_pos, to_bevy_transform, LayerNumber,
+    flip_y_axis_for_tile_pos, spawn_tiles_from_tiledmap, to_bevy_transform, LayerNumber,
     TiledMapInformation,
 };
 use task_masker::GameState;
@@ -216,7 +216,7 @@ impl GameWorld {
 
     /// Returns a reference to the Entity just created
     /// based on its type and location.
-    pub fn find_at(&mut self, entity_type: EntityType, position: TilePos) -> Entity {
+    pub fn find_at(&mut self, entity_type: EntityType, position: HeightedTilePos) -> Entity {
         match entity_type {
             EntityType::Fruit => {
                 self.app.update();
@@ -226,7 +226,7 @@ impl GameWorld {
                     .world
                     .query_filtered::<(Entity, &TilePos), With<FruitState>>()
                     .iter(&self.app.world)
-                    .find(|fruit_entry| *fruit_entry.1 == position)
+                    .find(|fruit_entry| *fruit_entry.1 == position.truncate())
                     .expect("find: Fruit was not found after trying to spawn it.")
                     .0;
             }
@@ -238,7 +238,7 @@ impl GameWorld {
                     .world
                     .query_filtered::<(Entity, &TilePos), With<CropState>>()
                     .iter(&self.app.world)
-                    .find(|crop_entry| *crop_entry.1 == position)
+                    .find(|crop_entry| *crop_entry.1 == position.truncate())
                     .expect("find: Crop was not found after trying to spawn it.")
                     .0;
             }
@@ -258,7 +258,7 @@ impl GameWorld {
             .expect("tile_at_position: Could not get map size given the specified height.")
             .clone();
 
-        let flipped_tile_pos = tiled_to_tile_pos(tile_pos.x, tile_pos.y, &map_size);
+        let flipped_tile_pos = flip_y_axis_for_tile_pos(tile_pos.x, tile_pos.y, &map_size);
         self.app
             .world
             .query::<(Entity, &TilePos, &LayerNumber)>()
@@ -383,7 +383,52 @@ impl GameWorld {
         }
     }
 
-    // TODO: Make has_reached_position which compares Transforms.
+    /// Returns the Transform for some given Entity.
+    fn get_transform_from(&mut self, entity: Entity) -> Vec2 {
+        let entity_type = self.get_entity_type(entity);
+        if entity_type == EntityType::Tile {
+            panic!("get_transform_from: Tile given for get_transform_from. Call get_tile_transform_from instead.")
+        }
+
+        self.app
+            .world
+            .get::<Transform>(entity)
+            .expect("get_transform_from: Could not find Transform for given Entity.")
+            .translation
+            .truncate()
+    }
+
+    /// Returns the Transform for some given Tile Entity.
+    pub fn get_tile_transform_from(&mut self, entity: Entity, tile_height: usize) -> Vec2 {
+        let tile_pos = self.get_tile_pos_from(entity);
+        return to_bevy_transform(&tile_pos, self.map_info(tile_height))
+            .translation
+            .truncate();
+    }
+
+    /// Asserts whether two Entities co-exist in the same location
+    /// at the Transform level.
+    pub fn has_reached_transform(&mut self, source_entity: Entity, target_entity: Entity) {
+        let source_transform = self.get_transform_from(source_entity);
+        let target_transform = self.get_transform_from(target_entity);
+
+        assert_eq!(source_transform, target_transform);
+    }
+
+    /// Asserts whether two Tile Entities co-exist in the same location
+    /// at the Transform level.
+    pub fn has_reached_tile_transform(
+        &mut self,
+        source_entity: Entity,
+        target_entity: Entity,
+        source_height: usize,
+        target_height: usize,
+    ) {
+        let source_tile_transform = self.get_tile_transform_from(source_entity, source_height);
+        let target_tile_transform = self.get_tile_transform_from(target_entity, target_height);
+
+        assert_eq!(source_tile_transform, target_tile_transform);
+    }
 
     /// Returns true when the source position has any Ground Tile neighboring
     /// it, where neighbors are left-to-right, or top-to-bottom only.
@@ -454,7 +499,7 @@ impl GameWorld {
             return found_tile;
         }
 
-        tiled_to_tile_pos(found_tile.x, found_tile.y, &self.map_size)
+        flip_y_axis_for_tile_pos(found_tile.x, found_tile.y, &self.map_size)
     }
 
     /// Returns an EntityType based on what was found for the
@@ -499,7 +544,8 @@ impl GameWorld {
     /// Returns whether a Tiled-based Tile Position exists in
     /// a populated Graph based on its type.
     pub fn tile_has_neighbors(&mut self, graph_type: GraphType, tiled_tile_pos: TilePos) -> bool {
-        let bevy_tile_pos = tiled_to_tile_pos(tiled_tile_pos.x, tiled_tile_pos.y, &self.map_size);
+        let bevy_tile_pos =
+            flip_y_axis_for_tile_pos(tiled_tile_pos.x, tiled_tile_pos.y, &self.map_size);
 
         let node_edges = self
             .app
@@ -745,6 +791,12 @@ fn streamer_arrives_at_higher_tile() {
     assert!(world.height_of(target_entity) > world.height_of(source_entity));
     world.travel_to(source_entity, target_entity);
     world.has_reached_tile(source_entity, target_entity);
+    world.has_reached_tile_transform(
+        source_entity,
+        target_entity,
+        STREAMER_LAYER_NUM,
+        STREAMER_LAYER_NUM + 1,
+    );
 }
 
 #[test]
@@ -764,6 +816,12 @@ fn streamer_wont_move_if_at_target() {
     world.travel_to(source_entity, target_entity);
     assert_eq!(world.get_tile_pos_from(source_entity), source_tilepos);
     world.has_reached_tile(source_entity, target_entity);
+    world.has_reached_tile_transform(
+        source_entity,
+        target_entity,
+        STREAMER_LAYER_NUM,
+        STREAMER_LAYER_NUM,
+    );
 }
 
 ////  		(Key = 1.4.1.2.)

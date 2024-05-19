@@ -64,7 +64,6 @@ pub fn spawn_player_sprite(
 }
 
 /// Spawns Player without any component related to rendering
-/// for Integration Testing purposes.
 pub fn spawn_player_tile(
     mut commands: Commands,
     map_information: Query<
