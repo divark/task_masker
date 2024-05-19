@@ -5,7 +5,8 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use task_masker::entities::{chatter::*, crop::*, fruit::*, streamer::*, subscriber::*};
 use task_masker::map::path_finding::{
-    tilepos_to_idx, GraphType, HeightedTilePos, MovementTimer, NodeEdges, Path, Target,
+    tilepos_to_idx, unique_tiles_from, GraphType, HeightedTilePos, MovementTimer, NodeData,
+    NodeEdges, Path, Target,
 };
 use task_masker::map::plugins::{PathFindingPlugin, TilePosEvent};
 use task_masker::map::tiled::{
@@ -840,4 +841,30 @@ fn subscriber_arrives_to_streamer() {
     assert!(world.height_of(target_entity) > world.height_of(source_entity));
     world.travel_to(source_entity, target_entity);
     world.has_reached_tile(source_entity, target_entity);
+}
+
+#[test]
+fn node_data_from_ground_tiles_works() {
+    let mut world = GameWorld::new();
+
+    let heighted_tiles = world
+        .app
+        .world
+        .query::<(&TilePos, &LayerNumber)>()
+        .iter(&world.app.world)
+        .map(|tile_entry| HeightedTilePos::new(*tile_entry.0, tile_entry.1 .0 as u32))
+        .collect::<Vec<HeightedTilePos>>();
+
+    let map_layer_information = world
+        .app
+        .world
+        .query::<(&TilemapGridSize, &TilemapType, &Transform)>()
+        .iter(&world.app.world)
+        .map(|layer_info| (*layer_info.0, *layer_info.1, *layer_info.2))
+        .collect::<Vec<(TilemapGridSize, TilemapType, Transform)>>();
+
+    let number_of_tiles = unique_tiles_from(&heighted_tiles).len();
+    let node_data = NodeData::from_ground_tiles(&heighted_tiles, map_layer_information);
+
+    assert_eq!(number_of_tiles, node_data.0.len());
 }

@@ -16,8 +16,59 @@ pub enum GraphType {
     Water,
 }
 
+pub struct TranslationGatherer {
+    map_information: Vec<(TilemapGridSize, TilemapType, Transform)>,
+}
+
+impl TranslationGatherer {
+    pub fn new(map_information: Vec<(TilemapGridSize, TilemapType, Transform)>) -> Self {
+        Self { map_information }
+    }
+
+    /// Returns a Transform (Position) for each Heighted Tile.
+    pub fn translations_from(&self, heighted_tiles: &Vec<HeightedTilePos>) -> Vec<Vec3> {
+        let mut heighted_tile_translations = Vec::new();
+
+        let tile_height_map = height_map_from(heighted_tiles);
+        let unique_tiles = unique_tiles_from(heighted_tiles);
+        let (length, _width, _height) = dimensions_from(heighted_tiles);
+
+        for tile in unique_tiles {
+            let tile_idx = tilepos_to_idx(tile.x, tile.y, length);
+            let tile_height = tile_height_map[tile_idx];
+
+            let (grid_size, map_type, map_transform) =
+                self.map_information.iter().nth(tile_height).expect(
+                    "translations_from: Could not find map information at given tile height.",
+                );
+
+            let tile_translation = tile
+                .center_in_world(grid_size, map_type)
+                .extend(map_transform.translation.z);
+            let tile_transform = *map_transform * Transform::from_translation(tile_translation);
+
+            heighted_tile_translations.push(tile_transform.translation);
+        }
+
+        heighted_tile_translations
+    }
+}
+
 #[derive(Component)]
 pub struct NodeData(pub Vec<Vec3>);
+
+impl NodeData {
+    pub fn from_ground_tiles(
+        heighted_tiles: &Vec<HeightedTilePos>,
+        layer_map_information: Vec<(TilemapGridSize, TilemapType, Transform)>,
+    ) -> Self {
+        let translation_gatherer = TranslationGatherer::new(layer_map_information);
+
+        let tile_translations = translation_gatherer.translations_from(heighted_tiles);
+
+        NodeData(tile_translations)
+    }
+}
 
 #[derive(Component, PartialEq, Debug)]
 pub struct NodeEdges(pub Vec<Vec<usize>>);
@@ -94,7 +145,7 @@ fn height_map_from(ground_tiles: &Vec<HeightedTilePos>) -> Vec<usize> {
 
 /// Returns a collection of Tile Positions sorted and extracted
 /// from Heighted Tile Positions.
-fn unique_tiles_from(tiles: Vec<HeightedTilePos>) -> Vec<TilePos> {
+pub fn unique_tiles_from(tiles: &Vec<HeightedTilePos>) -> Vec<TilePos> {
     let mut unique_tiles = HashSet::new();
 
     for tile in tiles {
@@ -117,7 +168,7 @@ impl NodeEdges {
         let height_map: Vec<usize> = height_map_from(&ground_tiles);
         let (length, _width, _height) = dimensions_from(&ground_tiles);
 
-        let tile_positions_no_layers = unique_tiles_from(ground_tiles);
+        let tile_positions_no_layers = unique_tiles_from(&ground_tiles);
 
         for tile_position in tile_positions_no_layers {
             let tile_idx = tilepos_to_idx(tile_position.x, tile_position.y, length);
@@ -234,7 +285,7 @@ pub fn idx_to_tilepos(mapped_idx: usize, world_size: u32) -> TilePos {
 /// indicate an at most 1 tile offset between two tiles.
 pub fn create_ground_graph(
     tile_positions: Query<(&TilePos, &LayerNumber)>,
-    map_information: Query<(&TilemapSize, &TilemapGridSize, &TilemapType, &Transform)>,
+    map_information: Query<(&TilemapGridSize, &TilemapType, &Transform)>,
     ground_graph_query: Query<(&NodeEdges, &NodeData, &GraphType)>,
     mut spawner: Commands,
 ) {
@@ -254,25 +305,14 @@ pub fn create_ground_graph(
         .map(|tile| HeightedTilePos::new(*tile.0, tile.1 .0 as u32))
         .collect::<Vec<HeightedTilePos>>();
 
-    let heighted_tile_translations = heighted_tiles
+    let layer_map_information = map_information
         .iter()
-        .map(|heighted_tile| {
-            let (map_size, grid_size, map_type, map_transform) = map_information
-                .iter()
-                .nth(heighted_tile.z() as usize)
-                .unwrap();
-            let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
-            to_bevy_transform(
-                &TilePos::new(heighted_tile.x(), heighted_tile.y()),
-                map_info,
-            )
-            .translation
-        })
-        .collect::<Vec<Vec3>>();
+        .map(|layer_entry| (*layer_entry.0, *layer_entry.1, *layer_entry.2))
+        .collect::<Vec<(TilemapGridSize, TilemapType, Transform)>>();
 
     let flipped_heighted_tiles = flip_heighted_tiles(&heighted_tiles);
 
-    let node_data = NodeData(heighted_tile_translations);
+    let node_data = NodeData::from_ground_tiles(&heighted_tiles, layer_map_information);
     let node_edges = NodeEdges::from_ground_tiles(flipped_heighted_tiles);
 
     spawner.spawn(Graph {
@@ -1365,7 +1405,7 @@ pub mod tests {
             TilePos::new(1, 0),
             TilePos::new(1, 1),
         ];
-        let actual_tiles = unique_tiles_from(heighted_tiles);
+        let actual_tiles = unique_tiles_from(&heighted_tiles);
 
         assert_eq!(expected_tiles, actual_tiles);
     }
