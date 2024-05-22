@@ -221,6 +221,12 @@ pub fn flip_y_axis_for_tile_pos(x: u32, y: u32, map_size: &TilemapSize) -> TileP
     TilePos::new(x, mapped_y)
 }
 
+pub fn convert_tiled_to_bevy_pos(tile_pos: TilePos, width: u32) -> TilePos {
+    let mapped_y = width - 1 - tile_pos.y;
+
+    TilePos::new(tile_pos.x, mapped_y)
+}
+
 pub struct TiledMapInformation<'a> {
     grid_size: &'a TilemapGridSize,
     map_size: &'a TilemapSize,

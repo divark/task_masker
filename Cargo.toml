@@ -11,3 +11,11 @@ bevy_ecs_tilemap = { git = "https://github.com/StarArawn/bevy_ecs_tilemap.git", 
 thiserror = "^1.0"
 tiled = "^0.11"
 rand = "^0.8"
+
+[dev-dependencies]
+cucumber = "0.20"
+futures = "0.3"
+
+[[test]]
+name = "traveling"
+harness = false
