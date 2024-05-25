@@ -246,9 +246,9 @@ impl GameWorld {
         }
     }
 
-    /// Returns a reference to the Tile Entity found
+    /// Returns a reference to the Tiled Tile Entity found
     /// at the desired position.
-    pub fn tile_at_position(&mut self, tile_pos: TilePos, height: u32) -> Entity {
+    pub fn tiled_tile_at_position(&mut self, tile_pos: TilePos, height: u32) -> Entity {
         let map_size = self
             .app
             .world
@@ -266,6 +266,18 @@ impl GameWorld {
             .find(|tile_entry| {
                 *tile_entry.1 == flipped_tile_pos && tile_entry.2 .0 == height as usize
             })
+            .map(|tile_entry| tile_entry.0)
+            .expect("tile_at_position: Could not find Tile at given Tile Pos and height.")
+    }
+
+    /// Returns a reference to the Bevy Tile Entity found at the
+    /// desired position.
+    pub fn tile_at_position(&mut self, tile_pos: TilePos, height: u32) -> Entity {
+        self.app
+            .world
+            .query::<(Entity, &TilePos, &LayerNumber)>()
+            .iter(&self.app.world)
+            .find(|tile_entry| *tile_entry.1 == tile_pos && tile_entry.2 .0 == height as usize)
             .map(|tile_entry| tile_entry.0)
             .expect("tile_at_position: Could not find Tile at given Tile Pos and height.")
     }
@@ -372,8 +384,8 @@ impl GameWorld {
     /// Returns a boolean representing whether two Entities
     /// co-exist in the same location.
     pub fn has_reached_tile(&mut self, source_entity: Entity, target_entity: Entity) {
-        let source_pos = self.get_tile_pos_from(source_entity);
-        let target_pos = self.get_tile_pos_from(target_entity);
+        let source_pos = self.get_tiled_tile_pos_from(source_entity);
+        let target_pos = self.get_tiled_tile_pos_from(target_entity);
         match self.get_entity_type(source_entity) {
             EntityType::Subscriber => assert!(self.next_to_land(source_pos)),
             EntityType::Chatter => {
@@ -400,7 +412,7 @@ impl GameWorld {
 
     /// Returns the Transform for some given Tile Entity.
     pub fn get_tile_transform_from(&mut self, entity: Entity, tile_height: usize) -> Vec2 {
-        let tile_pos = self.get_tile_pos_from(entity);
+        let tile_pos = self.get_tiled_tile_pos_from(entity);
         return to_bevy_transform(&tile_pos, self.map_info(tile_height))
             .translation
             .truncate();
@@ -484,6 +496,13 @@ impl GameWorld {
     }
 
     /// Returns the Tiled TilePos for some given Entity.
+    fn get_tiled_tile_pos_from(&mut self, entity: Entity) -> TilePos {
+        let found_tile = self.get_tile_pos_from(entity);
+
+        flip_y_axis_for_tile_pos(found_tile.x, found_tile.y, &self.map_size)
+    }
+
+    /// Returns the Bevy TilePos for some given Entity.
     fn get_tile_pos_from(&mut self, entity: Entity) -> TilePos {
         let entity_type = self.get_entity_type(entity);
 
@@ -499,7 +518,7 @@ impl GameWorld {
             return found_tile;
         }
 
-        flip_y_axis_for_tile_pos(found_tile.x, found_tile.y, &self.map_size)
+        found_tile
     }
 
     /// Returns an EntityType based on what was found for the
@@ -627,7 +646,7 @@ fn chatter_spawned_at_right_tilepos() {
     let chatter = world.find(EntityType::Chatter);
 
     let expected_tilepos = TilePos::new(69, 20);
-    let chatter_tilepos = world.get_tile_pos_from(chatter);
+    let chatter_tilepos = world.get_tiled_tile_pos_from(chatter);
 
     assert_eq!(expected_tilepos, chatter_tilepos);
 }
@@ -639,7 +658,7 @@ fn streamer_spawned_at_right_tilepos() {
     let streamer = world.find(EntityType::Streamer);
 
     let expected_tilepos = TilePos::new(42, 59);
-    let streamer_tilepos = world.get_tile_pos_from(streamer);
+    let streamer_tilepos = world.get_tiled_tile_pos_from(streamer);
 
     assert_eq!(expected_tilepos, streamer_tilepos);
 }
@@ -651,9 +670,9 @@ fn tile_spawned_at_right_tilepos() {
     let expected_tilepos = TilePos::new(46, 58);
     let expected_tile_height = 6;
 
-    let tile = world.tile_at_position(expected_tilepos, expected_tile_height);
+    let tile = world.tiled_tile_at_position(expected_tilepos, expected_tile_height);
 
-    let actual_tilepos = world.get_tile_pos_from(tile);
+    let actual_tilepos = world.get_tiled_tile_pos_from(tile);
 
     assert_eq!(expected_tilepos, actual_tilepos);
 }
@@ -675,8 +694,8 @@ fn streamer_and_subscriber_far_away_by_default() {
     let streamer = world.find(EntityType::Streamer);
     let subscriber = world.find(EntityType::Subscriber);
 
-    let streamer_pos = world.get_tile_pos_from(streamer);
-    let subscriber_pos = world.get_tile_pos_from(subscriber);
+    let streamer_pos = world.get_tiled_tile_pos_from(streamer);
+    let subscriber_pos = world.get_tiled_tile_pos_from(subscriber);
 
     assert_ne!(streamer_pos, subscriber_pos);
     assert!(distance_of(streamer_pos, subscriber_pos) > 0);
@@ -787,7 +806,8 @@ fn streamer_arrives_to_crop_at_same_height() {
 fn streamer_arrives_at_higher_tile() {
     let mut world = GameWorld::new();
     let source_entity = world.find(EntityType::Streamer);
-    let target_entity = world.tile_at_position(TilePos::new(44, 64), STREAMER_LAYER_NUM as u32 + 1);
+    let target_entity =
+        world.tiled_tile_at_position(TilePos::new(44, 64), STREAMER_LAYER_NUM as u32 + 1);
     assert!(world.height_of(target_entity) > world.height_of(source_entity));
     world.travel_to(source_entity, target_entity);
     world.has_reached_tile(source_entity, target_entity);

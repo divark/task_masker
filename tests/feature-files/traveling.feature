@@ -41,3 +41,10 @@ Feature: A Streamer can walk to any point on the map.
         """
         When I convert the Tiled Tile Position into a Bevy Tile Position
         Then the converted Tile Position should match the expected Bevy Tile Position
+
+    Scenario: A Bevy Tile Position maps to a Tiled Tile Position
+        Given a 5x5 Island Map
+        And a Bevy Tile Position
+        And an expected Tiled Tile Position
+        When I convert the Bevy Tile Position into a Tiled Tile Position
+        Then the converted Tile Position should match the expected Tiled Tile Position

@@ -103,17 +103,6 @@ fn dimensions_from(heighted_tiles: &Vec<HeightedTilePos>) -> (u32, u32, u32) {
     (length, width, height)
 }
 
-/// Returns a collection of Heighted Tiles with their y-axes
-/// flipped.
-fn flip_heighted_tiles(heighted_tiles: &Vec<HeightedTilePos>) -> Vec<HeightedTilePos> {
-    let (_length, width, _height) = dimensions_from(heighted_tiles);
-
-    heighted_tiles
-        .iter()
-        .map(|tile| tile.flip(width))
-        .collect::<Vec<HeightedTilePos>>()
-}
-
 /// Returns a 1 Dimensional Height Map calculated from some
 /// collection of Heighted Tile Positions with respect to
 /// the desired length and width.
@@ -204,14 +193,17 @@ impl NodeEdges {
     /// Returns a Single Shortest Path between a source and target Tile
     /// Position, or nothing if none were found.
     pub fn shortest_path(&self, source: TilePos, target: TilePos, length: u32) -> Option<Path> {
+        let source_tilepos = source; //convert_tiled_to_bevy_pos(source, length);
+        let target_tilepos = target; //convert_tiled_to_bevy_pos(target, length);
+
         let graph_node_edges = &self.0;
 
         let mut node_distances = vec![0; graph_node_edges.len()];
         let mut node_parents = vec![-1; graph_node_edges.len()];
         let mut node_visited = vec![false; graph_node_edges.len()];
 
-        let mapped_source_idx = tilepos_to_idx(source.x, source.y, length);
-        let mut mapped_target_idx = tilepos_to_idx(target.x, target.y, length);
+        let mapped_source_idx = tilepos_to_idx(source_tilepos.x, source_tilepos.y, length);
+        let mut mapped_target_idx = tilepos_to_idx(target_tilepos.x, target_tilepos.y, length);
 
         let mut bfs_queue = VecDeque::from([mapped_source_idx]);
         while !bfs_queue.is_empty() {
@@ -311,10 +303,8 @@ pub fn create_ground_graph(
         .map(|layer_entry| (*layer_entry.0, *layer_entry.1, *layer_entry.2))
         .collect::<Vec<(TilemapGridSize, TilemapType, Transform)>>();
 
-    let flipped_heighted_tiles = flip_heighted_tiles(&heighted_tiles);
-
     let node_data = NodeData::from_ground_tiles(&heighted_tiles, layer_map_information);
-    let node_edges = NodeEdges::from_ground_tiles(flipped_heighted_tiles);
+    let node_edges = NodeEdges::from_ground_tiles(heighted_tiles);
 
     spawner.spawn(Graph {
         graph_type: GraphType::Ground,
@@ -1414,20 +1404,6 @@ pub mod tests {
         let actual_tiles = unique_tiles_from(&heighted_tiles);
 
         assert_eq!(expected_tiles, actual_tiles);
-    }
-
-    #[test]
-    fn heighted_tiles_correctly_flipped() {
-        let square_island_tiles = create_island(IslandType::Square(4, 4));
-        let (_length, width, _height) = dimensions_from(&square_island_tiles);
-
-        let expected_heighted_tiles = square_island_tiles
-            .iter()
-            .map(|tile| tile.flip(width))
-            .collect::<Vec<HeightedTilePos>>();
-        let actual_heighted_tiles = flip_heighted_tiles(&square_island_tiles);
-
-        assert_eq!(expected_heighted_tiles, actual_heighted_tiles);
     }
 
     #[test]

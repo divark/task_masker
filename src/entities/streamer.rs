@@ -6,7 +6,7 @@ use bevy_ecs_tilemap::{
 
 use crate::map::path_finding::*;
 use crate::map::plugins::TilePosEvent;
-use crate::map::tiled::{tiled_to_bevy_transform, TiledMapInformation};
+use crate::map::tiled::{convert_tiled_to_bevy_pos, to_bevy_transform, TiledMapInformation};
 use crate::ui::chatting::{ChattingStatus, Msg};
 
 use super::MovementType;
@@ -86,8 +86,9 @@ pub fn spawn_player_tile(
         .expect("Could not load map information. Is world loaded?");
     let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
 
-    let streamer_bevy_tilepos = TilePos { x: 42, y: 59 };
-    let streamer_transform = tiled_to_bevy_transform(&streamer_bevy_tilepos, map_info);
+    let streamer_tiled_tilepos = TilePos { x: 42, y: 59 };
+    let streamer_bevy_tilepos = convert_tiled_to_bevy_pos(streamer_tiled_tilepos, map_size.x);
+    let streamer_transform = to_bevy_transform(&streamer_bevy_tilepos, map_info);
 
     commands.spawn((
         (
@@ -189,7 +190,7 @@ pub fn move_streamer_on_spacebar(
     mut destination_request_writer: EventWriter<TilePosEvent>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
-        destination_request_writer.send(TilePosEvent::new(TilePos { x: 64, y: 52 }));
+        destination_request_writer.send(TilePosEvent::new(TilePos { x: 64, y: 47 }));
     }
 }
 

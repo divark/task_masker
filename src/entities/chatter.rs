@@ -98,8 +98,6 @@ pub fn replace_chatter_tile(
         let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
         let tile_transform = to_bevy_transform(tile_pos, map_info);
 
-        let chatter_tilepos = flip_y_axis_for_tile_pos(tile_pos.x, tile_pos.y, map_size);
-
         commands.entity(chatter_entity).despawn_recursive();
         commands.spawn((
             (
@@ -109,7 +107,7 @@ pub fn replace_chatter_tile(
                 ChatterStatus::Idle,
                 *tile_texture_index,
             ),
-            chatter_tilepos,
+            *tile_pos,
         ));
     }
 }
