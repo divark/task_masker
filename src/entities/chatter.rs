@@ -26,7 +26,7 @@ pub enum ChatterStatus {
 }
 
 #[derive(Component)]
-pub struct WaitTimer(Timer);
+pub struct WaitTimer(pub Timer);
 
 #[derive(Component, Event, Clone)]
 pub struct ChatMsg {

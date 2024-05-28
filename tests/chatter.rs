@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::utils::Duration;
+use bevy_ecs_tilemap::prelude::*;
 use cucumber::{given, then, when, World};
 
 use task_masker::entities::chatter::*;
@@ -7,6 +8,7 @@ use task_masker::entities::streamer::*;
 use task_masker::map::path_finding::*;
 use task_masker::map::plugins::PathFindingPlugin;
 use task_masker::map::tiled::spawn_tiles_from_tiledmap;
+use task_masker::ui::chatting::Msg;
 use task_masker::GameState;
 
 #[derive(Default)]
@@ -15,11 +17,13 @@ pub struct MockChatterPlugin;
 impl Plugin for MockChatterPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<ChatMsg>();
+        app.add_event::<Msg>();
         app.add_systems(
             Update,
             (
                 replace_chatter_tile,
                 fly_to_streamer_to_speak,
+                speak_to_streamer_from_chatter,
                 leave_from_streamer_from_chatter,
                 return_chatter_to_idle,
                 follow_streamer_while_speaking,
@@ -59,6 +63,25 @@ fn intercept_movement_timer(mut timer_query: Query<&mut MovementTimer, Added<Mov
     for mut movement_timer in &mut timer_query {
         movement_timer.0 = Timer::new(Duration::from_secs(0), TimerMode::Repeating);
     }
+}
+
+/// Intercepts and sets the Wait Timer interval to 0 seconds for testing purposes.
+fn reduce_wait_times_to_zero(mut waiting_timers: Query<&mut WaitTimer, Added<WaitTimer>>) {
+    for mut waiting_timer in &mut waiting_timers {
+        waiting_timer.0 = Timer::new(Duration::from_secs(0), TimerMode::Once);
+    }
+}
+
+/// Returns the approximate number of Tiles away the target_pos
+/// is from source_pos
+fn distance_of(source_pos: TilePos, target_pos: TilePos) -> usize {
+    let x1 = source_pos.x as f32;
+    let x2 = target_pos.x as f32;
+
+    let y1 = source_pos.y as f32;
+    let y2 = target_pos.y as f32;
+
+    ((x2 - x1).powi(2) + (y2 - y1).powi(2)).sqrt().floor() as usize
 }
 
 #[derive(Debug, World)]
@@ -119,15 +142,34 @@ fn wait_for_chatter_to_approach_to_speak(world: &mut GameWorld) {
     loop {
         world.app.update();
 
-        let chatter_path = world
+        let (chatter_path, chatter_target) = world
             .app
             .world
-            .query_filtered::<&Path, With<ChatterStatus>>()
-            .iter(&world.app.world)
-            .next()
+            .query_filtered::<(&Path, &Target), With<ChatterStatus>>()
+            .get_single(&world.app.world)
             .expect("wait_for_chatter_to_approach_to_speak: Chatter does not have a path.");
 
-        if chatter_path.len() == 0 {
+        if chatter_path.len() == 0 && chatter_target.is_none() {
+            break;
+        }
+    }
+}
+
+#[when("the Chatter is done speaking")]
+fn wait_for_chatter_to_finish_speaking(world: &mut GameWorld) {
+    world.app.add_systems(Update, reduce_wait_times_to_zero);
+
+    loop {
+        world.app.update();
+
+        let chatter_status = world
+            .app
+            .world
+            .query::<&ChatterStatus>()
+            .get_single(&world.app.world)
+            .expect("wait_for_chatter_to_finish_speaking: Chatter does not have a Status.");
+
+        if *chatter_status != ChatterStatus::Speaking {
             break;
         }
     }
@@ -141,8 +183,7 @@ fn chatter_should_approach_to_streamer(world: &mut GameWorld) {
         .app
         .world
         .query::<&ChatterStatus>()
-        .iter(&world.app.world)
-        .next()
+        .get_single(&world.app.world)
         .expect("chatter_should_approach_to_streamer: Chatter does not have a Status.");
 
     assert_eq!(*chatter_status, ChatterStatus::Approaching);
@@ -151,11 +192,75 @@ fn chatter_should_approach_to_streamer(world: &mut GameWorld) {
         .app
         .world
         .query_filtered::<&Path, With<ChatterStatus>>()
-        .iter(&world.app.world)
-        .next()
+        .get_single(&world.app.world)
         .expect("chatter_should_approach_to_streamer: Chatter does not have a Path.");
 
     assert_ne!(chatter_path.len(), 0);
+}
+
+#[then("the Chatter will be two tiles away from the Streamer")]
+fn chatter_should_be_two_tiles_away_from_streamer(world: &mut GameWorld) {
+    world.app.update();
+
+    let chatter_tilepos = world
+        .app
+        .world
+        .query_filtered::<&TilePos, With<ChatterLabel>>()
+        .get_single(&world.app.world)
+        .expect("chatter_should_be_two_tiles_away_from_streamer: Chatter does not have a TilePos.")
+        .clone();
+
+    let streamer_tilepos = world
+        .app
+        .world
+        .query_filtered::<&TilePos, With<StreamerLabel>>()
+        .get_single(&world.app.world)
+        .expect("chatter_should_be_two_tiles_away_from_streamer: Streamer does not have a TilePos.")
+        .clone();
+
+    let tile_distance = distance_of(chatter_tilepos, streamer_tilepos);
+    assert_eq!(tile_distance, 2);
+}
+
+#[then("the Chatter will begin to speak")]
+fn chatter_should_start_speaking(world: &mut GameWorld) {
+    world.app.update();
+
+    let chatter_status = world
+        .app
+        .world
+        .query::<&ChatterStatus>()
+        .get_single(&world.app.world)
+        .expect("chatter_should_start_speaking: Chatter does not have a Status.");
+
+    assert_eq!(*chatter_status, ChatterStatus::Speaking);
+}
+
+#[then("the Chatter will leave back to its resting point")]
+fn chatter_should_be_leaving_back_to_spawn(world: &mut GameWorld) {
+    world.app.update();
+
+    let world_size = world
+        .app
+        .world
+        .query::<&TilemapSize>()
+        .iter(&world.app.world)
+        .last()
+        .expect("chatter_should_be_leaving_back_to_spawn: Tiled map did not include Tilemap Size information.")
+        .clone();
+
+    let (chatter_path, chatter_status, chatter_spawn) = world
+        .app
+        .world
+        .query::<(&Path, &ChatterStatus, &SpawnPoint)>()
+        .get_single(&world.app.world)
+        .expect("chatter_should_be_leaving_back_to_spawn: Chatter is missing pathfinding-based information and/or Status.");
+
+    assert_eq!(*chatter_status, ChatterStatus::Leaving);
+
+    let chatter_destination_tilepos =
+        idx_to_tilepos(*chatter_path.iter().last().unwrap(), world_size.x);
+    assert_eq!(chatter_spawn.0, chatter_destination_tilepos);
 }
 
 fn main() {
