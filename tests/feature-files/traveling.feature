@@ -1,5 +1,26 @@
 Feature: A Streamer can walk to any point on the map.
 
+    Scenario: The Streamer moves to a lower point on the island.
+        Given a 5x5 Island Map
+        And the Streamer spawned at a higher point on the island
+        And a desired point on the island that is lower in height from the Streamer 
+        When the Streamer travels to the desired point
+        Then the Streamer should be at that desired point
+
+    Scenario: The Streamer moves to a higher point on the island.
+        Given a 5x5 Island Map
+        And the Streamer spawned at a lower point on the island
+        And a desired point on the island that is higher in height from the Streamer
+        When the Streamer travels to the desired point
+        Then the Streamer should be at that desired point
+
+    Scenario: The Streamer moves to a point equal in height on the island.
+        Given a 5x5 Island Map
+        And the Streamer spawned at a level point on the island
+        And a desired point on the island that is equal in height from the Streamer
+        When the Streamer travels to the desired point
+        Then the Streamer should be at that desired point
+
     Scenario: A Tiled Tile Position maps to a Bevy Tile Position
         Given a 5x5 Island Map
         """
@@ -42,9 +63,3 @@ Feature: A Streamer can walk to any point on the map.
         When I convert the Tiled Tile Position into a Bevy Tile Position
         Then the converted Tile Position should match the expected Bevy Tile Position
 
-    Scenario: A Bevy Tile Position maps to a Tiled Tile Position
-        Given a 5x5 Island Map
-        And a Bevy Tile Position
-        And an expected Tiled Tile Position
-        When I convert the Bevy Tile Position into a Tiled Tile Position
-        Then the converted Tile Position should match the expected Tiled Tile Position

@@ -17,7 +17,7 @@ pub const DIST_AWAY_FROM_STREAMER: usize = 2;
 #[derive(Component)]
 pub struct ChatterLabel;
 
-#[derive(Component, PartialEq)]
+#[derive(Component, Debug, PartialEq)]
 pub enum ChatterStatus {
     Idle,
     Approaching,
