@@ -255,12 +255,11 @@ pub fn leave_from_streamer_from_chatter(
             continue;
         }
 
-        *chatter_path = get_path(
-            &chatter_start_pos.1,
-            &chatter_spawn_pos.0,
-            map_size,
-            air_graph_edges,
-        );
+        if let Some(path) =
+            air_graph_edges.shortest_path(chatter_start_pos.1, chatter_spawn_pos.0, map_size.x)
+        {
+            *chatter_path = path;
+        }
 
         commands
             .entity(chatter_entity)
@@ -400,11 +399,10 @@ pub fn follow_streamer_while_approaching_for_chatter(
             continue;
         }
 
-        *chatter_path = get_path(
-            chatter_pos,
-            &chatter_destination_distanced,
-            map_size,
-            air_graph_edges,
-        );
+        if let Some(path) =
+            air_graph_edges.shortest_path(*chatter_pos, chatter_destination_distanced, map_size.x)
+        {
+            *chatter_path = path;
+        }
     }
 }
