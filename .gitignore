@@ -1,14 +1,13 @@
 /target
 .sublimetext/*
 .vscode/*
-.DS_Store
-.cargo/*
-
-assets/*
+*.DS_Store
 
 *.png
 *.jpg
 
-*.wav
+._*.tmx
 
-*.tmx
+*.wav
+*.WAV
+

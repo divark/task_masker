@@ -77,7 +77,7 @@ pub fn replace_fruit_sprites(
     asset_server: Res<AssetServer>,
 ) {
     for (fruit_entity, fruit_transform, tile_texture_index) in &fruit {
-        let texture_handle = asset_server.load("Fruit(16x16).png");
+        let texture_handle = asset_server.load("environment/Fruit(16x16).png");
         let fruit_texture_atlas =
             TextureAtlasLayout::from_grid(Vec2::new(16.0, 16.0), 38, 6, None, None);
         let fruit_texture_atlas_handle = texture_atlases.add(fruit_texture_atlas);
