@@ -53,6 +53,28 @@ impl TranslationGatherer {
 
         heighted_tile_translations
     }
+
+    /// Returns the Highest Transform (Position) found for each Heighted Tile.
+    pub fn highest_translations_from(&self, heighted_tiles: &Vec<HeightedTilePos>) -> Vec<Vec3> {
+        let mut heighted_tile_translations = Vec::new();
+
+        let unique_tiles = unique_tiles_from(heighted_tiles);
+        for tile in unique_tiles {
+            let (grid_size, map_type, map_transform) = self.map_information.iter().last().expect(
+                "highest_translations_from: Could not find map information at the highest
+                tile height.",
+            );
+
+            let tile_translation = tile
+                .center_in_world(grid_size, map_type)
+                .extend(map_transform.translation.z);
+            let tile_transform = *map_transform * Transform::from_translation(tile_translation);
+
+            heighted_tile_translations.push(tile_transform.translation);
+        }
+
+        heighted_tile_translations
+    }
 }
 
 #[derive(Component)]
@@ -66,6 +88,17 @@ impl NodeData {
         let translation_gatherer = TranslationGatherer::new(layer_map_information);
 
         let tile_translations = translation_gatherer.translations_from(heighted_tiles);
+
+        NodeData(tile_translations)
+    }
+
+    pub fn from_air_tiles(
+        heighted_tiles: &Vec<HeightedTilePos>,
+        layer_map_information: Vec<(TilemapGridSize, TilemapType, Transform)>,
+    ) -> Self {
+        let translation_gatherer = TranslationGatherer::new(layer_map_information);
+
+        let tile_translations = translation_gatherer.highest_translations_from(heighted_tiles);
 
         NodeData(tile_translations)
     }
@@ -182,6 +215,37 @@ impl NodeEdges {
                     current_node_edges.push(left_node_idx);
                     directed_graph_edges[left_node_idx].push(tile_idx);
                 }
+            }
+
+            directed_graph_edges.push(current_node_edges);
+        }
+
+        NodeEdges(directed_graph_edges)
+    }
+
+    /// Returns a set of Node Edges derived from a collection of Tiles
+    /// designated for Air traversal.
+    pub fn from_air_tiles(air_tiles: Vec<HeightedTilePos>) -> NodeEdges {
+        let mut directed_graph_edges: Vec<Vec<usize>> = Vec::with_capacity(air_tiles.len());
+
+        let (length, _width, _height) = dimensions_from(&air_tiles);
+
+        let tile_positions_no_layers = unique_tiles_from(&air_tiles);
+        for tile_position in tile_positions_no_layers {
+            let tile_idx = tilepos_to_idx(tile_position.x, tile_position.y, length);
+
+            let mut current_node_edges = Vec::new();
+            if tile_position.x > 0 {
+                let top_node_idx = tilepos_to_idx(tile_position.x - 1, tile_position.y, length);
+
+                current_node_edges.push(top_node_idx);
+                directed_graph_edges[top_node_idx].push(tile_idx);
+            }
+
+            if tile_position.y > 0 {
+                let left_node_idx = tilepos_to_idx(tile_position.x, tile_position.y - 1, length);
+                current_node_edges.push(left_node_idx);
+                directed_graph_edges[left_node_idx].push(tile_idx);
             }
 
             directed_graph_edges.push(current_node_edges);
@@ -459,8 +523,8 @@ pub fn create_water_graph(
 
 /// Spawns an Undirected Graph representing all air titles
 pub fn create_air_graph(
-    tile_positions: Query<&TilePos>,
-    map_information: Query<(&TilemapSize, &TilemapGridSize, &TilemapType, &Transform)>,
+    tile_positions: Query<(&TilePos, &LayerNumber)>,
+    map_information: Query<(&TilemapGridSize, &TilemapType, &Transform)>,
     air_graph_query: Query<(&NodeEdges, &NodeData, &GraphType)>,
     mut spawner: Commands,
 ) {
@@ -475,99 +539,23 @@ pub fn create_air_graph(
         return;
     }
 
-    // Each Tile Layer has its own World and Grid size should someone decide
-    // to change tilesets for the layer. However, I will not do that, so
-    // both the world size and grid size should be the same.
-    let world_size = map_information
+    let heighted_tiles = tile_positions
         .iter()
-        .map(|sizes| sizes.0)
-        .max_by(|&x, &y| {
-            let x_world_area = x.x * x.y;
-            let y_world_area = y.x * y.y;
+        .map(|tile| HeightedTilePos::new(*tile.0, tile.1 .0 as u32))
+        .collect::<Vec<HeightedTilePos>>();
 
-            x_world_area.cmp(&y_world_area)
-        })
-        .expect("Could not find largest world size. Is the map loaded?");
-
-    let grid_size = map_information
+    let layer_map_information = map_information
         .iter()
-        .map(|sizes| sizes.1)
-        .max_by(|&x, &y| {
-            let x_grid_area = x.x * x.y;
-            let y_grid_area = y.x * y.y;
+        .map(|layer_entry| (*layer_entry.0, *layer_entry.1, *layer_entry.2))
+        .collect::<Vec<(TilemapGridSize, TilemapType, Transform)>>();
 
-            x_grid_area.partial_cmp(&y_grid_area).unwrap()
-        })
-        .expect("Could not find largest grid size. Is the map loaded?");
-
-    // I'm not sure how a map type could change based on the layer, but
-    // the Tiled loader insists it could happen, but I won't do that for
-    // my own maps, so they should all be equal.
-    let map_type = map_information
-        .iter()
-        .next()
-        .map(|x| x.2)
-        .expect("Could not get map type. Is the map loaded?");
-
-    // Sorting by Tile Position and Layer number ensures that we won't add
-    // a previous node, whether above or to the left, that does not exist
-    // yet.
-    let mut tile_positions_sorted = tile_positions
-        .iter()
-        .map(|tile_pair| flip_y_axis_for_tile_pos(tile_pair.x, tile_pair.y, world_size))
-        .collect::<Vec<TilePos>>();
-    tile_positions_sorted.sort_by(|&pos1, &pos2| {
-        let pos1_converted = tilepos_to_idx(pos1.x, pos1.y, world_size.x);
-        let pos2_converted = tilepos_to_idx(pos2.x, pos2.y, world_size.x);
-
-        pos1_converted.cmp(&pos2_converted)
-    });
-
-    // Perhaps it's a precaution, but given we are dealing with
-    // many layers, and Tile Positions don't take into consideration
-    // its layer (z value), we don't want to be dealing with
-    // repeated entries.
-    tile_positions_sorted.dedup();
-
-    let mut directed_graph_data: Vec<Vec3> = Vec::new();
-    let mut directed_graph_edges: Vec<Vec<usize>> = Vec::new();
-
-    for tile_position in tile_positions_sorted {
-        let tile_idx = tilepos_to_idx(tile_position.x, tile_position.y, world_size.x);
-
-        let map_transform = map_information
-            .iter()
-            // The chatter is a Bird, so we want to consider the sky, which
-            // happens to be the highest layer of tiles.
-            .last()
-            .expect("Tile should be on this layer.")
-            .3;
-
-        let map_info = TiledMapInformation::new(grid_size, world_size, map_type, map_transform);
-        let tiled_transform = tiled_to_bevy_transform(&tile_position, map_info);
-        let node_data = tiled_transform.translation;
-        let mut node_edges = Vec::new();
-
-        if tile_position.x > 0 {
-            let left_node_idx = tilepos_to_idx(tile_position.x - 1, tile_position.y, world_size.x);
-            node_edges.push(left_node_idx);
-            directed_graph_edges[left_node_idx].push(tile_idx);
-        }
-
-        if tile_position.y > 0 {
-            let top_node_idx = tilepos_to_idx(tile_position.x, tile_position.y - 1, world_size.x);
-            node_edges.push(top_node_idx);
-            directed_graph_edges[top_node_idx].push(tile_idx);
-        }
-
-        directed_graph_data.push(node_data);
-        directed_graph_edges.push(node_edges);
-    }
+    let node_data = NodeData::from_air_tiles(&heighted_tiles, layer_map_information);
+    let node_edges = NodeEdges::from_air_tiles(heighted_tiles);
 
     spawner.spawn(Graph {
         graph_type: GraphType::Air,
-        node_data: NodeData(directed_graph_data),
-        node_edges: NodeEdges(directed_graph_edges),
+        node_data,
+        node_edges,
     });
 }
 
@@ -1422,5 +1410,22 @@ pub mod tests {
         let actual_flipped_tile = heighted_tile.flip(width);
 
         assert_eq!(expected_flipped_tile, actual_flipped_tile);
+    }
+
+    #[test]
+    fn air_tiles_includes_all_tiles_for_node_edges() {
+        let square_island_tiles = create_island(IslandType::Square(4, 4));
+        let num_unique_tiles = unique_tiles_from(&square_island_tiles).len();
+
+        let graph_edges = NodeEdges::from_air_tiles(square_island_tiles);
+
+        let expected_has_edges = vec![true; num_unique_tiles];
+        let actual_has_edges = graph_edges
+            .0
+            .iter()
+            .map(|node_edges| !node_edges.is_empty())
+            .collect::<Vec<bool>>();
+
+        assert_eq!(expected_has_edges, actual_has_edges);
     }
 }
