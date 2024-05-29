@@ -4,9 +4,7 @@ use std::collections::VecDeque;
 
 use crate::entities::streamer::{StreamerLabel, StreamerStatus};
 use crate::map::path_finding::*;
-use crate::map::tiled::{
-    flip_y_axis_for_tile_pos, to_bevy_transform, LayerNumber, TiledMapInformation,
-};
+use crate::map::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
 use crate::ui::chatting::Msg;
 
 use super::MovementType;
@@ -274,14 +272,14 @@ pub fn leave_from_streamer_from_chatter(
 /// when reaching its starting position once
 /// again after leaving.
 pub fn return_chatter_to_idle(
-    mut chatter: Query<(&Path, &mut ChatterStatus), (Changed<Path>, With<ChatterLabel>)>,
+    mut chatter: Query<(&Path, &Target, &mut ChatterStatus), (Changed<Path>, With<ChatterLabel>)>,
 ) {
-    for (chatter_path, mut chatter_status) in &mut chatter {
+    for (chatter_path, chatter_target, mut chatter_status) in &mut chatter {
         if *chatter_status != ChatterStatus::Leaving {
             continue;
         }
 
-        if !chatter_path.0.is_empty() {
+        if !chatter_path.0.is_empty() || chatter_target.is_some() {
             continue;
         }
 

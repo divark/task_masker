@@ -21,4 +21,4 @@ Feature: A Chatter, represented as a Bird, can approach the Streamer to speak, a
         And a Chatter spawned on the Tiled Map
         When the Chatter has approached the Streamer
         And the Chatter is done speaking
-        Then the Chatter will leave back to its resting point
+        Then the Chatter leaves back to its resting point

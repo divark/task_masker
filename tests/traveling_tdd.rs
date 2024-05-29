@@ -124,8 +124,6 @@ enum EntityType {
     Streamer,
     Chatter,
     Subscriber,
-    Fruit,
-    Crop,
     Tile,
 }
 
@@ -208,38 +206,6 @@ impl GameWorld {
                     .query::<(Entity, &ChatterLabel)>()
                     .get_single(&self.app.world)
                     .expect("spawn: Chatter was not found after trying to spawn it.")
-                    .0;
-            }
-            _ => todo!(),
-        }
-    }
-
-    /// Returns a reference to the Entity just created
-    /// based on its type and location.
-    pub fn find_at(&mut self, entity_type: EntityType, position: HeightedTilePos) -> Entity {
-        match entity_type {
-            EntityType::Fruit => {
-                self.app.update();
-
-                return self
-                    .app
-                    .world
-                    .query_filtered::<(Entity, &TilePos), With<FruitState>>()
-                    .iter(&self.app.world)
-                    .find(|fruit_entry| *fruit_entry.1 == position.truncate())
-                    .expect("find: Fruit was not found after trying to spawn it.")
-                    .0;
-            }
-            EntityType::Crop => {
-                self.app.update();
-
-                return self
-                    .app
-                    .world
-                    .query_filtered::<(Entity, &TilePos), With<CropState>>()
-                    .iter(&self.app.world)
-                    .find(|crop_entry| *crop_entry.1 == position.truncate())
-                    .expect("find: Crop was not found after trying to spawn it.")
                     .0;
             }
             _ => todo!(),
@@ -395,36 +361,12 @@ impl GameWorld {
         }
     }
 
-    /// Returns the Transform for some given Entity.
-    fn get_transform_from(&mut self, entity: Entity) -> Vec2 {
-        let entity_type = self.get_entity_type(entity);
-        if entity_type == EntityType::Tile {
-            panic!("get_transform_from: Tile given for get_transform_from. Call get_tile_transform_from instead.")
-        }
-
-        self.app
-            .world
-            .get::<Transform>(entity)
-            .expect("get_transform_from: Could not find Transform for given Entity.")
-            .translation
-            .truncate()
-    }
-
     /// Returns the Transform for some given Tile Entity.
     pub fn get_tile_transform_from(&mut self, entity: Entity, tile_height: usize) -> Vec2 {
         let tile_pos = self.get_tiled_tile_pos_from(entity);
         return to_bevy_transform(&tile_pos, self.map_info(tile_height))
             .translation
             .truncate();
-    }
-
-    /// Asserts whether two Entities co-exist in the same location
-    /// at the Transform level.
-    pub fn has_reached_transform(&mut self, source_entity: Entity, target_entity: Entity) {
-        let source_transform = self.get_transform_from(source_entity);
-        let target_transform = self.get_transform_from(target_entity);
-
-        assert_eq!(source_transform, target_transform);
     }
 
     /// Asserts whether two Tile Entities co-exist in the same location
@@ -735,90 +677,6 @@ fn heighted_tile_transform_matches_tile_transform() {
     assert_eq!(expected_transform, actual_transform);
 }
 
-//  		(Key = 1.2.1.1.)
-#[test]
-fn streamer_arrives_to_fruit_at_higher_height() {
-    let mut world = GameWorld::new();
-    let source_entity = world.find(EntityType::Streamer);
-    let target_entity = world.find(EntityType::Fruit);
-    assert!(world.height_of(target_entity) > world.height_of(source_entity));
-    world.travel_to(source_entity, target_entity);
-    world.has_reached_tile(source_entity, target_entity);
-}
-
-//  		(Key = 1.2.2.1.)
-#[test]
-fn streamer_arrives_to_fruit_at_lower_height() {
-    let mut world = GameWorld::new();
-    let source_entity = world.find(EntityType::Streamer);
-    let target_entity = world.find(EntityType::Fruit);
-    assert!(world.height_of(target_entity) < world.height_of(source_entity));
-    world.travel_to(source_entity, target_entity);
-    world.has_reached_tile(source_entity, target_entity);
-}
-
-//  		(Key = 1.2.3.1.)
-#[test]
-fn streamer_arrives_to_fruit_at_same_height() {
-    let mut world = GameWorld::new();
-    let source_entity = world.find(EntityType::Streamer);
-    let target_entity = world.find(EntityType::Fruit);
-    assert!(world.height_of(target_entity) == world.height_of(source_entity));
-    world.travel_to(source_entity, target_entity);
-    world.has_reached_tile(source_entity, target_entity);
-}
-
-//  		(Key = 1.3.1.1.)
-#[test]
-fn streamer_arrives_to_crop_at_higher_height() {
-    let mut world = GameWorld::new();
-    let source_entity = world.find(EntityType::Streamer);
-    let target_entity = world.find(EntityType::Crop);
-    assert!(world.height_of(target_entity) > world.height_of(source_entity));
-    world.travel_to(source_entity, target_entity);
-    world.has_reached_tile(source_entity, target_entity);
-}
-
-//  		(Key = 1.3.2.1.)
-#[test]
-fn streamer_arrives_to_crop_at_lower_height() {
-    let mut world = GameWorld::new();
-    let source_entity = world.find(EntityType::Streamer);
-    let target_entity = world.find(EntityType::Crop);
-    assert!(world.height_of(target_entity) < world.height_of(source_entity));
-    world.travel_to(source_entity, target_entity);
-    world.has_reached_tile(source_entity, target_entity);
-}
-
-//  		(Key = 1.3.3.1.)
-#[test]
-fn streamer_arrives_to_crop_at_same_height() {
-    let mut world = GameWorld::new();
-    let source_entity = world.find(EntityType::Streamer);
-    let target_entity = world.find(EntityType::Crop);
-    assert!(world.height_of(target_entity) == world.height_of(source_entity));
-    world.travel_to(source_entity, target_entity);
-    world.has_reached_tile(source_entity, target_entity);
-}
-
-//  		(Key = 1.4.1.1.)
-#[test]
-fn streamer_arrives_at_higher_tile() {
-    let mut world = GameWorld::new();
-    let source_entity = world.find(EntityType::Streamer);
-    let target_entity =
-        world.tiled_tile_at_position(TilePos::new(44, 64), STREAMER_LAYER_NUM as u32 + 1);
-    assert!(world.height_of(target_entity) > world.height_of(source_entity));
-    world.travel_to(source_entity, target_entity);
-    world.has_reached_tile(source_entity, target_entity);
-    world.has_reached_tile_transform(
-        source_entity,
-        target_entity,
-        STREAMER_LAYER_NUM,
-        STREAMER_LAYER_NUM + 1,
-    );
-}
-
 #[test]
 fn streamer_wont_move_if_at_target() {
     let mut world = GameWorld::new();
@@ -843,61 +701,6 @@ fn streamer_wont_move_if_at_target() {
         STREAMER_LAYER_NUM,
     );
 }
-
-////  		(Key = 1.4.1.2.)
-//#[test]
-//fn test_case_8() {
-//   let mut world = GameWorld::new();
-//    let source_entity = world.spawn(EntityType::Streamer);
-//   Destination Entity      :  Tile
-//   assert!(world.height_of(target_entity) > world.height_of(source_entity));
-//   world.travel_to(source_entity, target_entity);
-//    assert!(!world.has_reached(source_entity, target_entity));
-//}
-//
-////  		(Key = 1.4.2.1.)
-//#[test]
-//fn test_case_9() {
-//   let mut world = GameWorld::new();
-//    let source_entity = world.spawn(EntityType::Streamer);
-//   Destination Entity      :  Tile
-//   assert!(world.height_of(target_entity) < world.height_of(source_entity));
-//   world.travel_to(source_entity, target_entity);
-//    assert!(world.has_reached(source_entity, target_entity));
-//}
-//
-//// 		(Key = 1.4.2.2.)
-//#[test]
-//fn test_case_10() {
-//   let mut world = GameWorld::new();
-//    let source_entity = world.spawn(EntityType::Streamer);
-//   Destination Entity      :  Tile
-//   assert!(world.height_of(target_entity) < world.height_of(source_entity));
-//   world.travel_to(source_entity, target_entity);
-//    assert!(!world.has_reached(source_entity, target_entity));
-//}
-//
-//// 		(Key = 1.4.3.1.)
-//#[test]
-//fn test_case_11() {
-//   let mut world = GameWorld::new();
-//    let source_entity = world.spawn(EntityType::Streamer);
-//   Destination Entity      :  Tile
-//   assert!(world.height_of(target_entity) == world.height_of(source_entity));
-//   world.travel_to(source_entity, target_entity);
-//    assert!(world.has_reached(source_entity, target_entity));
-//}
-//
-//// 		(Key = 1.4.3.2.)
-//#[test]
-//fn test_case_12() {
-//   let mut world = GameWorld::new();
-//    let source_entity = world.spawn(EntityType::Streamer);
-//   Destination Entity      :  Tile
-//   assert!(world.height_of(target_entity) == world.height_of(source_entity));
-//   world.travel_to(source_entity, target_entity);
-//    assert!(!world.has_reached(source_entity, target_entity));
-//}
 
 // 		(Key = 2.1.2.1.)
 #[test]

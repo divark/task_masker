@@ -1,4 +1,3 @@
-use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use cucumber::{given, then, when, World};
 
@@ -7,8 +6,6 @@ use task_masker::map::tiled::convert_tiled_to_bevy_pos;
 #[derive(Debug, World)]
 #[world(init = Self::new)]
 pub struct MapWorld {
-    app: App,
-
     world_length: u32,
     world_width: u32,
     world_height: u32,
@@ -20,14 +17,10 @@ pub struct MapWorld {
 
 impl MapWorld {
     fn new() -> Self {
-        let app = App::new();
-
         let tiled_tile_pos = TilePos::new(0, 0);
         let bevy_tile_pos = TilePos::new(1, 1);
 
         Self {
-            app,
-
             world_length: 0,
             world_width: 0,
             world_height: 0,

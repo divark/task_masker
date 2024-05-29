@@ -236,31 +236,31 @@ fn chatter_should_start_speaking(world: &mut GameWorld) {
     assert_eq!(*chatter_status, ChatterStatus::Speaking);
 }
 
-#[then("the Chatter will leave back to its resting point")]
+#[then("the Chatter leaves back to its resting point")]
 fn chatter_should_be_leaving_back_to_spawn(world: &mut GameWorld) {
-    world.app.update();
+    loop {
+        world.app.update();
 
-    let world_size = world
+        let chatter_status = world
+            .app
+            .world
+            .query::<&ChatterStatus>()
+            .get_single(&world.app.world)
+            .expect("chatter_should_be_leaving_back_to_spawn: Chatter does not have a Status.");
+
+        if *chatter_status == ChatterStatus::Idle {
+            break;
+        }
+    }
+
+    let (chatter_tilepos, chatter_spawn) = world
         .app
         .world
-        .query::<&TilemapSize>()
-        .iter(&world.app.world)
-        .last()
-        .expect("chatter_should_be_leaving_back_to_spawn: Tiled map did not include Tilemap Size information.")
-        .clone();
-
-    let (chatter_path, chatter_status, chatter_spawn) = world
-        .app
-        .world
-        .query::<(&Path, &ChatterStatus, &SpawnPoint)>()
+        .query_filtered::<(&TilePos, &SpawnPoint), With<ChatterStatus>>()
         .get_single(&world.app.world)
         .expect("chatter_should_be_leaving_back_to_spawn: Chatter is missing pathfinding-based information and/or Status.");
 
-    assert_eq!(*chatter_status, ChatterStatus::Leaving);
-
-    let chatter_destination_tilepos =
-        idx_to_tilepos(*chatter_path.iter().last().unwrap(), world_size.x);
-    assert_eq!(chatter_spawn.0, chatter_destination_tilepos);
+    assert_eq!(chatter_spawn.0, *chatter_tilepos);
 }
 
 fn main() {
