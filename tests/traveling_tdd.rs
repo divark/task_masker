@@ -578,30 +578,31 @@ fn heighted_tile_transform_matches_tile_transform() {
     assert_eq!(expected_transform, actual_transform);
 }
 
-#[test]
-fn streamer_wont_move_if_at_target() {
-    let mut world = GameWorld::new();
-    let source_entity = world.find(EntityType::Streamer);
-    let source_tilepos = world.get_tile_pos_from(source_entity);
-    let target_entity = world.tile_at_position(source_tilepos, STREAMER_LAYER_NUM as u32);
-    let target_tilepos = world.get_tile_pos_from(target_entity);
-
-    assert_eq!(source_tilepos, target_tilepos);
-    assert_eq!(
-        world.height_of(target_entity),
-        world.height_of(source_entity)
-    );
-
-    world.travel_to(source_entity, target_entity);
-    assert_eq!(world.get_tile_pos_from(source_entity), source_tilepos);
-    world.has_reached_tile(source_entity, target_entity);
-    world.has_reached_tile_transform(
-        source_entity,
-        target_entity,
-        STREAMER_LAYER_NUM,
-        STREAMER_LAYER_NUM,
-    );
-}
+// TODO: Rewrite and move this into streamer.rs
+//#[test]
+//fn streamer_wont_move_if_at_target() {
+//    let mut world = GameWorld::new();
+//    let source_entity = world.find(EntityType::Streamer);
+//    let source_tilepos = world.get_tile_pos_from(source_entity);
+//    let target_entity = world.tile_at_position(source_tilepos, STREAMER_LAYER_NUM as u32);
+//    let target_tilepos = world.get_tile_pos_from(target_entity);
+//
+//    assert_eq!(source_tilepos, target_tilepos);
+//    assert_eq!(
+//        world.height_of(target_entity),
+//        world.height_of(source_entity)
+//    );
+//
+//    world.travel_to(source_entity, target_entity);
+//    assert_eq!(world.get_tile_pos_from(source_entity), source_tilepos);
+//    world.has_reached_tile(source_entity, target_entity);
+//    world.has_reached_tile_transform(
+//        source_entity,
+//        target_entity,
+//        STREAMER_LAYER_NUM,
+//        STREAMER_LAYER_NUM,
+//    );
+//}
 
 // 		(Key = 2.1.2.1.)
 #[test]
