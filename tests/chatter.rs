@@ -22,10 +22,10 @@ impl Plugin for MockChatterPlugin {
             Update,
             (
                 replace_chatter_tile,
-                fly_to_streamer_to_speak,
+                fly_to_streamer_to_speak.after(replace_chatter_tile),
                 speak_to_streamer_from_chatter.after(fly_to_streamer_to_speak),
                 leave_from_streamer_from_chatter.after(speak_to_streamer_from_chatter),
-                return_chatter_to_idle.after(leave_from_streamer_from_chatter),
+                return_chatter_to_idle,
                 follow_streamer_while_speaking,
                 follow_streamer_while_approaching_for_chatter,
             ),
@@ -43,7 +43,8 @@ impl Plugin for MockStreamerPlugin {
             (
                 spawn_player_tile,
                 move_streamer,
-                queue_destination_for_streamer,
+                queue_destination_for_streamer.after(spawn_player_tile),
+                make_streamer_idle_when_not_moving,
                 update_status_when_speaking,
             ),
         );
@@ -142,14 +143,14 @@ fn wait_for_chatter_to_approach_to_speak(world: &mut GameWorld) {
     loop {
         world.app.update();
 
-        let (chatter_path, chatter_target) = world
+        let chatter_status = world
             .app
             .world
-            .query_filtered::<(&Path, &Target), With<ChatterStatus>>()
+            .query::<&ChatterStatus>()
             .get_single(&world.app.world)
-            .expect("wait_for_chatter_to_approach_to_speak: Chatter does not have a path.");
+            .expect("wait_for_chatter_to_approach_to_speak: Chatter does not have a Status.");
 
-        if chatter_path.len() == 0 && chatter_target.is_none() {
+        if *chatter_status == ChatterStatus::Speaking {
             break;
         }
     }
@@ -201,6 +202,15 @@ fn chatter_should_approach_to_streamer(world: &mut GameWorld) {
 #[then("the Chatter will be two tiles away from the Streamer")]
 fn chatter_should_be_two_tiles_away_from_streamer(world: &mut GameWorld) {
     world.app.update();
+
+    let chatter_status = world
+        .app
+        .world
+        .query::<&ChatterStatus>()
+        .get_single(&world.app.world)
+        .expect("chatter_should_approach_to_streamer: Chatter does not have a Status.");
+
+    assert_eq!(*chatter_status, ChatterStatus::Speaking);
 
     let chatter_tilepos = world
         .app

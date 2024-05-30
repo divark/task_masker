@@ -183,16 +183,32 @@ pub fn fly_to_streamer_to_speak(
 
 pub fn speak_to_streamer_from_chatter(
     mut chatter_query: Query<
-        (Entity, &ChatMsg, &Path, &mut ChatterStatus, &MovementType),
+        (
+            Entity,
+            &ChatMsg,
+            &Path,
+            &Target,
+            &mut ChatterStatus,
+            &MovementType,
+        ),
         Without<WaitTimer>,
     >,
     mut chat_msg_requester: EventWriter<Msg>,
     mut commands: Commands,
 ) {
-    for (chatter_entity, chatter_msg, chatter_path, mut chatter_status, &chatter_type) in
-        &mut chatter_query
+    for (
+        chatter_entity,
+        chatter_msg,
+        chatter_path,
+        chatter_target,
+        mut chatter_status,
+        &chatter_type,
+    ) in &mut chatter_query
     {
-        if !chatter_path.0.is_empty() || *chatter_status != ChatterStatus::Approaching {
+        if !chatter_path.0.is_empty()
+            || chatter_target.is_some()
+            || *chatter_status != ChatterStatus::Approaching
+        {
             continue;
         }
 
@@ -272,14 +288,18 @@ pub fn leave_from_streamer_from_chatter(
 /// when reaching its starting position once
 /// again after leaving.
 pub fn return_chatter_to_idle(
-    mut chatter: Query<(&Path, &Target, &mut ChatterStatus), (Changed<Path>, With<ChatterLabel>)>,
+    mut chatter: Query<(&Path, &Target, &mut ChatterStatus), With<ChatterLabel>>,
 ) {
     for (chatter_path, chatter_target, mut chatter_status) in &mut chatter {
         if *chatter_status != ChatterStatus::Leaving {
             continue;
         }
 
-        if !chatter_path.0.is_empty() || chatter_target.is_some() {
+        if !chatter_path.0.is_empty() {
+            continue;
+        }
+
+        if chatter_target.is_some() {
             continue;
         }
 
