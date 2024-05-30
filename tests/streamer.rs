@@ -28,6 +28,7 @@ impl Plugin for MockStreamerPlugin {
                 spawn_player_tile,
                 move_streamer,
                 queue_destination_for_streamer.after(spawn_player_tile),
+                make_streamer_idle_when_not_moving,
                 update_status_when_speaking,
             ),
         );
@@ -109,10 +110,6 @@ fn request_streamer_to_move_to_lower_location(world: &mut GameWorld, option: Str
     regex = r"^the Streamer will arrive at the (lower|equal in height|higher) location after traveling there."
 )]
 fn streamer_should_have_reached_lower_location(world: &mut GameWorld, option: String) {
-    world
-        .app
-        .add_systems(Update, make_streamer_idle_when_not_moving);
-
     loop {
         world.app.update();
 

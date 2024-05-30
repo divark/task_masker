@@ -59,6 +59,7 @@ impl Plugin for StreamerPlugin {
                 spawn_player_sprite,
                 spawn_player_tile,
                 move_streamer,
+                make_streamer_idle_when_not_moving,
                 move_streamer_on_spacebar,
                 test_streamer_msg,
                 queue_destination_for_streamer,
