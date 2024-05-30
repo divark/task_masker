@@ -1,3 +1,7 @@
+mod mock_plugins;
+
+use crate::mock_plugins::{MockStreamerPlugin, MockTiledMapPlugin};
+
 use bevy::prelude::*;
 use bevy::utils::Duration;
 use bevy_ecs_tilemap::prelude::*;
@@ -5,35 +9,7 @@ use cucumber::{given, then, when, World};
 use task_masker::entities::streamer::*;
 use task_masker::map::path_finding::*;
 use task_masker::map::plugins::{PathFindingPlugin, TilePosEvent};
-use task_masker::map::tiled::*;
 use task_masker::GameState;
-
-#[derive(Default)]
-pub struct MockTiledMapPlugin;
-
-impl Plugin for MockTiledMapPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_tiles_from_tiledmap);
-    }
-}
-
-#[derive(Default)]
-pub struct MockStreamerPlugin;
-
-impl Plugin for MockStreamerPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            (
-                spawn_player_tile,
-                move_streamer,
-                queue_destination_for_streamer.after(spawn_player_tile),
-                make_streamer_idle_when_not_moving,
-                update_status_when_speaking,
-            ),
-        );
-    }
-}
 
 fn intercept_movement_timer(mut timer_query: Query<&mut MovementTimer, Added<MovementTimer>>) {
     for mut movement_timer in &mut timer_query {
