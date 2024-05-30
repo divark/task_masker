@@ -222,16 +222,12 @@ pub fn swim_to_streamer_to_speak(
             break;
         }
 
-        let path_to_streamer = get_path(
-            subscriber_tilepos,
-            streamer_tilepos,
-            map_size,
-            air_graph_edges,
-        );
-
-        let path_to_shore = include_nodes_only_from(path_to_streamer, water_graph_edges);
-
-        *subscriber_path = path_to_shore;
+        if let Some(path) =
+            air_graph_edges.shortest_path(*subscriber_tilepos, *streamer_tilepos, map_size.x)
+        {
+            let path_to_shore = include_nodes_only_from(path, water_graph_edges);
+            *subscriber_path = path_to_shore;
+        }
 
         commands
             .entity(subscriber_entity)
@@ -324,12 +320,13 @@ pub fn leave_from_streamer_from_subscriber(
             continue;
         }
 
-        *subscriber_path = get_path(
-            &subscriber_start_pos.1,
-            &subscriber_spawn_pos.0,
-            map_size,
-            water_graph_edges,
-        );
+        if let Some(path) = water_graph_edges.shortest_path(
+            subscriber_start_pos.1,
+            subscriber_spawn_pos.0,
+            map_size.x,
+        ) {
+            *subscriber_path = path;
+        }
 
         commands
             .entity(subscriber_entity)
@@ -414,14 +411,13 @@ pub fn follow_streamer_while_approaching_for_subscriber(
         let current_subscriber_destination =
             idx_to_tilepos(*subscriber_path.0.iter().last().unwrap(), map_size.y);
 
-        let path_to_streamer = get_path(
-            subscriber_pos,
-            &streamer_destination_tilepos,
-            map_size,
-            air_graph_edges,
-        );
-
-        let path_to_shore = include_nodes_only_from(path_to_streamer, water_graph_edges);
+        let path_to_shore = if let Some(path) =
+            air_graph_edges.shortest_path(*subscriber_pos, streamer_destination_tilepos, map_size.x)
+        {
+            include_nodes_only_from(path, water_graph_edges)
+        } else {
+            Path(VecDeque::new())
+        };
 
         let next_subscriber_destination_idx = path_to_shore
             .0

@@ -157,12 +157,15 @@ pub fn fly_to_streamer_to_speak(
             break;
         }
 
-        let mut path_to_streamer = get_path(
-            chatter_tilepos,
-            streamer_tilepos,
-            map_size,
-            air_graph_edges.0,
-        );
+        let mut path_to_streamer = if let Some(path) =
+            air_graph_edges
+                .0
+                .shortest_path(*chatter_tilepos, *streamer_tilepos, map_size.x)
+        {
+            path
+        } else {
+            Path(VecDeque::new())
+        };
 
         // The chatter should not be directly on top of the
         // streamer, so we provide some distance by adjusting

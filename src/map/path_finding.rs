@@ -568,64 +568,6 @@ pub struct StartingPoint(pub Vec3, pub TilePos);
 #[derive(Component, Deref, DerefMut)]
 pub struct Path(pub VecDeque<usize>);
 
-pub fn get_path(
-    source: &TilePos,
-    destination: &TilePos,
-    map_size: &TilemapSize,
-    graph_node_edges: &NodeEdges,
-) -> Path {
-    let mut node_distances = vec![0; graph_node_edges.0.len()];
-    let mut node_parents = vec![-1; graph_node_edges.0.len()];
-    let mut node_visited = vec![false; graph_node_edges.0.len()];
-
-    let mapped_source_idx = tilepos_to_idx(source.x, source.y, map_size.y);
-    let mut mapped_destination_idx = tilepos_to_idx(destination.x, destination.y, map_size.y);
-
-    let mut bfs_queue = VecDeque::from([mapped_source_idx]);
-    while !bfs_queue.is_empty() {
-        let current_node_idx = bfs_queue.pop_front().unwrap();
-        if current_node_idx == mapped_destination_idx {
-            node_visited[current_node_idx] = true;
-            break;
-        }
-
-        if node_visited[current_node_idx] {
-            continue;
-        }
-
-        node_visited[current_node_idx] = true;
-
-        for node_edge in &graph_node_edges.0[current_node_idx] {
-            if node_visited[*node_edge] {
-                continue;
-            }
-
-            node_parents[*node_edge] = current_node_idx as i32;
-            node_distances[*node_edge] = node_distances[current_node_idx] + 1;
-
-            bfs_queue.push_back(*node_edge);
-        }
-    }
-
-    if !node_visited[mapped_destination_idx] {
-        return Path(VecDeque::new());
-    }
-
-    let mut path = VecDeque::from([mapped_destination_idx]);
-    while mapped_source_idx != mapped_destination_idx {
-        let node_parent = node_parents[mapped_destination_idx];
-        if node_parent == -1 {
-            break;
-        }
-
-        mapped_destination_idx = node_parent as usize;
-
-        path.push_front(mapped_destination_idx);
-    }
-
-    Path(path)
-}
-
 #[derive(Component, PartialEq, PartialOrd, Debug)]
 pub enum Direction {
     TopLeft,
@@ -726,22 +668,24 @@ pub fn update_movement_target(
                 .0
         };
 
-        if target.0.is_none() && !path.0.is_empty() {
-            let new_target = path
-                .0
-                .pop_front()
-                .expect("The path was not supposed to be empty by here.");
-            let target_tile_pos = idx_to_tilepos(new_target, world_size.y);
-            let target_pos = nodes.0[new_target];
-
-            if let Some(new_direction) =
-                get_direction(*current_pos, Transform::from_translation(target_pos))
-            {
-                *direction = new_direction;
-            }
-
-            target.0 = Some((target_pos, target_tile_pos));
+        if target.0.is_some() || path.0.is_empty() {
+            continue;
         }
+
+        let new_target = path
+            .0
+            .pop_front()
+            .expect("The path was not supposed to be empty by here.");
+        let target_tile_pos = idx_to_tilepos(new_target, world_size.y);
+        let target_pos = nodes.0[new_target];
+
+        if let Some(new_direction) =
+            get_direction(*current_pos, Transform::from_translation(target_pos))
+        {
+            *direction = new_direction;
+        }
+
+        target.0 = Some((target_pos, target_tile_pos));
     }
 }
 
@@ -1189,7 +1133,10 @@ pub mod tests {
 
                 assert_eq!(
                     VecDeque::from(expected_paths[mapped_start_idx][mapped_end_idx].clone()),
-                    get_path(start_pos, end_pos, &world_size, &node_edges,).0,
+                    node_edges
+                        .shortest_path(*start_pos, *end_pos, world_size.x)
+                        .unwrap()
+                        .0,
                     "Nodes {} and {}",
                     mapped_start_idx,
                     mapped_end_idx
