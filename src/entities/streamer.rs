@@ -14,7 +14,7 @@ use super::MovementType;
 #[derive(Component)]
 pub struct StreamerLabel;
 
-#[derive(Component, PartialEq)]
+#[derive(Component, PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub enum StreamerStatus {
     Idle,
     Moving,
@@ -156,7 +156,6 @@ pub fn move_streamer(
     }
 
     if streamer_destination_queue.is_empty() {
-        *streamer_status = StreamerStatus::Idle;
         return;
     }
 
@@ -169,6 +168,22 @@ pub fn move_streamer(
     }
 
     *streamer_status = StreamerStatus::Moving;
+}
+
+/// Updates the Status of the Streamer to Idle when the Streamer
+/// is no longer following some path.
+pub fn make_streamer_idle_when_not_moving(
+    mut streamer: Query<(&mut StreamerStatus, &Path, &Target)>,
+) {
+    if streamer.is_empty() {
+        return;
+    }
+
+    let (mut streamer_status, streamer_path, streamer_target) = streamer.single_mut();
+
+    if streamer_path.len() == 0 && streamer_target.is_none() {
+        *streamer_status = StreamerStatus::Idle;
+    }
 }
 
 pub fn queue_destination_for_streamer(
