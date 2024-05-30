@@ -65,7 +65,7 @@ pub fn replace_subscriber(
     let (map_transform, grid_size, map_size, map_type) =
         map_information.expect("replace_subscriber: Map information should exist by now.");
 
-    let texture_handle = asset_server.load("subscribers/animation.png");
+    let texture_handle = asset_server.load("subscriber/Fish(32x32).png");
     let subscriber_texture_atlas =
         TextureAtlasLayout::from_grid(Vec2::new(32.0, 32.0), 16, 16, None, None);
     let subscriber_texture_atlas_handle = texture_atlases.add(subscriber_texture_atlas);

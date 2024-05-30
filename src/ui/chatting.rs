@@ -110,7 +110,7 @@ pub fn setup_chatting_from_msg(
     let role_image = match &recent_msg.speaker_role {
         MovementType::Walk => UiImage::new(asset_server.load("caveman/portrait.png")),
         MovementType::Fly => UiImage::new(asset_server.load("chatters/portrait.png")),
-        MovementType::Swim => UiImage::new(asset_server.load("subscribers/portrait.png")),
+        MovementType::Swim => UiImage::new(asset_server.load("subscriber/portrait.png")),
     };
 
     *speaker_portrait = role_image;
