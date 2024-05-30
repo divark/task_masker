@@ -38,10 +38,10 @@ impl TranslationGatherer {
             let tile_idx = tilepos_to_idx(tile.x, tile.y, length);
             let tile_height = tile_height_map[tile_idx];
 
-            let (grid_size, map_type, map_transform) =
-                self.map_information.iter().nth(tile_height).expect(
-                    "translations_from: Could not find map information at given tile height.",
-                );
+            let (grid_size, map_type, map_transform) = self
+                .map_information
+                .get(tile_height)
+                .expect("translations_from: Could not find map information at given tile height.");
 
             let tile_translation = tile
                 .center_in_world(grid_size, map_type)

@@ -1,123 +1,24 @@
+mod mock_plugins;
+
+use crate::mock_plugins::{
+    MockChatterPlugin, MockStreamerPlugin, MockSubscriberPlugin, MockTiledMapPlugin,
+};
+
 use std::time::Duration;
 
 use bevy::prelude::*;
 
 use bevy_ecs_tilemap::prelude::*;
-use task_masker::entities::{chatter::*, crop::*, fruit::*, streamer::*, subscriber::*};
+use task_masker::entities::{chatter::*, streamer::*, subscriber::*};
 use task_masker::map::path_finding::{
     tilepos_to_idx, unique_tiles_from, GraphType, HeightedTilePos, MovementTimer, NodeData,
     NodeEdges, Path, Target,
 };
 use task_masker::map::plugins::{PathFindingPlugin, TilePosEvent};
 use task_masker::map::tiled::{
-    flip_y_axis_for_tile_pos, spawn_tiles_from_tiledmap, to_bevy_transform, LayerNumber,
-    TiledMapInformation,
+    flip_y_axis_for_tile_pos, to_bevy_transform, LayerNumber, TiledMapInformation,
 };
 use task_masker::GameState;
-
-#[derive(Default)]
-pub struct MockTiledMapPlugin;
-
-impl Plugin for MockTiledMapPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_tiles_from_tiledmap);
-    }
-}
-
-#[derive(Default)]
-pub struct MockStreamerPlugin;
-
-impl Plugin for MockStreamerPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            (
-                spawn_player_tile,
-                move_streamer,
-                queue_destination_for_streamer,
-                update_status_when_speaking,
-            ),
-        );
-    }
-}
-
-#[derive(Default)]
-pub struct MockSubscriberPlugin;
-
-impl Plugin for MockSubscriberPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_event::<SubscriberMsg>();
-        app.add_systems(
-            Update,
-            (
-                mock_replace_subscriber,
-                //trigger_swimming_to_streamer,
-                swim_to_streamer_to_speak,
-                leave_from_streamer_from_subscriber,
-                return_subscriber_to_idle,
-                follow_streamer_while_approaching_for_subscriber,
-            ),
-        );
-    }
-}
-
-#[derive(Default)]
-pub struct MockChatterPlugin;
-
-impl Plugin for MockChatterPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_event::<ChatMsg>();
-        app.add_systems(
-            Update,
-            (
-                replace_chatter_tile,
-                //trigger_flying_to_streamer,
-                fly_to_streamer_to_speak,
-                leave_from_streamer_from_chatter,
-                return_chatter_to_idle,
-                follow_streamer_while_speaking,
-                follow_streamer_while_approaching_for_chatter,
-            ),
-        );
-    }
-}
-
-#[derive(Default)]
-pub struct MockFruitPlugin;
-
-impl Plugin for MockFruitPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            (
-                replace_fruit_tiles,
-                make_fruit_fall,
-                make_fruit_dropped,
-                pathfind_streamer_to_fruit,
-                claim_fruit_from_streamer,
-                respawn_fruit,
-            ),
-        );
-    }
-}
-
-#[derive(Default)]
-pub struct MockCropPlugin;
-
-impl Plugin for MockCropPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_event::<NewSubscriber>();
-        app.add_systems(
-            Update,
-            (
-                replace_crop_tiles,
-                grow_crops,
-                pathfind_streamer_to_crops,
-                pick_up_crops,
-            ),
-        );
-    }
-}
 
 #[derive(PartialEq)]
 enum EntityType {
