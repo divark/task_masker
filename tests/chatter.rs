@@ -23,7 +23,7 @@ impl Plugin for MockChatterPlugin {
             (
                 replace_chatter_tile,
                 fly_to_streamer_to_speak,
-                speak_to_streamer_from_chatter,
+                speak_to_streamer_from_chatter.after(fly_to_streamer_to_speak),
                 leave_from_streamer_from_chatter.after(speak_to_streamer_from_chatter),
                 return_chatter_to_idle.after(leave_from_streamer_from_chatter),
                 follow_streamer_while_speaking,

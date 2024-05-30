@@ -14,7 +14,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         
       # Used the following as reference to install dependencies for Bevy:
       # https://github.com/bevyengine/bevy/blob/main/docs/linux_dependencies.md#ubuntu
