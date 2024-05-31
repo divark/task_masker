@@ -165,9 +165,8 @@ pub fn move_streamer(
     if let Some(found_path) = edges.shortest_path(streamer_tile_pos.1, streamer_target, map_size.x)
     {
         *streamer_path = found_path;
+        *streamer_status = StreamerStatus::Moving;
     }
-
-    *streamer_status = StreamerStatus::Moving;
 }
 
 /// Updates the Status of the Streamer to Idle when the Streamer

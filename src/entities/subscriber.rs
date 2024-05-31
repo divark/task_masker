@@ -227,13 +227,13 @@ pub fn swim_to_streamer_to_speak(
         {
             let path_to_shore = include_nodes_only_from(path, water_graph_edges);
             *subscriber_path = path_to_shore;
+
+            commands
+                .entity(subscriber_entity)
+                .insert(subscriber_msg.read().next().unwrap().clone());
+
+            *subscriber_status = SubscriberStatus::Approaching;
         }
-
-        commands
-            .entity(subscriber_entity)
-            .insert(subscriber_msg.read().next().unwrap().clone());
-
-        *subscriber_status = SubscriberStatus::Approaching;
     }
 }
 
@@ -326,14 +326,14 @@ pub fn leave_from_streamer_from_subscriber(
             map_size.x,
         ) {
             *subscriber_path = path;
+
+            commands
+                .entity(subscriber_entity)
+                .remove::<WaitTimer>()
+                .remove::<SubscriberMsg>();
+
+            *subscriber_status = SubscriberStatus::Leaving;
         }
-
-        commands
-            .entity(subscriber_entity)
-            .remove::<WaitTimer>()
-            .remove::<SubscriberMsg>();
-
-        *subscriber_status = SubscriberStatus::Leaving;
     }
 }
 

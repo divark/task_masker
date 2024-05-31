@@ -157,30 +157,26 @@ pub fn fly_to_streamer_to_speak(
             break;
         }
 
-        let mut path_to_streamer = if let Some(path) =
+        if let Some(mut path) =
             air_graph_edges
                 .0
                 .shortest_path(*chatter_tilepos, *streamer_tilepos, map_size.x)
         {
-            path
-        } else {
-            Path(VecDeque::new())
-        };
+            // The chatter should not be directly on top of the
+            // streamer, so we provide some distance by adjusting
+            // the path to not go straight to the streamer.
+            for _i in 0..DIST_AWAY_FROM_STREAMER {
+                path.pop_back();
+            }
 
-        // The chatter should not be directly on top of the
-        // streamer, so we provide some distance by adjusting
-        // the path to not go straight to the streamer.
-        for _i in 0..DIST_AWAY_FROM_STREAMER {
-            path_to_streamer.pop_back();
+            *chatter_path = path;
+
+            commands
+                .entity(chatter_entity)
+                .insert(chatter_msg.read().next().unwrap().clone());
+
+            *chatter_status = ChatterStatus::Approaching;
         }
-
-        *chatter_path = path_to_streamer;
-
-        commands
-            .entity(chatter_entity)
-            .insert(chatter_msg.read().next().unwrap().clone());
-
-        *chatter_status = ChatterStatus::Approaching;
     }
 }
 
@@ -276,14 +272,13 @@ pub fn leave_from_streamer_from_chatter(
             air_graph_edges.shortest_path(chatter_start_pos.1, chatter_spawn_pos.0, map_size.x)
         {
             *chatter_path = path;
+            commands
+                .entity(chatter_entity)
+                .remove::<WaitTimer>()
+                .remove::<ChatMsg>();
+
+            *chatter_status = ChatterStatus::Leaving;
         }
-
-        commands
-            .entity(chatter_entity)
-            .remove::<WaitTimer>()
-            .remove::<ChatMsg>();
-
-        *chatter_status = ChatterStatus::Leaving;
     }
 }
 
