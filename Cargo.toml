@@ -13,8 +13,8 @@ tiled = "^0.11"
 rand = "^0.8"
 
 [dev-dependencies]
-cucumber = "0.20"
-futures = "0.3"
+cucumber = "^0.21"
+futures = "^0.3"
 
 [[test]]
 name = "traveling"
