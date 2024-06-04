@@ -63,12 +63,14 @@ pub struct MockSubscriberPlugin;
 impl Plugin for MockSubscriberPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<SubscriberMsg>();
+        app.add_event::<Msg>();
         app.add_systems(
             Update,
             (
                 mock_replace_subscriber,
-                swim_to_streamer_to_speak,
-                leave_from_streamer_from_subscriber,
+                swim_to_streamer_to_speak.after(mock_replace_subscriber),
+                speak_to_streamer_from_subscriber.after(swim_to_streamer_to_speak),
+                leave_from_streamer_from_subscriber.after(speak_to_streamer_from_subscriber),
                 return_subscriber_to_idle,
                 follow_streamer_while_approaching_for_subscriber,
             ),

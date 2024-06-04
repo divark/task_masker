@@ -17,7 +17,7 @@ pub const DESIRED_SUBSCRIBER_LAYER_NUM: usize = 1;
 #[derive(Component)]
 pub struct SubscriberLabel;
 
-#[derive(Component, PartialEq)]
+#[derive(Component, Debug, PartialEq)]
 pub enum SubscriberStatus {
     Idle,
     Approaching,
@@ -26,7 +26,7 @@ pub enum SubscriberStatus {
 }
 
 #[derive(Component)]
-pub struct WaitTimer(Timer);
+pub struct WaitTimer(pub Timer);
 
 #[derive(Component, Event, Clone)]
 pub struct SubscriberMsg {
@@ -341,14 +341,18 @@ pub fn leave_from_streamer_from_subscriber(
 /// when reaching its starting position once
 /// again after leaving.
 pub fn return_subscriber_to_idle(
-    mut subscriber: Query<(&Path, &mut SubscriberStatus), (Changed<Path>, With<SubscriberLabel>)>,
+    mut subscriber: Query<(&Path, &Target, &mut SubscriberStatus), With<SubscriberLabel>>,
 ) {
-    for (subscriber_path, mut subscriber_status) in &mut subscriber {
+    for (subscriber_path, subscriber_target, mut subscriber_status) in &mut subscriber {
         if *subscriber_status != SubscriberStatus::Leaving {
             continue;
         }
 
         if !subscriber_path.0.is_empty() {
+            continue;
+        }
+
+        if subscriber_target.is_some() {
             continue;
         }
 
