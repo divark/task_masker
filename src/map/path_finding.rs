@@ -75,6 +75,33 @@ impl TranslationGatherer {
 
         heighted_tile_translations
     }
+
+    /// Returns the Lowest Transform (Position) found for each Heighted Tile.
+    pub fn translations_at_height(
+        &self,
+        heighted_tiles: &Vec<HeightedTilePos>,
+        height: usize,
+    ) -> Vec<Vec3> {
+        let mut heighted_tile_translations = Vec::new();
+
+        let unique_tiles = unique_tiles_from(heighted_tiles);
+        for tile in unique_tiles {
+            let (grid_size, map_type, map_transform) =
+                self.map_information.iter().nth(height).expect(
+                    "lowest_translations_from: Could not find map information at the specified 
+                tile height.",
+                );
+
+            let tile_translation = tile
+                .center_in_world(grid_size, map_type)
+                .extend(map_transform.translation.z);
+            let tile_transform = *map_transform * Transform::from_translation(tile_translation);
+
+            heighted_tile_translations.push(tile_transform.translation);
+        }
+
+        heighted_tile_translations
+    }
 }
 
 #[derive(Component)]
@@ -99,6 +126,18 @@ impl NodeData {
         let translation_gatherer = TranslationGatherer::new(layer_map_information);
 
         let tile_translations = translation_gatherer.highest_translations_from(heighted_tiles);
+
+        NodeData(tile_translations)
+    }
+
+    pub fn from_water_tiles(
+        heighted_tiles: &Vec<HeightedTilePos>,
+        layer_map_information: Vec<(TilemapGridSize, TilemapType, Transform)>,
+    ) -> Self {
+        let translation_gatherer = TranslationGatherer::new(layer_map_information);
+
+        let tile_translations =
+            translation_gatherer.translations_at_height(heighted_tiles, SUBSCRIBER_LAYER_NUM);
 
         NodeData(tile_translations)
     }
@@ -254,6 +293,46 @@ impl NodeEdges {
         NodeEdges(directed_graph_edges)
     }
 
+    /// Returns a set of Node Edges derived from a collection of Tiles
+    /// designated for Water traversal.
+    pub fn from_water_tiles(water_tiles: Vec<HeightedTilePos>) -> NodeEdges {
+        let mut directed_graph_edges: Vec<Vec<usize>> = Vec::with_capacity(water_tiles.len());
+
+        let height_map: Vec<usize> = height_map_from(&water_tiles);
+        let (length, _width, _height) = dimensions_from(&water_tiles);
+
+        let tile_positions_no_layers = unique_tiles_from(&water_tiles);
+
+        for tile_position in tile_positions_no_layers {
+            let tile_idx = tilepos_to_idx(tile_position.x, tile_position.y, length);
+            let tile_height = height_map[tile_idx];
+
+            let mut current_node_edges = Vec::new();
+
+            if tile_position.x > 0 && tile_height == 0 {
+                let top_node_idx = tilepos_to_idx(tile_position.x - 1, tile_position.y, length);
+                let height_difference: i32 = height_map[top_node_idx] as i32 - tile_height as i32;
+                if height_difference.abs() == 0 {
+                    current_node_edges.push(top_node_idx);
+                    directed_graph_edges[top_node_idx].push(tile_idx);
+                }
+            }
+
+            if tile_position.y > 0 && tile_height == 0 {
+                let left_node_idx = tilepos_to_idx(tile_position.x, tile_position.y - 1, length);
+                let height_difference: i32 = height_map[left_node_idx] as i32 - tile_height as i32;
+                if height_difference.abs() == 0 {
+                    current_node_edges.push(left_node_idx);
+                    directed_graph_edges[left_node_idx].push(tile_idx);
+                }
+            }
+
+            directed_graph_edges.push(current_node_edges);
+        }
+
+        NodeEdges(directed_graph_edges)
+    }
+
     /// Returns a Single Shortest Path between a source and target Tile
     /// Position, or nothing if none were found.
     pub fn shortest_path(&self, source: TilePos, target: TilePos, length: u32) -> Option<Path> {
@@ -380,7 +459,7 @@ pub fn create_ground_graph(
 /// Spawns an Undirected Graph representing all water titles
 pub fn create_water_graph(
     tile_positions: Query<(&TilePos, &LayerNumber)>,
-    map_information: Query<(&TilemapSize, &TilemapGridSize, &TilemapType, &Transform)>,
+    map_information: Query<(&TilemapGridSize, &TilemapType, &Transform)>,
     water_graph_query: Query<(&NodeEdges, &NodeData, &GraphType)>,
     mut spawner: Commands,
 ) {
@@ -395,129 +474,23 @@ pub fn create_water_graph(
         return;
     }
 
-    // Each Tile Layer has its own World and Grid size should someone decide
-    // to change tilesets for the layer. However, I will not do that, so
-    // both the world size and grid size should be the same.
-    let world_size = map_information
+    let heighted_tiles = tile_positions
         .iter()
-        .map(|sizes| sizes.0)
-        .max_by(|&x, &y| {
-            let x_world_area = x.x * x.y;
-            let y_world_area = y.x * y.y;
+        .map(|tile| HeightedTilePos::new(*tile.0, tile.1 .0 as u32))
+        .collect::<Vec<HeightedTilePos>>();
 
-            x_world_area.cmp(&y_world_area)
-        })
-        .expect("Could not find largest world size. Is the map loaded?");
-
-    let grid_size = map_information
+    let layer_map_information = map_information
         .iter()
-        .map(|sizes| sizes.1)
-        .max_by(|&x, &y| {
-            let x_grid_area = x.x * x.y;
-            let y_grid_area = y.x * y.y;
+        .map(|layer_entry| (*layer_entry.0, *layer_entry.1, *layer_entry.2))
+        .collect::<Vec<(TilemapGridSize, TilemapType, Transform)>>();
 
-            x_grid_area.partial_cmp(&y_grid_area).unwrap()
-        })
-        .expect("Could not find largest grid size. Is the map loaded?");
-
-    // I'm not sure how a map type could change based on the layer, but
-    // the Tiled loader insists it could happen, but I won't do that for
-    // my own maps, so they should all be equal.
-    let map_type = map_information
-        .iter()
-        .next()
-        .map(|x| x.2)
-        .expect("Could not get map type. Is the map loaded?");
-
-    let mut height_map: Vec<usize> = vec![0; (world_size.x * world_size.y) as usize];
-
-    // Sorting by Tile Position and Layer number ensures that we won't add
-    // a previous node, whether above or to the left, that does not exist
-    // yet.
-    let mut tile_positions_sorted = tile_positions
-        .iter()
-        .map(|tile_pair| {
-            (
-                flip_y_axis_for_tile_pos(tile_pair.0.x, tile_pair.0.y, world_size),
-                tile_pair.1,
-            )
-        })
-        .collect::<Vec<(TilePos, &LayerNumber)>>();
-    tile_positions_sorted.sort_by(|&pos1, &pos2| {
-        let pos1_converted = tilepos_to_idx(pos1.0.x, pos1.0.y, world_size.x);
-        let pos2_converted = tilepos_to_idx(pos2.0.x, pos2.0.y, world_size.x);
-
-        let pos1_layer = pos1.1;
-        let pos2_layer = pos2.1;
-
-        pos1_converted
-            .cmp(&pos2_converted)
-            .then(pos1_layer.cmp(pos2_layer))
-    });
-
-    for (tile_position, &layer_number) in tile_positions_sorted.iter() {
-        let height_idx = tilepos_to_idx(tile_position.x, tile_position.y, world_size.x);
-        let height_entry = height_map[height_idx];
-
-        // The difference of 1 here allows for tiles that are not
-        // connected to the water to be ignored. Think scenery
-        // that obscures the vision from the camera that the
-        // player can pass through.
-        if layer_number.0 - height_entry == 1 {
-            height_map[height_idx] += 1;
-        }
-    }
-
-    let mut directed_graph_data: Vec<Vec3> = Vec::new();
-    let mut directed_graph_edges: Vec<Vec<usize>> = Vec::new();
-
-    let mut tile_positions_no_layers = tile_positions_sorted
-        .iter()
-        .map(|x| x.0)
-        .collect::<Vec<TilePos>>();
-    tile_positions_no_layers.dedup();
-
-    for tile_position in tile_positions_no_layers {
-        let tile_idx = tilepos_to_idx(tile_position.x, tile_position.y, world_size.x);
-        let tile_height = height_map[tile_idx];
-
-        let map_transform = map_information
-            .iter()
-            .nth(SUBSCRIBER_LAYER_NUM)
-            .expect("Tile should be on this layer.")
-            .3;
-
-        let map_info = TiledMapInformation::new(grid_size, world_size, map_type, map_transform);
-        let tiled_transform = tiled_to_bevy_transform(&tile_position, map_info);
-        let node_data = tiled_transform.translation;
-        let mut node_edges = Vec::new();
-
-        if tile_position.x > 0 && tile_height == 0 {
-            let top_node_idx = tilepos_to_idx(tile_position.x - 1, tile_position.y, world_size.x);
-            let height_difference: i32 = height_map[top_node_idx] as i32 - tile_height as i32;
-            if height_difference.abs() == 0 {
-                node_edges.push(top_node_idx);
-                directed_graph_edges[top_node_idx].push(tile_idx);
-            }
-        }
-
-        if tile_position.y > 0 && tile_height == 0 {
-            let left_node_idx = tilepos_to_idx(tile_position.x, tile_position.y - 1, world_size.x);
-            let height_difference: i32 = height_map[left_node_idx] as i32 - tile_height as i32;
-            if height_difference.abs() == 0 {
-                node_edges.push(left_node_idx);
-                directed_graph_edges[left_node_idx].push(tile_idx);
-            }
-        }
-
-        directed_graph_data.push(node_data);
-        directed_graph_edges.push(node_edges);
-    }
+    let node_data = NodeData::from_water_tiles(&heighted_tiles, layer_map_information);
+    let node_edges = NodeEdges::from_water_tiles(heighted_tiles);
 
     spawner.spawn(Graph {
         graph_type: GraphType::Water,
-        node_data: NodeData(directed_graph_data),
-        node_edges: NodeEdges(directed_graph_edges),
+        node_data,
+        node_edges,
     });
 }
 

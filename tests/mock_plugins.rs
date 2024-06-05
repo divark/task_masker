@@ -67,8 +67,8 @@ impl Plugin for MockSubscriberPlugin {
         app.add_systems(
             Update,
             (
-                mock_replace_subscriber,
-                swim_to_streamer_to_speak.after(mock_replace_subscriber),
+                replace_subscriber_tile,
+                swim_to_streamer_to_speak.after(replace_subscriber_tile),
                 speak_to_streamer_from_subscriber.after(swim_to_streamer_to_speak),
                 leave_from_streamer_from_subscriber.after(speak_to_streamer_from_subscriber),
                 return_subscriber_to_idle,

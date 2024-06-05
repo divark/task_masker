@@ -37,7 +37,8 @@ impl Plugin for SubscriberPlugin {
         app.add_systems(
             Update,
             (
-                replace_subscriber,
+                replace_subscriber_sprite,
+                replace_subscriber_tile,
                 trigger_swimming_to_streamer,
                 swim_to_streamer_to_speak,
                 leave_from_streamer_from_subscriber,

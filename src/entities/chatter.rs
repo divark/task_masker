@@ -47,7 +47,7 @@ pub fn replace_chatter_sprite(
     asset_server: Res<AssetServer>,
 ) {
     for (chatter_entity, chatter_transform, tile_texture_index) in &chatter {
-        let texture_handle = asset_server.load("chatters/animation.png");
+        let texture_handle = asset_server.load("chatter/animation.png");
         let chatter_texture_atlas =
             TextureAtlasLayout::from_grid(Vec2::new(16.0, 16.0), 8, 2, None, None);
         let chatter_texture_atlas_handle = texture_atlases.add(chatter_texture_atlas);

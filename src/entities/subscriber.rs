@@ -42,40 +42,17 @@ pub struct SubscriberBundle {
     status: SubscriberStatus,
 }
 
-// TODO: Mimic separation done from Streamer, doing replace_subscriber_sprite
-// and replace_subscriber_tile
-pub fn replace_subscriber(
-    mut tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,
-    map_info_query: Query<
-        (&Transform, &TilemapGridSize, &TilemapSize, &TilemapType),
-        Added<TilemapGridSize>,
-    >,
+pub fn replace_subscriber_sprite(
+    subscriber: Query<(Entity, &Transform, &TileTextureIndex), Added<SubscriberLabel>>,
     mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
-    let map_information = map_info_query
-        .iter()
-        .find(|map_info| map_info.0.translation.z == DESIRED_SUBSCRIBER_LAYER_NUM as f32);
-
-    if map_information.is_none() {
-        return;
-    }
-
-    let (map_transform, grid_size, map_size, map_type) =
-        map_information.expect("replace_subscriber: Map information should exist by now.");
-
-    let texture_handle = asset_server.load("subscriber/Fish(32x32).png");
-    let subscriber_texture_atlas =
-        TextureAtlasLayout::from_grid(Vec2::new(32.0, 32.0), 16, 16, None, None);
-    let subscriber_texture_atlas_handle = texture_atlases.add(subscriber_texture_atlas);
-    for (subscriber_entity, layer_number, tile_pos, tile_texture_index) in &mut tiles_query {
-        if layer_number.0 != SUBSCRIBER_LAYER_NUM {
-            continue;
-        }
-
-        let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
-        let tile_transform = to_bevy_transform(tile_pos, map_info);
+    for (subscriber_entity, subscriber_transform, tile_texture_index) in &subscriber {
+        let texture_handle = asset_server.load("subscriber/Fish(32x32).png");
+        let subscriber_texture_atlas =
+            TextureAtlasLayout::from_grid(Vec2::new(32.0, 32.0), 16, 16, None, None);
+        let subscriber_texture_atlas_handle = texture_atlases.add(subscriber_texture_atlas);
 
         let subscriber_sprite = SpriteSheetBundle {
             sprite: Sprite::default(),
@@ -84,28 +61,18 @@ pub fn replace_subscriber(
                 index: tile_texture_index.0 as usize,
             },
             texture: texture_handle.clone(),
-            transform: tile_transform,
+            transform: *subscriber_transform,
             ..default()
         };
-        let subscriber_tilepos = flip_y_axis_for_tile_pos(tile_pos.x, tile_pos.y, map_size);
 
-        commands.entity(subscriber_entity).despawn_recursive();
-        commands.spawn((
-            SubscriberBundle {
-                label: SubscriberLabel,
-                sprite: subscriber_sprite,
-                movement_type: MovementType::Swim,
-                status: SubscriberStatus::Idle,
-            },
-            subscriber_tilepos,
-        ));
+        commands.entity(subscriber_entity).remove::<Transform>();
+        commands.entity(subscriber_entity).insert(subscriber_sprite);
     }
 }
 
 /// Respawns Subscriber without rendering components
-/// for Integration Testing purposes.
-pub fn mock_replace_subscriber(
-    mut tiles_query: Query<(Entity, &LayerNumber, &TilePos)>,
+pub fn replace_subscriber_tile(
+    mut tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,
     map_info_query: Query<
         (&Transform, &TilemapGridSize, &TilemapSize, &TilemapType),
         Added<TilemapGridSize>,
@@ -121,17 +88,15 @@ pub fn mock_replace_subscriber(
     }
 
     let (map_transform, grid_size, map_size, map_type) =
-        map_information.expect("mock_replace_subscriber: Map information should exist by now.");
+        map_information.expect("replace_subscriber_tile: Map information should exist by now.");
 
-    for (subscriber_entity, layer_number, tile_pos) in &mut tiles_query {
+    for (subscriber_entity, layer_number, tile_pos, tile_texture_index) in &mut tiles_query {
         if layer_number.0 != SUBSCRIBER_LAYER_NUM {
             continue;
         }
 
         let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
         let tile_transform = to_bevy_transform(tile_pos, map_info);
-
-        let subscriber_tilepos = flip_y_axis_for_tile_pos(tile_pos.x, tile_pos.y, map_size);
 
         commands.entity(subscriber_entity).despawn_recursive();
         commands.spawn((
@@ -140,8 +105,9 @@ pub fn mock_replace_subscriber(
                 MovementType::Swim,
                 tile_transform,
                 SubscriberStatus::Idle,
+                *tile_texture_index,
             ),
-            subscriber_tilepos,
+            *tile_pos,
         ));
     }
 }
@@ -243,6 +209,7 @@ pub fn speak_to_streamer_from_subscriber(
             Entity,
             &SubscriberMsg,
             &Path,
+            &Target,
             &mut SubscriberStatus,
             &MovementType,
         ),
@@ -255,11 +222,15 @@ pub fn speak_to_streamer_from_subscriber(
         subscriber_entity,
         subscriber_msg,
         subscriber_path,
+        subscriber_target,
         mut subscriber_status,
         &subscriber_type,
     ) in &mut subscriber_query
     {
-        if !subscriber_path.0.is_empty() || *subscriber_status != SubscriberStatus::Approaching {
+        if !subscriber_path.0.is_empty()
+            || subscriber_target.is_some()
+            || *subscriber_status != SubscriberStatus::Approaching
+        {
             continue;
         }
 
