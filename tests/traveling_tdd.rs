@@ -16,7 +16,7 @@ use task_masker::map::path_finding::{
 };
 use task_masker::map::plugins::{PathFindingPlugin, TilePosEvent};
 use task_masker::map::tiled::{
-    flip_y_axis_for_tile_pos, to_bevy_transform, LayerNumber, TiledMapInformation,
+    convert_tiled_to_bevy_pos, to_bevy_transform, LayerNumber, TiledMapInformation,
 };
 use task_masker::GameState;
 
@@ -125,7 +125,7 @@ impl GameWorld {
             .expect("tile_at_position: Could not get map size given the specified height.")
             .clone();
 
-        let flipped_tile_pos = flip_y_axis_for_tile_pos(tile_pos.x, tile_pos.y, &map_size);
+        let flipped_tile_pos = convert_tiled_to_bevy_pos(tile_pos, map_size.y);
         self.app
             .world
             .query::<(Entity, &TilePos, &LayerNumber)>()
@@ -342,7 +342,7 @@ impl GameWorld {
     fn get_tiled_tile_pos_from(&mut self, entity: Entity) -> TilePos {
         let found_tile = self.get_tile_pos_from(entity);
 
-        flip_y_axis_for_tile_pos(found_tile.x, found_tile.y, &self.map_size)
+        convert_tiled_to_bevy_pos(found_tile, self.map_size.y)
     }
 
     /// Returns the Bevy TilePos for some given Entity.
@@ -406,8 +406,7 @@ impl GameWorld {
     /// Returns whether a Tiled-based Tile Position exists in
     /// a populated Graph based on its type.
     pub fn tile_has_neighbors(&mut self, graph_type: GraphType, tiled_tile_pos: TilePos) -> bool {
-        let bevy_tile_pos =
-            flip_y_axis_for_tile_pos(tiled_tile_pos.x, tiled_tile_pos.y, &self.map_size);
+        let bevy_tile_pos = convert_tiled_to_bevy_pos(tiled_tile_pos, self.map_size.y);
 
         let node_edges = self
             .app

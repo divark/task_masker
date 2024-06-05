@@ -4,9 +4,7 @@ use std::collections::VecDeque;
 
 use crate::entities::streamer::{StreamerLabel, StreamerStatus};
 use crate::map::path_finding::*;
-use crate::map::tiled::{
-    flip_y_axis_for_tile_pos, to_bevy_transform, LayerNumber, TiledMapInformation,
-};
+use crate::map::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
 use crate::ui::chatting::Msg;
 
 use super::MovementType;

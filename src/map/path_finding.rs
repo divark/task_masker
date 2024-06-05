@@ -5,10 +5,7 @@ use bevy_ecs_tilemap::prelude::*;
 
 use crate::entities::{subscriber::SUBSCRIBER_LAYER_NUM, MovementType};
 
-use super::tiled::{
-    flip_y_axis_for_tile_pos, tiled_to_bevy_transform, to_bevy_transform, LayerNumber,
-    TiledMapInformation,
-};
+use super::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
 
 #[derive(Component, PartialEq, Debug)]
 pub enum GraphType {
