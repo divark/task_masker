@@ -14,3 +14,6 @@ pub enum MovementType {
     Fly,
     Swim,
 }
+
+#[derive(Component)]
+pub struct WaitTimer(pub Timer);

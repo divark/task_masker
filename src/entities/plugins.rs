@@ -87,6 +87,7 @@ impl Plugin for FruitPlugin {
                 claim_fruit_from_streamer,
                 respawn_fruit,
                 drop_random_fruit_on_f_key,
+                play_sound_for_fruit,
             ),
         );
     }

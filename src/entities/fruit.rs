@@ -11,10 +11,10 @@ use rand::seq::IteratorRandom;
 
 use super::streamer::StreamerLabel;
 
-#[derive(Component)]
+#[derive(Component, Deref, DerefMut)]
 pub struct TriggerQueue(pub VecDeque<()>);
 
-#[derive(Component, PartialEq, Eq)]
+#[derive(Component, Debug, PartialEq, Eq)]
 pub enum FruitState {
     Hanging,
     Falling,
@@ -102,8 +102,6 @@ pub fn make_fruit_fall(
     mut fruit_query: Query<(&TilePos, &mut FruitState, &mut Target, &TriggerQueue)>,
     ground_graph_query: Query<(&NodeData, &GraphType)>,
     map_info_query: Query<(&Transform, &TilemapSize)>,
-    asset_loader: Res<AssetServer>,
-    mut commands: Commands,
 ) {
     if ground_graph_query.is_empty() {
         return;
@@ -147,16 +145,6 @@ pub fn make_fruit_fall(
 
         fruit_pathing_target.0 = Some((tile_transform.translation, tile_target_pos));
         *fruit_state = FruitState::Falling;
-
-        let fruit_fall_sound = AudioBundle {
-            source: asset_loader.load("sfx/fruit_dropped.wav"),
-            settings: PlaybackSettings {
-                mode: PlaybackMode::Despawn,
-                ..default()
-            },
-        };
-
-        commands.spawn(fruit_fall_sound);
     }
 }
 
@@ -190,8 +178,6 @@ pub fn pathfind_streamer_to_fruit(
 pub fn claim_fruit_from_streamer(
     mut fruit_query: Query<(&TilePos, &mut FruitState, &mut Visibility)>,
     streamer_query: Query<&TilePos, (With<StreamerLabel>, Changed<TilePos>)>,
-    asset_loader: Res<AssetServer>,
-    mut commands: Commands,
 ) {
     if streamer_query.is_empty() {
         return;
@@ -209,16 +195,6 @@ pub fn claim_fruit_from_streamer(
 
         *fruit_state = FruitState::Claimed;
         *fruit_sprite_visibility = Visibility::Hidden;
-
-        let fruit_pickedup_sound = AudioBundle {
-            source: asset_loader.load("sfx/fruit_pickedup.wav"),
-            settings: PlaybackSettings {
-                mode: PlaybackMode::Despawn,
-                ..default()
-            },
-        };
-
-        commands.spawn(fruit_pickedup_sound);
     }
 }
 
@@ -233,7 +209,7 @@ pub fn respawn_fruit(
             &mut Visibility,
             &mut TriggerQueue,
         ),
-        Changed<FruitState>,
+        With<AudioSink>,
     >,
 ) {
     for (
@@ -246,6 +222,10 @@ pub fn respawn_fruit(
         mut fruit_trigger_queue,
     ) in fruit_query.iter_mut()
     {
+        if *fruit_state != FruitState::Claimed {
+            continue;
+        }
+
         if *fruit_sprite_visibility != Visibility::Hidden {
             continue;
         }
@@ -275,5 +255,40 @@ pub fn drop_random_fruit_on_f_key(
 
     if keyboard_input.just_pressed(KeyCode::KeyF) {
         random_fruit_queue.0.push_back(());
+    }
+}
+
+/// Plays a sound depending on the changed state of the Fruit.
+pub fn play_sound_for_fruit(
+    fruit_query: Query<(Entity, &FruitState), Changed<FruitState>>,
+    asset_loader: Res<AssetServer>,
+    mut commands: Commands,
+) {
+    for (fruit_entity, fruit_state) in &fruit_query {
+        match fruit_state {
+            FruitState::Falling => {
+                let fruit_fall_sound = AudioBundle {
+                    source: asset_loader.load("sfx/fruit_dropped.wav"),
+                    settings: PlaybackSettings {
+                        mode: PlaybackMode::Remove,
+                        ..default()
+                    },
+                };
+
+                commands.entity(fruit_entity).insert(fruit_fall_sound);
+            }
+            FruitState::Claimed => {
+                let fruit_pickedup_sound = AudioBundle {
+                    source: asset_loader.load("sfx/fruit_pickedup.wav"),
+                    settings: PlaybackSettings {
+                        mode: PlaybackMode::Remove,
+                        ..default()
+                    },
+                };
+
+                commands.entity(fruit_entity).insert(fruit_pickedup_sound);
+            }
+            _ => continue,
+        }
     }
 }

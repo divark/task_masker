@@ -1,49 +1,17 @@
 mod mock_plugins;
 
-use crate::mock_plugins::{MockStreamerPlugin, MockSubscriberPlugin, MockTiledMapPlugin};
+use crate::mock_plugins::{
+    reduce_wait_times_to_zero, GameWorld, MockStreamerPlugin, MockSubscriberPlugin,
+    MockTiledMapPlugin,
+};
 
 use bevy::prelude::*;
-use bevy::utils::Duration;
 use bevy_ecs_tilemap::prelude::*;
 use cucumber::{given, then, when, World};
 
 use task_masker::entities::subscriber::*;
 use task_masker::map::path_finding::*;
 use task_masker::map::plugins::PathFindingPlugin;
-use task_masker::GameState;
-
-fn intercept_movement_timer(mut timer_query: Query<&mut MovementTimer, Added<MovementTimer>>) {
-    for mut movement_timer in &mut timer_query {
-        movement_timer.0 = Timer::new(Duration::from_secs(0), TimerMode::Repeating);
-    }
-}
-
-/// Intercepts and sets the Wait Timer interval to 0 seconds for testing purposes.
-fn reduce_wait_times_to_zero(mut waiting_timers: Query<&mut WaitTimer, Added<WaitTimer>>) {
-    for mut waiting_timer in &mut waiting_timers {
-        waiting_timer.0 = Timer::new(Duration::from_secs(0), TimerMode::Once);
-    }
-}
-
-#[derive(Debug, World)]
-#[world(init = Self::new)]
-struct GameWorld {
-    app: App,
-}
-
-impl GameWorld {
-    fn new() -> Self {
-        let mut app = App::new();
-
-        app.init_state::<GameState>();
-        app.insert_state(GameState::InGame);
-        app.add_plugins(MinimalPlugins);
-
-        app.add_systems(Update, intercept_movement_timer);
-
-        Self { app }
-    }
-}
 
 #[given("a Tiled Map")]
 fn spawn_tiled_map(world: &mut GameWorld) {

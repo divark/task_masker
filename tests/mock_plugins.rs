@@ -1,12 +1,20 @@
 use bevy::prelude::*;
 
+use bevy::utils::Duration;
+
 use task_masker::entities::chatter::*;
 use task_masker::entities::crop::*;
 use task_masker::entities::fruit::*;
 use task_masker::entities::streamer::*;
 use task_masker::entities::subscriber::*;
+use task_masker::entities::WaitTimer;
+use task_masker::map::path_finding::*;
 use task_masker::map::tiled::*;
 use task_masker::ui::chatting::Msg;
+
+use task_masker::GameState;
+
+use cucumber::World;
 
 #[derive(Default)]
 pub struct MockChatterPlugin;
@@ -87,11 +95,11 @@ impl Plugin for MockFruitPlugin {
             Update,
             (
                 replace_fruit_tiles,
-                make_fruit_fall,
-                make_fruit_dropped,
-                pathfind_streamer_to_fruit,
-                claim_fruit_from_streamer,
-                respawn_fruit,
+                make_fruit_fall.after(replace_fruit_tiles),
+                make_fruit_dropped.after(make_fruit_fall),
+                pathfind_streamer_to_fruit.after(make_fruit_dropped),
+                claim_fruit_from_streamer.after(pathfind_streamer_to_fruit),
+                respawn_fruit.after(claim_fruit_from_streamer),
             ),
         );
     }
@@ -112,5 +120,40 @@ impl Plugin for MockCropPlugin {
                 pick_up_crops,
             ),
         );
+    }
+}
+
+/// Sets the time to move for any Entity to be instant
+/// for testing purposes.
+fn reduce_movement_times_to_zero(mut timer_query: Query<&mut MovementTimer, Added<MovementTimer>>) {
+    for mut movement_timer in &mut timer_query {
+        movement_timer.0 = Timer::new(Duration::from_secs(0), TimerMode::Repeating);
+    }
+}
+
+/// Intercepts and sets the Wait Timer interval to 0 seconds for testing purposes.
+pub fn reduce_wait_times_to_zero(mut waiting_timers: Query<&mut WaitTimer, Added<WaitTimer>>) {
+    for mut waiting_timer in &mut waiting_timers {
+        waiting_timer.0 = Timer::new(Duration::from_secs(0), TimerMode::Once);
+    }
+}
+
+#[derive(Debug, World)]
+#[world(init = Self::new)]
+pub struct GameWorld {
+    pub app: App,
+}
+
+impl GameWorld {
+    pub fn new() -> Self {
+        let mut app = App::new();
+
+        app.init_state::<GameState>();
+        app.insert_state(GameState::InGame);
+        app.add_plugins(MinimalPlugins);
+
+        app.add_systems(Update, reduce_movement_times_to_zero);
+
+        Self { app }
     }
 }

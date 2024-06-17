@@ -31,3 +31,7 @@ harness = false
 [[test]]
 name = "subscriber"
 harness = false
+
+[[test]]
+name = "fruit"
+harness = false

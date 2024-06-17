@@ -3,6 +3,7 @@ use bevy_ecs_tilemap::prelude::*;
 use std::collections::VecDeque;
 
 use crate::entities::streamer::{StreamerLabel, StreamerStatus};
+use crate::entities::WaitTimer;
 use crate::map::path_finding::*;
 use crate::map::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
 use crate::ui::chatting::Msg;
@@ -22,9 +23,6 @@ pub enum SubscriberStatus {
     Speaking,
     Leaving,
 }
-
-#[derive(Component)]
-pub struct WaitTimer(pub Timer);
 
 #[derive(Component, Event, Clone)]
 pub struct SubscriberMsg {

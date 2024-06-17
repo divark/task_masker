@@ -3,7 +3,7 @@ Feature: Fruit Trees.
         Given a Tiled Map,
         And Fruits are spawned on the Tiled Map,
         When a piece of Fruit is detached from its tree,
-        Then the Fruit should be on the ground.
+        Then the Fruit should be dropped on the ground.
 
     Scenario: A fallen piece of fruit is claimed by the Streamer.
         Given a Tiled Map,
