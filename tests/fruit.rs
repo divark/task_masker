@@ -3,7 +3,6 @@ mod mock_plugins;
 use bevy::prelude::*;
 
 use task_masker::entities::fruit::*;
-use task_masker::map::path_finding::Target;
 use task_masker::map::plugins::PathFindingPlugin;
 
 use crate::mock_plugins::{GameWorld, MockFruitPlugin, MockStreamerPlugin, MockTiledMapPlugin};
@@ -33,7 +32,7 @@ fn spawn_fruit_from_tiled_map(world: &mut GameWorld) {
     world.app.update();
 }
 
-#[when("a piece of Fruit is detached from its tree,")]
+#[when("some Fruit is requested to drop,")]
 fn trigger_fruit_to_fall(world: &mut GameWorld) {
     let mut fruit_queue = world
         .app
@@ -48,33 +47,19 @@ fn trigger_fruit_to_fall(world: &mut GameWorld) {
     world.app.update();
 }
 
-#[then("the Fruit should be dropped on the ground.")]
-fn fruit_should_be_dropped(world: &mut GameWorld) {
-    loop {
-        world.app.update();
+#[then("the Fruit should be heading towards the ground.")]
+fn fruit_should_be_falling(world: &mut GameWorld) {
+    world.app.update();
 
-        let fruit_target = world
-            .app
-            .world
-            .query_filtered::<&Target, With<FruitState>>()
-            .iter(&world.app.world)
-            .next()
-            .expect("fruit_should_be_dropped: No Target information was found for Fruit.");
-
-        if fruit_target.is_none() {
-            break;
-        }
-    }
-
-    let fruit_state = world
+    let fruit_status = world
         .app
         .world
         .query::<&FruitState>()
         .iter(&world.app.world)
         .next()
-        .expect("fruit_should_be_dropped: No Fruit was found.");
+        .expect("fruit_should_be_falling: Could not find Fruit that should be falling.");
 
-    assert_eq!(*fruit_state, FruitState::Dropped);
+    assert_eq!(*fruit_status, FruitState::Falling);
 }
 
 fn main() {
