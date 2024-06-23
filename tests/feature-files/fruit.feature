@@ -24,5 +24,6 @@ Feature: Fruit Trees.
         Given a Tiled Map,
         And Fruits are spawned on the Tiled Map,
         And a Streamer spawned on the Tiled Map,
-        When the Fruit has been picked up by the Streamer,
+        When the Fruit has been dropped,
+        And the Fruit has been picked up by the Streamer,
         Then the Fruit will re-appear back on its tree.

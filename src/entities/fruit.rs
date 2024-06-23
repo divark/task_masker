@@ -176,7 +176,7 @@ pub fn pathfind_streamer_to_fruit(
 }
 
 pub fn claim_fruit_from_streamer(
-    mut fruit_query: Query<(&TilePos, &mut FruitState, &mut Visibility)>,
+    mut fruit_query: Query<(&TilePos, &mut FruitState)>,
     streamer_query: Query<&TilePos, (With<StreamerLabel>, Changed<TilePos>)>,
 ) {
     if streamer_query.is_empty() {
@@ -184,7 +184,7 @@ pub fn claim_fruit_from_streamer(
     }
 
     let streamer_tile_pos = streamer_query.single();
-    for (fruit_tile_pos, mut fruit_state, mut fruit_sprite_visibility) in fruit_query.iter_mut() {
+    for (fruit_tile_pos, mut fruit_state) in fruit_query.iter_mut() {
         if *fruit_state != FruitState::Dropped {
             continue;
         }
@@ -194,7 +194,20 @@ pub fn claim_fruit_from_streamer(
         }
 
         *fruit_state = FruitState::Claimed;
-        *fruit_sprite_visibility = Visibility::Hidden;
+    }
+}
+
+pub fn toggle_fruit_visibility(
+    mut fruit_query: Query<(&FruitState, &mut Visibility), Changed<FruitState>>,
+) {
+    for (fruit_state, mut fruit_visibility) in &mut fruit_query {
+        if *fruit_state == FruitState::Claimed {
+            *fruit_visibility = Visibility::Hidden;
+        }
+
+        if *fruit_state == FruitState::Hanging {
+            *fruit_visibility = Visibility::Visible;
+        }
     }
 }
 
@@ -206,7 +219,6 @@ pub fn respawn_fruit(
             &mut StartingPoint,
             &RespawnPoint,
             &mut FruitState,
-            &mut Visibility,
             &mut TriggerQueue,
         ),
         With<AudioSink>,
@@ -218,7 +230,6 @@ pub fn respawn_fruit(
         mut fruit_starting_point,
         fruit_respawn_point,
         mut fruit_state,
-        mut fruit_sprite_visibility,
         mut fruit_trigger_queue,
     ) in fruit_query.iter_mut()
     {
@@ -226,15 +237,10 @@ pub fn respawn_fruit(
             continue;
         }
 
-        if *fruit_sprite_visibility != Visibility::Hidden {
-            continue;
-        }
-
         fruit_trigger_queue.0.pop_front();
         *fruit_tile_pos = fruit_respawn_point.0 .1;
         *fruit_starting_point = StartingPoint(fruit_respawn_point.0 .0, fruit_respawn_point.0 .1);
         *fruit_transform = Transform::from_translation(fruit_respawn_point.0 .0);
-        *fruit_sprite_visibility = Visibility::Visible;
         // Spawn Fruit Popping in Noise
         *fruit_state = FruitState::Hanging;
     }

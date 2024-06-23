@@ -88,6 +88,7 @@ impl Plugin for FruitPlugin {
                 respawn_fruit,
                 drop_random_fruit_on_f_key,
                 play_sound_for_fruit,
+                toggle_fruit_visibility,
             ),
         );
     }

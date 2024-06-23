@@ -100,6 +100,7 @@ impl Plugin for MockFruitPlugin {
                 pathfind_streamer_to_fruit.after(make_fruit_dropped),
                 claim_fruit_from_streamer.after(pathfind_streamer_to_fruit),
                 respawn_fruit.after(claim_fruit_from_streamer),
+                toggle_fruit_visibility,
             ),
         );
     }
