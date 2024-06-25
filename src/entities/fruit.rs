@@ -16,6 +16,7 @@ pub struct TriggerQueue(pub VecDeque<()>);
 
 #[derive(Component, Debug, PartialEq, Eq)]
 pub enum FruitState {
+    Spawned,
     Hanging,
     Falling,
     Dropped,
@@ -59,7 +60,7 @@ pub fn replace_fruit_tiles(
             *tile_pos,
             *tile_texture_index,
             tile_transform,
-            FruitState::Hanging,
+            FruitState::Spawned,
             StartingPoint(tile_transform.translation, *tile_pos),
             RespawnPoint(StartingPoint(tile_transform.translation, *tile_pos)),
             Target(None),
@@ -133,7 +134,7 @@ pub fn make_fruit_fall(
             continue;
         }
 
-        if *fruit_state != FruitState::Hanging {
+        if !(*fruit_state == FruitState::Hanging || *fruit_state == FruitState::Spawned) {
             continue;
         }
 
@@ -175,18 +176,15 @@ pub fn pathfind_streamer_to_fruit(
 }
 
 pub fn respawn_fruit(
-    mut fruit_query: Query<
-        (
-            &mut Transform,
-            &mut TilePos,
-            &mut StartingPoint,
-            &RespawnPoint,
-            &mut FruitState,
-            &mut TriggerQueue,
-        ),
-        Without<AudioSink>,
-    >,
-    streamer_query: Query<&TilePos, (With<StreamerLabel>, Without<FruitState>, Changed<TilePos>)>,
+    mut fruit_query: Query<(
+        &mut Transform,
+        &mut TilePos,
+        &mut StartingPoint,
+        &RespawnPoint,
+        &mut FruitState,
+        &mut TriggerQueue,
+    )>,
+    streamer_query: Query<&TilePos, (With<StreamerLabel>, Without<FruitState>)>,
 ) {
     if streamer_query.is_empty() {
         return;
@@ -214,7 +212,6 @@ pub fn respawn_fruit(
         *fruit_tilepos = fruit_respawn_point.0 .1;
         *fruit_starting_point = StartingPoint(fruit_respawn_point.0 .0, fruit_respawn_point.0 .1);
         *fruit_transform = Transform::from_translation(fruit_respawn_point.0 .0);
-        // Spawn Fruit Popping in Noise
         *fruit_state = FruitState::Hanging;
     }
 }
