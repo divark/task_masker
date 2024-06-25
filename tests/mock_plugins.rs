@@ -98,9 +98,7 @@ impl Plugin for MockFruitPlugin {
                 make_fruit_fall.after(replace_fruit_tiles),
                 make_fruit_dropped.after(make_fruit_fall),
                 pathfind_streamer_to_fruit.after(make_fruit_dropped),
-                claim_fruit_from_streamer.after(pathfind_streamer_to_fruit),
-                respawn_fruit.after(claim_fruit_from_streamer),
-                toggle_fruit_visibility,
+                respawn_fruit.after(pathfind_streamer_to_fruit),
             ),
         );
     }

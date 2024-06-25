@@ -18,12 +18,5 @@ Feature: Fruit Trees.
         And a Streamer spawned on the Tiled Map,
         When the Fruit has been dropped,
         And the Streamer is over the dropped Fruit,
-        Then the dropped Fruit will disappear.
-
-    Scenario: A piece of Fruit that is claimed respawns on its tree.
-        Given a Tiled Map,
-        And Fruits are spawned on the Tiled Map,
-        And a Streamer spawned on the Tiled Map,
-        When the Fruit has been dropped,
-        And the Fruit has been picked up by the Streamer,
         Then the Fruit will re-appear back on its tree.
+

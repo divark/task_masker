@@ -84,11 +84,9 @@ impl Plugin for FruitPlugin {
                 make_fruit_fall,
                 make_fruit_dropped,
                 pathfind_streamer_to_fruit,
-                claim_fruit_from_streamer,
                 respawn_fruit,
                 drop_random_fruit_on_f_key,
                 play_sound_for_fruit,
-                toggle_fruit_visibility,
             ),
         );
     }

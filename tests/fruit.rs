@@ -82,6 +82,15 @@ fn wait_for_fruit_to_be_dropped(world: &mut GameWorld) {
 
 #[when("the Streamer is over the dropped Fruit,")]
 fn wait_for_streamer_to_be_over_fruit(world: &mut GameWorld) {
+    let fruit_tilepos = world
+        .app
+        .world
+        .query_filtered::<&TilePos, With<FruitState>>()
+        .iter(&world.app.world)
+        .next()
+        .expect("wait_for_streamer_to_be_over_fruit: Fruit was not found with TilePos.")
+        .clone();
+
     loop {
         world.app.update();
 
@@ -89,42 +98,10 @@ fn wait_for_streamer_to_be_over_fruit(world: &mut GameWorld) {
             .app
             .world
             .query_filtered::<&TilePos, With<StreamerLabel>>()
-            .get_single(&world.app.world)
-            .expect(
-                "wait_for_streamer_to_be_over_fruit: Streamer could not be found with a TilePos.",
-            )
+            .single(&world.app.world)
             .clone();
 
-        let fruit_tilepos = world
-            .app
-            .world
-            .query_filtered::<&TilePos, With<FruitState>>()
-            .iter(&world.app.world)
-            .next()
-            .expect("wait_for_streamer_to_be_over_fruit: Fruit could not be found with a TilePos.");
-
-        if streamer_tilepos == *fruit_tilepos {
-            break;
-        }
-    }
-}
-
-#[when("the Fruit has been picked up by the Streamer,")]
-fn wait_for_fruit_to_be_claimed_by_streamer(world: &mut GameWorld) {
-    loop {
-        world.app.update();
-
-        let fruit_state = world
-            .app
-            .world
-            .query::<&FruitState>()
-            .iter(&world.app.world)
-            .next()
-            .expect(
-                "wait_for_fruit_to_be_claimed_by_streamer: Fruit could not be found with State.",
-            );
-
-        if *fruit_state == FruitState::Claimed {
+        if streamer_tilepos == fruit_tilepos {
             break;
         }
     }
@@ -198,21 +175,6 @@ fn streamer_should_be_heading_towards_fruit(world: &mut GameWorld) {
         .clone();
 
     assert_eq!(fruit_transform, streamer_destination_transform);
-}
-
-#[then("the dropped Fruit will disappear.")]
-fn fruit_should_disappear(world: &mut GameWorld) {
-    world.app.update();
-
-    let fruit_state = world
-        .app
-        .world
-        .query::<&FruitState>()
-        .iter(&world.app.world)
-        .next()
-        .expect("fruit_should_disappear: Could not find Fruit with Visibility.");
-
-    assert_eq!(*fruit_state, FruitState::Claimed);
 }
 
 #[then("the Fruit will re-appear back on its tree.")]

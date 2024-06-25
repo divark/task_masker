@@ -19,7 +19,6 @@ pub enum FruitState {
     Hanging,
     Falling,
     Dropped,
-    Claimed,
 }
 
 #[derive(Component)]
@@ -175,42 +174,6 @@ pub fn pathfind_streamer_to_fruit(
     }
 }
 
-pub fn claim_fruit_from_streamer(
-    mut fruit_query: Query<(&TilePos, &mut FruitState)>,
-    streamer_query: Query<&TilePos, (With<StreamerLabel>, Changed<TilePos>)>,
-) {
-    if streamer_query.is_empty() {
-        return;
-    }
-
-    let streamer_tile_pos = streamer_query.single();
-    for (fruit_tile_pos, mut fruit_state) in fruit_query.iter_mut() {
-        if *fruit_state != FruitState::Dropped {
-            continue;
-        }
-
-        if streamer_tile_pos != fruit_tile_pos {
-            continue;
-        }
-
-        *fruit_state = FruitState::Claimed;
-    }
-}
-
-pub fn toggle_fruit_visibility(
-    mut fruit_query: Query<(&FruitState, &mut Visibility), Changed<FruitState>>,
-) {
-    for (fruit_state, mut fruit_visibility) in &mut fruit_query {
-        if *fruit_state == FruitState::Claimed {
-            *fruit_visibility = Visibility::Hidden;
-        }
-
-        if *fruit_state == FruitState::Hanging {
-            *fruit_visibility = Visibility::Visible;
-        }
-    }
-}
-
 pub fn respawn_fruit(
     mut fruit_query: Query<
         (
@@ -221,24 +184,34 @@ pub fn respawn_fruit(
             &mut FruitState,
             &mut TriggerQueue,
         ),
-        With<AudioSink>,
+        Without<AudioSink>,
     >,
+    streamer_query: Query<&TilePos, (With<StreamerLabel>, Without<FruitState>, Changed<TilePos>)>,
 ) {
+    if streamer_query.is_empty() {
+        return;
+    }
+
+    let streamer_tilepos = streamer_query.single();
     for (
         mut fruit_transform,
-        mut fruit_tile_pos,
+        mut fruit_tilepos,
         mut fruit_starting_point,
         fruit_respawn_point,
         mut fruit_state,
         mut fruit_trigger_queue,
     ) in fruit_query.iter_mut()
     {
-        if *fruit_state != FruitState::Claimed {
+        if *fruit_state != FruitState::Dropped {
+            continue;
+        }
+
+        if *streamer_tilepos != *fruit_tilepos {
             continue;
         }
 
         fruit_trigger_queue.0.pop_front();
-        *fruit_tile_pos = fruit_respawn_point.0 .1;
+        *fruit_tilepos = fruit_respawn_point.0 .1;
         *fruit_starting_point = StartingPoint(fruit_respawn_point.0 .0, fruit_respawn_point.0 .1);
         *fruit_transform = Transform::from_translation(fruit_respawn_point.0 .0);
         // Spawn Fruit Popping in Noise
@@ -283,7 +256,7 @@ pub fn play_sound_for_fruit(
 
                 commands.entity(fruit_entity).insert(fruit_fall_sound);
             }
-            FruitState::Claimed => {
+            FruitState::Hanging => {
                 let fruit_pickedup_sound = AudioBundle {
                     source: asset_loader.load("sfx/fruit_pickedup.wav"),
                     settings: PlaybackSettings {
