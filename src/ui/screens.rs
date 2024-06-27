@@ -250,7 +250,7 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
 
             ..default()
         },
-        image: UiImage::new(asset_server.load("ui/UI_Paper_Textfield.png")),
+        image: UiImage::new(asset_server.load("ui/UI_Paper_Textfield_01.png")),
         ..default()
     };
 
