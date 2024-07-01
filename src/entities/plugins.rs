@@ -107,6 +107,8 @@ impl Plugin for CropPlugin {
                 grow_crops,
                 pathfind_streamer_to_crops,
                 pick_up_crops,
+                play_sound_for_crop,
+                change_crop_sprite,
             ),
         );
     }

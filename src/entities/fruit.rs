@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 
+use crate::entities::TriggerQueue;
 use crate::map::{
     path_finding::{tilepos_to_idx, GraphType, MovementTimer, NodeData, StartingPoint, Target},
     plugins::TilePosEvent,
@@ -10,9 +11,6 @@ use bevy_ecs_tilemap::prelude::*;
 use rand::seq::IteratorRandom;
 
 use super::streamer::StreamerLabel;
-
-#[derive(Component, Deref, DerefMut)]
-pub struct TriggerQueue(pub VecDeque<()>);
 
 #[derive(Component, Debug, PartialEq, Eq)]
 pub enum FruitState {

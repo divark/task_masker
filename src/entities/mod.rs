@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use bevy::prelude::*;
 
 pub mod chatter;
@@ -17,3 +19,6 @@ pub enum MovementType {
 
 #[derive(Component)]
 pub struct WaitTimer(pub Timer);
+
+#[derive(Component, Deref, DerefMut)]
+pub struct TriggerQueue(pub VecDeque<()>);

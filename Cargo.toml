@@ -35,3 +35,7 @@ harness = false
 [[test]]
 name = "fruit"
 harness = false
+
+[[test]]
+name = "crop"
+harness = false

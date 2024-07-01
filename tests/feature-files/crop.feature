@@ -10,6 +10,6 @@ Feature: Crops.
         Given a Tiled Map,
         And Crops are spawned on the Tiled Map,
         And a Streamer spawned on the Tiled Map,
-        When the Crop has been grown,
+        When the Crop has been fully grown,
         And the Streamer is over the grown Crop,
-        Then the Crop will re-appear as seeds.
+        Then the Crop will be replanted.

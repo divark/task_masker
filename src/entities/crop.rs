@@ -9,11 +9,13 @@ use rand::seq::IteratorRandom;
 use crate::map::plugins::TilePosEvent;
 use crate::map::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
 
-use super::fruit::TriggerQueue;
 use super::streamer::StreamerLabel;
+use crate::entities::TriggerQueue;
 
-#[derive(Component, PartialEq, PartialOrd)]
+#[derive(Component, Debug, PartialEq, PartialOrd)]
 pub enum CropState {
+    Spawned,
+    Planted,
     Growing,
     Grown,
 }
@@ -24,8 +26,9 @@ pub struct CropEndIdx(usize);
 #[derive(Event)]
 pub struct NewSubscriber;
 
-const CROP_NUM_STAGES: usize = 7;
+pub const CROP_NUM_STAGES: usize = 7;
 const CROP_LAYER_NUM: usize = 13;
+const IDEAL_CROP_LAYER_NUM: usize = 3;
 
 pub fn replace_crop_tiles(
     tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,
@@ -37,7 +40,7 @@ pub fn replace_crop_tiles(
 ) {
     let map_information = map_info_query
         .iter()
-        .find(|map_info| map_info.0.translation.z == CROP_LAYER_NUM as f32);
+        .find(|map_info| map_info.0.translation.z == IDEAL_CROP_LAYER_NUM as f32);
 
     if map_information.is_none() {
         return;
@@ -59,7 +62,7 @@ pub fn replace_crop_tiles(
             tile_transform,
             *tile_texture_index,
             *tile_pos,
-            CropState::Growing,
+            CropState::Spawned,
             CropEndIdx(tile_texture_index.0 as usize + CROP_NUM_STAGES - 1),
             TriggerQueue(VecDeque::new()),
         ));
@@ -112,18 +115,12 @@ pub fn grow_crop_on_c_key(
     }
 }
 
-pub fn grow_crops(
-    mut crop_query: Query<(
-        &mut TriggerQueue,
-        &mut CropState,
-        &mut TextureAtlas,
-        &mut CropEndIdx,
-    )>,
-    mut commands: Commands,
-    asset_loader: Res<AssetServer>,
-) {
-    for (mut crop_queue, mut crop_state, mut crop_texture_atlas, crop_end_idx) in &mut crop_query {
-        if *crop_state != CropState::Growing {
+pub fn grow_crops(mut crop_query: Query<(&mut TriggerQueue, &mut CropState)>) {
+    for (mut crop_queue, mut crop_state) in &mut crop_query {
+        if !(*crop_state == CropState::Spawned
+            || *crop_state == CropState::Planted
+            || *crop_state == CropState::Growing)
+        {
             continue;
         }
 
@@ -132,21 +129,7 @@ pub fn grow_crops(
         }
 
         crop_queue.0.pop_front();
-
-        crop_texture_atlas.index += 1;
-        if crop_texture_atlas.index >= crop_end_idx.0 {
-            *crop_state = CropState::Grown;
-        }
-
-        let crop_grow_sound = AudioBundle {
-            source: asset_loader.load("sfx/crop_grow.wav"),
-            settings: PlaybackSettings {
-                mode: PlaybackMode::Despawn,
-                ..default()
-            },
-        };
-
-        commands.spawn(crop_grow_sound);
+        *crop_state = CropState::Growing;
     }
 }
 
@@ -164,10 +147,8 @@ pub fn pathfind_streamer_to_crops(
 }
 
 pub fn pick_up_crops(
-    mut crop_query: Query<(&mut CropState, &mut TextureAtlas, &TilePos)>,
+    mut crop_query: Query<(&mut CropState, &TilePos)>,
     streamer_query: Query<&TilePos, (With<StreamerLabel>, Changed<TilePos>)>,
-    mut commands: Commands,
-    asset_loader: Res<AssetServer>,
 ) {
     if streamer_query.is_empty() {
         return;
@@ -175,7 +156,7 @@ pub fn pick_up_crops(
 
     let streamer_tile_pos = streamer_query.single();
 
-    for (mut crop_state, mut crop_texture_atlas, crop_tile_pos) in &mut crop_query {
+    for (mut crop_state, crop_tile_pos) in &mut crop_query {
         if *crop_state != CropState::Grown {
             continue;
         }
@@ -184,17 +165,53 @@ pub fn pick_up_crops(
             continue;
         }
 
-        crop_texture_atlas.index -= CROP_NUM_STAGES - 1;
-        *crop_state = CropState::Growing;
+        *crop_state = CropState::Planted;
+    }
+}
 
-        let crop_pickedup_sound = AudioBundle {
-            source: asset_loader.load("sfx/crop_pickedup.wav"),
-            settings: PlaybackSettings {
-                mode: PlaybackMode::Despawn,
-                ..default()
-            },
-        };
+pub fn change_crop_sprite(
+    mut crop_query: Query<(&mut TextureAtlas, &CropEndIdx, &mut CropState), Changed<CropState>>,
+) {
+    for (mut crop_texture_atlas, crop_end_idx, mut crop_state) in &mut crop_query {
+        if *crop_state == CropState::Growing {
+            crop_texture_atlas.index += 1;
 
-        commands.spawn(crop_pickedup_sound);
+            if crop_texture_atlas.index == crop_end_idx.0 {
+                *crop_state = CropState::Grown;
+            }
+        } else if *crop_state == CropState::Planted {
+            crop_texture_atlas.index -= CROP_NUM_STAGES - 1;
+        }
+    }
+}
+
+pub fn play_sound_for_crop(
+    crop_query: Query<&CropState, Changed<TextureAtlas>>,
+    asset_loader: Res<AssetServer>,
+    mut commands: Commands,
+) {
+    for crop_state in &crop_query {
+        // Planted in this case means it has been picked up by the Streamer.
+        if *crop_state == CropState::Planted {
+            let crop_pickedup_sound = AudioBundle {
+                source: asset_loader.load("sfx/crop_pickedup.wav"),
+                settings: PlaybackSettings {
+                    mode: PlaybackMode::Despawn,
+                    ..default()
+                },
+            };
+
+            commands.spawn(crop_pickedup_sound);
+        } else if *crop_state == CropState::Growing {
+            let crop_grow_sound = AudioBundle {
+                source: asset_loader.load("sfx/crop_grow.wav"),
+                settings: PlaybackSettings {
+                    mode: PlaybackMode::Despawn,
+                    ..default()
+                },
+            };
+
+            commands.spawn(crop_grow_sound);
+        }
     }
 }

@@ -6,6 +6,7 @@ use bevy_ecs_tilemap::prelude::*;
 
 use task_masker::entities::fruit::*;
 use task_masker::entities::streamer::*;
+use task_masker::entities::TriggerQueue;
 use task_masker::map::path_finding::*;
 use task_masker::map::plugins::PathFindingPlugin;
 
