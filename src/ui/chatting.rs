@@ -70,7 +70,7 @@ pub fn insert_chatting_information(
 
 pub fn setup_chatting_from_msg(
     mut chatting_ui_section: Query<&mut Visibility, With<SpeakerUI>>,
-    mut chatting_fields: Query<&mut UiImage, With<SpeakerPortrait>>,
+    mut chatting_fields: Query<(&mut UiImage, &mut TextureAtlas), With<SpeakerPortrait>>,
     mut msg_fields: Query<
         (
             &mut Text,
@@ -81,14 +81,21 @@ pub fn setup_chatting_from_msg(
         ),
         With<SpeakerChatBox>,
     >,
+    chatting_entities: Query<
+        (&TextureAtlas, &Handle<Image>, &MovementType),
+        Without<SpeakerPortrait>,
+    >,
     mut msg_receiver: EventReader<Msg>,
-    asset_server: Res<AssetServer>,
 ) {
+    if chatting_entities.is_empty() {
+        return;
+    }
+
     if msg_receiver.is_empty() || chatting_ui_section.is_empty() {
         return;
     }
 
-    let mut speaker_portrait = chatting_fields
+    let (mut speaker_image, mut speaker_portrait_atlas) = chatting_fields
         .get_single_mut()
         .expect("Could not find Speaker UI elements.");
 
@@ -107,13 +114,50 @@ pub fn setup_chatting_from_msg(
         .next()
         .expect("Should have a message pending.");
 
-    let role_image = match &recent_msg.speaker_role {
-        MovementType::Walk => UiImage::new(asset_server.load("caveman/portrait.png")),
-        MovementType::Fly => UiImage::new(asset_server.load("chatters/portrait.png")),
-        MovementType::Swim => UiImage::new(asset_server.load("subscriber/portrait.png")),
+    let (role_image, role_atlas) = match &recent_msg.speaker_role {
+        MovementType::Walk => {
+            let streamer_texture_entry = chatting_entities
+                .iter()
+                .find(|entity_texture_info| *entity_texture_info.2 == MovementType::Walk)
+                .expect("setup_chatting_from_msg: Could not find Streamer's Texture Atlas.");
+
+            let streamer_texture_atlas = streamer_texture_entry.0.clone();
+            let streamer_image_handle = streamer_texture_entry.1.clone();
+
+            let streamer_image = UiImage::new(streamer_image_handle);
+
+            (streamer_image, streamer_texture_atlas)
+        }
+        MovementType::Fly => {
+            let chatter_texture_entry = chatting_entities
+                .iter()
+                .find(|entity_texture_info| *entity_texture_info.2 == MovementType::Fly)
+                .expect("setup_chatting_from_msg: Could not find Chatter's Texture Atlas.");
+
+            let chatter_texture_atlas = chatter_texture_entry.0.clone();
+            let chatter_image_handle = chatter_texture_entry.1.clone();
+
+            let chatter_image = UiImage::new(chatter_image_handle);
+
+            (chatter_image, chatter_texture_atlas)
+        }
+        MovementType::Swim => {
+            let subscriber_texture_entry = chatting_entities
+                .iter()
+                .find(|entity_texture_info| *entity_texture_info.2 == MovementType::Swim)
+                .expect("setup_chatting_from_msg: Could not find Subscriber's Texture Atlas.");
+
+            let subscriber_texture_atlas = subscriber_texture_entry.0.clone();
+            let subscriber_image_handle = subscriber_texture_entry.1.clone();
+
+            let subscriber_image = UiImage::new(subscriber_image_handle);
+
+            (subscriber_image, subscriber_texture_atlas)
+        }
     };
 
-    *speaker_portrait = role_image;
+    *speaker_portrait_atlas = role_atlas;
+    *speaker_image = role_image;
 
     speaker_textbox.sections[0].value = String::new();
     speaker_textbox.sections.drain(1..);

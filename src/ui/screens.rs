@@ -213,14 +213,12 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
         ..default()
     };
 
-    let speaker_portrait = ImageBundle {
+    let speaker_portrait = AtlasImageBundle {
         style: Style {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
-
             ..default()
         },
-        image: UiImage::new(asset_server.load("caveman/portrait.png")),
         ..default()
     };
 
