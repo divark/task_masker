@@ -11,6 +11,7 @@ bevy_ecs_tilemap = { git = "https://github.com/StarArawn/bevy_ecs_tilemap.git", 
 thiserror = "^1.0"
 tiled = "^0.11"
 rand = "^0.8"
+sqlite = "^0.36"
 
 [dev-dependencies]
 cucumber = "^0.21"
@@ -38,4 +39,8 @@ harness = false
 
 [[test]]
 name = "crop"
+harness = false
+
+[[test]]
+name = "portrait-preference"
 harness = false

@@ -11,6 +11,7 @@ use task_masker::entities::WaitTimer;
 use task_masker::map::path_finding::*;
 use task_masker::map::tiled::*;
 use task_masker::ui::chatting::Msg;
+use task_masker::ui::portrait_preferences::*;
 
 use task_masker::GameState;
 
@@ -119,6 +120,15 @@ impl Plugin for MockCropPlugin {
                 pick_up_crops,
             ),
         );
+    }
+}
+
+#[derive(Default)]
+pub struct MockPortraitPreferencePlugin;
+
+impl Plugin for MockPortraitPreferencePlugin {
+    fn build(&self, app: &mut App) {
+        app.insert_resource(PortraitPreferences::new(String::from(":memory:")));
     }
 }
 
