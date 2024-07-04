@@ -12,7 +12,7 @@ impl Plugin for AnimationPlugin {
             (
                 insert_animation_information,
                 change_sprite_direction,
-                change_fish_direction,
+                change_fish_or_chatter_direction,
                 animate,
                 check_if_idle,
             ),

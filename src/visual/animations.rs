@@ -53,17 +53,10 @@ fn ground_directional_index_from(direction: &Direction) -> usize {
     }
 }
 
-fn fly_directional_index_from(direction: &Direction) -> usize {
+fn fly_directional_index_from(_direction: &Direction) -> usize {
     let num_flying_sprites_in_row = movement_type_len(&MovementType::Fly) as u32;
 
-    match direction {
-        Direction::BottomLeft | Direction::TopLeft => {
-            tilepos_to_idx(0, 0, num_flying_sprites_in_row)
-        }
-        Direction::BottomRight | Direction::TopRight => {
-            tilepos_to_idx(1, 0, num_flying_sprites_in_row)
-        }
-    }
+    tilepos_to_idx(1, 0, num_flying_sprites_in_row)
 }
 
 fn swim_directional_index_from(_direction: &Direction) -> usize {
@@ -81,14 +74,14 @@ fn direction_to_row_index(direction: &Direction, entity_type: &MovementType) -> 
 }
 
 /// Flips the Fish sprite on Direction change.
-pub fn change_fish_direction(
+pub fn change_fish_or_chatter_direction(
     mut moving_entities: Query<(&MovementType, &Direction, &mut Sprite), Changed<Direction>>,
 ) {
     for (entity_type, entity_direction, mut entity_spritesheet) in &mut moving_entities {
         // Since Fish have no animation, flipping the sprite serves
         // as a good enough solution to at least make it seem like
         // the fish is facing something or someone.
-        if *entity_type == MovementType::Swim {
+        if *entity_type == MovementType::Swim || *entity_type == MovementType::Fly {
             match entity_direction {
                 Direction::BottomLeft | Direction::TopLeft => entity_spritesheet.flip_x = false,
                 Direction::BottomRight | Direction::TopRight => entity_spritesheet.flip_x = true,
@@ -113,7 +106,7 @@ pub fn change_sprite_direction(
     for (mut animation_indices, mut entity_spritesheet, entity_type, entity_direction) in
         &mut moving_entities
     {
-        if *entity_type == MovementType::Swim {
+        if *entity_type == MovementType::Swim || *entity_type == MovementType::Fly {
             continue;
         }
 
