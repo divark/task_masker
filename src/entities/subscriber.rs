@@ -131,7 +131,7 @@ fn include_nodes_only_from(path_to_streamer: Path, water_graph_edges: &NodeEdges
 
     for node in path_to_streamer.0.iter() {
         if water_graph_edges.0[*node].is_empty() {
-            continue;
+            break;
         }
 
         stripped_path.0.push_back(*node);
