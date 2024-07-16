@@ -47,9 +47,14 @@ impl PortraitPreferences {
         }
     }
 
-    /// Updates the Preference for some specified user.
+    /// Inserts or Updates the Preference for some specified user.
     pub fn set(&mut self, user: String, preference_idx: usize) {
-        let insert_query = "INSERT INTO twitch_portrait_preferences VALUES (?, ?);";
+        let insert_query = "
+            INSERT INTO twitch_portrait_preferences(name, preference)
+            VALUES (?, ?)
+            ON CONFLICT(name)
+            DO UPDATE SET preference=excluded.preference;
+        ";
         let mut insert_statement = self
             .db_connection
             .prepare(insert_query)
