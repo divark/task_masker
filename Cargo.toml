@@ -9,7 +9,7 @@ edition = "2021"
 bevy = { version = "^0.13", features = ["wav", "wayland"] }
 bevy_ecs_tilemap = { git = "https://github.com/StarArawn/bevy_ecs_tilemap.git", rev = "25def41e029626bb5e84fe7aca1f16a1d6beccdc" }
 thiserror = "^1.0"
-tiled = "^0.11"
+tiled = "^0.12"
 rand = "^0.8"
 sqlite = "^0.36"
 
