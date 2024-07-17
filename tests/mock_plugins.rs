@@ -123,12 +123,17 @@ impl Plugin for MockCropPlugin {
     }
 }
 
+pub const DEFAULT_SUBSCRIBER_SPRITE_IDX: usize = 210;
+
 #[derive(Default)]
 pub struct MockPortraitPreferencePlugin;
 
 impl Plugin for MockPortraitPreferencePlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(PortraitPreferences::new(String::from(":memory:")));
+        app.insert_resource(PortraitPreferences::new(
+            String::from(":memory:"),
+            DEFAULT_SUBSCRIBER_SPRITE_IDX,
+        ));
     }
 }
 

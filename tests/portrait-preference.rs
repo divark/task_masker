@@ -2,6 +2,7 @@ mod mock_plugins;
 
 use bevy::prelude::*;
 use cucumber::{given, then, when, World};
+use mock_plugins::DEFAULT_SUBSCRIBER_SPRITE_IDX;
 
 use crate::mock_plugins::MockPortraitPreferencePlugin;
 use task_masker::ui::portrait_preferences::*;
@@ -69,8 +70,7 @@ fn user_changes_preference_with_entry(world: &mut GamePreferencesWorld) {
 
 #[then("the index of the default portrait should be returned.")]
 fn should_be_default_preference_when_none_exists(world: &mut GamePreferencesWorld) {
-    let default_portrait_idx = 0;
-    assert_eq!(default_portrait_idx, world.preference_idx);
+    assert_eq!(DEFAULT_SUBSCRIBER_SPRITE_IDX, world.preference_idx);
 }
 
 #[then("the portrait preference should be saved for the user.")]

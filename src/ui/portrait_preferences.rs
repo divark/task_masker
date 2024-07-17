@@ -4,10 +4,11 @@ use sqlite::{Connection, ConnectionThreadSafe};
 #[derive(Resource)]
 pub struct PortraitPreferences {
     db_connection: ConnectionThreadSafe,
+    default_value: usize,
 }
 
 impl PortraitPreferences {
-    pub fn new(db_name: String) -> Self {
+    pub fn new(db_name: String, default_value: usize) -> Self {
         let sqlite_connection = Connection::open_thread_safe(db_name).unwrap();
 
         let create_table_query = "
@@ -20,6 +21,7 @@ impl PortraitPreferences {
 
         Self {
             db_connection: sqlite_connection,
+            default_value,
         }
     }
 
@@ -36,14 +38,16 @@ impl PortraitPreferences {
         find_preference_statement
             .bind((1, user.as_str()))
             .expect("PortraitPreferences get: Could not bind user string.");
-        find_preference_statement
-            .next()
-            .expect("PortraitPreferences get: Could not process find_preference statement.");
 
-        if let Ok(portrait_preference) = find_preference_statement.read::<i64, _>("preference") {
-            return portrait_preference as usize;
+        let found_entry = find_preference_statement
+            .into_iter()
+            .map(|row| row.unwrap())
+            .next();
+
+        if let Some(portrait_preference) = found_entry {
+            return portrait_preference.read::<i64, _>("preference") as usize;
         } else {
-            return 0;
+            return self.default_value;
         }
     }
 
