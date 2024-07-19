@@ -9,7 +9,7 @@ Task Masker is an application built to engage with a live audience on a platform
 - A Chat message is displayed as a pop-up dialogue when received, changing the portrait depending on who is speaking.
 - The Playable Character and all NPCs are capable of traveling to any point on a map containing Ground and Air tiles.
 - Tiled is the only supported map type.
-- Background music plays in a loop, randomly choosing the next track randomly.
+- Background music plays in a loop, randomly choosing the next track.
 
 ## Future
 - Portrait Preferences are loaded and saved for some Subscriber, influencing the NPC's Sprite both in-game, and when chatting.
