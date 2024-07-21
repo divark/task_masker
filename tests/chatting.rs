@@ -1,12 +1,11 @@
 mod mock_plugins;
 
-use crate::mock_plugins::{GameWorld, MockStreamerPlugin, MockTiledMapPlugin};
+use crate::mock_plugins::{GameWorld, MockChattingPlugin, MockStreamerPlugin, MockTiledMapPlugin};
 
 use bevy::prelude::*;
 use cucumber::{given, then, when, World};
 
 use task_masker::ui::chatting::Msg;
-use task_masker::ui::plugins::ChattingPlugin;
 
 use task_masker::entities::streamer::*;
 use task_masker::entities::MovementType;
@@ -32,7 +31,7 @@ fn spawn_streamer(world: &mut GameWorld) {
 
 #[given("the Chatting interface exists,")]
 fn spawn_chatting_ui(world: &mut GameWorld) {
-    world.app.add_plugins(ChattingPlugin);
+    world.app.add_plugins(MockChattingPlugin);
     world.app.update();
 }
 
@@ -51,6 +50,7 @@ fn streamer_sends_msg(world: &mut GameWorld) {
 #[then("the Chatting Queue should contain the Streamer's chat message.")]
 fn chatting_queue_has_streamer_msg(world: &mut GameWorld) {
     // TODO: Create component called MessageQueue.
+    unimplemented!();
 }
 
 fn main() {

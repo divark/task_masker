@@ -199,8 +199,6 @@ pub fn teletype_current_message(
         With<SpeakerChatBox>,
     >,
     time: Res<Time>,
-    asset_server: Res<AssetServer>,
-    mut commands: Commands,
 ) {
     if msg_fields.is_empty() {
         return;
@@ -222,20 +220,38 @@ pub fn teletype_current_message(
     msg_character.style.color = Color::BLACK;
 
     msg_index.0 += 1;
+}
 
-    if msg_character.value == " " {
-        return;
+/// Spawns a noise for each visible character just revealed.
+pub fn play_typing_noise(
+    msg_fields: Query<(&Text, &MsgIndex, &MsgLen), Changed<MsgIndex>>,
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) {
+    for (speaker_msg, msg_index, msg_len) in &msg_fields {
+        if msg_len.0 == 0 {
+            continue;
+        }
+
+        let msg_character = speaker_msg
+            .sections
+            .get(msg_index.0)
+            .expect("play_typing_noise: Could not find text section in msg.");
+
+        if msg_character.value == " " {
+            continue;
+        }
+
+        let typing_noise = AudioBundle {
+            source: asset_server.load("ui/balloon-boop.wav"),
+            settings: PlaybackSettings {
+                mode: bevy::audio::PlaybackMode::Despawn,
+                ..default()
+            },
+        };
+
+        commands.spawn(typing_noise);
     }
-
-    let typing_noise = AudioBundle {
-        source: asset_server.load("ui/balloon-boop.wav"),
-        settings: PlaybackSettings {
-            mode: bevy::audio::PlaybackMode::Despawn,
-            ..default()
-        },
-    };
-
-    commands.spawn(typing_noise);
 }
 
 pub fn activate_waiting_timer(

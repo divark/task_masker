@@ -48,6 +48,7 @@ impl Plugin for ChattingPlugin {
                 speak_to_streamer_from_chatter,
                 speak_to_streamer_from_subscriber,
                 teletype_current_message,
+                play_typing_noise,
                 activate_waiting_timer,
                 clear_current_msg_on_time_up,
                 hide_chatting_ui,
