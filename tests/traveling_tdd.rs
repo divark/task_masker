@@ -65,13 +65,12 @@ impl GameWorld {
 
         app.update();
 
-        let map_size = app
+        let map_size = *app
             .world
             .query::<&TilemapSize>()
             .iter(&app.world)
             .next()
-            .unwrap()
-            .clone();
+            .unwrap();
 
         Self { app, map_size }
     }
@@ -116,14 +115,13 @@ impl GameWorld {
     /// Returns a reference to the Tiled Tile Entity found
     /// at the desired position.
     pub fn tiled_tile_at_position(&mut self, tile_pos: TilePos, height: u32) -> Entity {
-        let map_size = self
+        let map_size = *self
             .app
             .world
             .query::<&TilemapSize>()
             .iter(&self.app.world)
             .nth(height as usize)
-            .expect("tile_at_position: Could not get map size given the specified height.")
-            .clone();
+            .expect("tile_at_position: Could not get map size given the specified height.");
 
         let flipped_tile_pos = convert_tiled_to_bevy_pos(tile_pos, map_size.y);
         self.app
@@ -139,7 +137,7 @@ impl GameWorld {
 
     /// Returns a reference to the Bevy Tile Entity found at the
     /// desired position.
-    pub fn tile_at_position(&mut self, tile_pos: TilePos, height: u32) -> Entity {
+    fn tile_at_position(&mut self, tile_pos: TilePos, height: u32) -> Entity {
         self.app
             .world
             .query::<(Entity, &TilePos, &LayerNumber)>()
@@ -263,7 +261,7 @@ impl GameWorld {
     }
 
     /// Returns the Transform for some given Tile Entity.
-    pub fn get_tile_transform_from(&mut self, entity: Entity, tile_height: usize) -> Vec2 {
+    fn get_tile_transform_from(&mut self, entity: Entity, tile_height: usize) -> Vec2 {
         let tile_pos = self.get_tiled_tile_pos_from(entity);
         return to_bevy_transform(&tile_pos, self.map_info(tile_height))
             .translation
@@ -272,7 +270,7 @@ impl GameWorld {
 
     /// Asserts whether two Tile Entities co-exist in the same location
     /// at the Transform level.
-    pub fn has_reached_tile_transform(
+    fn has_reached_tile_transform(
         &mut self,
         source_entity: Entity,
         target_entity: Entity,
@@ -332,7 +330,7 @@ impl GameWorld {
         let right_tilepos = TilePos::new(source_pos.x + 1, source_pos.y);
         let bottom_tilepos = TilePos::new(source_pos.x, source_pos.y - 1);
 
-        vec![left_tilepos, top_tilepos, right_tilepos, bottom_tilepos]
+        [left_tilepos, top_tilepos, right_tilepos, bottom_tilepos]
             .iter_mut()
             .map(|tile_pos| tilepos_to_idx(tile_pos.x, tile_pos.y, world_size.x))
             .collect::<Vec<usize>>()
@@ -349,13 +347,12 @@ impl GameWorld {
     fn get_tile_pos_from(&mut self, entity: Entity) -> TilePos {
         let entity_type = self.get_entity_type(entity);
 
-        let found_tile = self
+        let found_tile = *self
             .app
             .world
             .query::<&TilePos>()
             .get(&self.app.world, entity)
-            .unwrap()
-            .clone();
+            .unwrap();
 
         if entity_type != EntityType::Tile {
             return found_tile;
@@ -400,7 +397,7 @@ impl GameWorld {
             return EntityType::Chatter;
         }
 
-        return EntityType::Tile;
+        EntityType::Tile
     }
 
     /// Returns whether a Tiled-based Tile Position exists in
@@ -418,15 +415,11 @@ impl GameWorld {
             .next()
             .unwrap();
 
-        //.find(|graph_entry| {
         let node_idx = tilepos_to_idx(bevy_tile_pos.x, bevy_tile_pos.y, self.map_size.x);
 
         let graph_edges = &node_edges.0;
-        let is_not_isolated = graph_edges[node_idx].len() > 0;
 
-        is_not_isolated
-        //})
-        //.is_some()
+        !graph_edges[node_idx].is_empty()
     }
 
     /// Returns Map Measurement Information based on the specified
@@ -569,7 +562,7 @@ fn heighted_tile_transform_matches_tile_transform() {
     let tile_pos = TilePos::new(69, 20);
     let tile_height: usize = 19;
 
-    let heighted_tile_pos = HeightedTilePos::new(tile_pos.clone(), tile_height as u32);
+    let heighted_tile_pos = HeightedTilePos::new(tile_pos, tile_height as u32);
 
     let expected_transform = to_bevy_transform(&tile_pos, game.map_info(tile_height));
     let actual_transform = heighted_tile_pos.transform(game.map_info(tile_height));

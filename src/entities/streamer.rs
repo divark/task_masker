@@ -216,11 +216,11 @@ pub fn test_streamer_msg(
         return;
     }
 
-    let streamer_msg = Msg {
-        speaker_name: "Caveman".to_string(),
-        msg: "This is a test message to see if this works and types as expected.".to_string(),
-        speaker_role: MovementType::Walk,
-    };
+    let streamer_msg = Msg::new(
+        "Caveman".to_string(),
+        "This is a test message to see if this works and types as expected.".to_string(),
+        MovementType::Walk,
+    );
 
     msg_writer.send(streamer_msg);
 }

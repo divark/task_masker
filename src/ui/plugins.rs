@@ -15,6 +15,10 @@ impl Plugin for StartupScreenPlugin {
         app.add_systems(OnExit(GameState::Start), despawn_start_screen);
 
         app.add_systems(OnEnter(GameState::InGame), spawn_ingame_screen);
+        app.add_systems(
+            OnEnter(GameState::InGame),
+            insert_speaker_portrait_background.after(spawn_ingame_screen),
+        );
 
         app.add_systems(
             Update,

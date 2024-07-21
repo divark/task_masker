@@ -83,24 +83,22 @@ fn wait_for_fruit_to_be_dropped(world: &mut GameWorld) {
 
 #[when("the Streamer is over the dropped Fruit,")]
 fn wait_for_streamer_to_be_over_fruit(world: &mut GameWorld) {
-    let fruit_tilepos = world
+    let fruit_tilepos = *world
         .app
         .world
         .query_filtered::<&TilePos, With<FruitState>>()
         .iter(&world.app.world)
         .next()
-        .expect("wait_for_streamer_to_be_over_fruit: Fruit was not found with TilePos.")
-        .clone();
+        .expect("wait_for_streamer_to_be_over_fruit: Fruit was not found with TilePos.");
 
     loop {
         world.app.update();
 
-        let streamer_tilepos = world
+        let streamer_tilepos = *world
             .app
             .world
             .query_filtered::<&TilePos, With<StreamerLabel>>()
-            .single(&world.app.world)
-            .clone();
+            .single(&world.app.world);
 
         if streamer_tilepos == fruit_tilepos {
             break;
@@ -142,7 +140,7 @@ fn streamer_should_be_heading_towards_fruit(world: &mut GameWorld) {
         }
     }
 
-    let streamer_path_destination = world
+    let streamer_path_destination = *world
         .app
         .world
         .query_filtered::<&Path, With<StreamerLabel>>()
@@ -152,8 +150,7 @@ fn streamer_should_be_heading_towards_fruit(world: &mut GameWorld) {
         .last()
         .expect(
             "streamer_should_be_heading_towards_fruit: Streamer's Path does not contain anything.",
-        )
-        .clone();
+        );
 
     let streamer_destination_transform = world
         .app
@@ -162,18 +159,17 @@ fn streamer_should_be_heading_towards_fruit(world: &mut GameWorld) {
         .iter(&world.app.world)
         .filter(|graph_info| *graph_info.1 == GraphType::Ground)
         .map(|graph_info| graph_info.0.0[streamer_path_destination])
-        .map(|found_translation| Transform::from_translation(found_translation))
+        .map(Transform::from_translation)
         .next()
         .expect("streamer_should_be_heading_towards_fruit: The destination Transform could not be derived from the Streamer's Path.");
 
-    let fruit_transform = world
+    let fruit_transform = *world
         .app
         .world
         .query_filtered::<&Transform, With<FruitState>>()
         .iter(&world.app.world)
         .next()
-        .expect("streamer_should_be_heading_towards_fruit: No Fruit with Transform found.")
-        .clone();
+        .expect("streamer_should_be_heading_towards_fruit: No Fruit with Transform found.");
 
     assert_eq!(fruit_transform, streamer_destination_transform);
 }

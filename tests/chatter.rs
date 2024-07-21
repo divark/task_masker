@@ -132,21 +132,21 @@ fn chatter_should_be_two_tiles_away_from_streamer(world: &mut GameWorld) {
 
     assert_eq!(*chatter_status, ChatterStatus::Speaking);
 
-    let chatter_tilepos = world
+    let chatter_tilepos = *world
         .app
         .world
         .query_filtered::<&TilePos, With<ChatterLabel>>()
         .get_single(&world.app.world)
-        .expect("chatter_should_be_two_tiles_away_from_streamer: Chatter does not have a TilePos.")
-        .clone();
+        .expect("chatter_should_be_two_tiles_away_from_streamer: Chatter does not have a TilePos.");
 
-    let streamer_tilepos = world
+    let streamer_tilepos = *world
         .app
         .world
         .query_filtered::<&TilePos, With<StreamerLabel>>()
         .get_single(&world.app.world)
-        .expect("chatter_should_be_two_tiles_away_from_streamer: Streamer does not have a TilePos.")
-        .clone();
+        .expect(
+            "chatter_should_be_two_tiles_away_from_streamer: Streamer does not have a TilePos.",
+        );
 
     let tile_distance = distance_of(chatter_tilepos, streamer_tilepos);
     assert_eq!(tile_distance, 2);

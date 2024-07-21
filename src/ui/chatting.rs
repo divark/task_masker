@@ -1,8 +1,10 @@
+use std::cmp::Ordering;
+use std::collections::BinaryHeap;
+
 use bevy::prelude::*;
 
-use crate::entities::MovementType;
-
 use super::screens::{SpeakerChatBox, SpeakerPortrait, SpeakerUI};
+use crate::entities::MovementType;
 
 #[derive(Component, PartialEq)]
 pub enum ChattingStatus {
@@ -10,12 +12,54 @@ pub enum ChattingStatus {
     Speaking(MovementType),
 }
 
-#[derive(Default, Event)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub enum MsgPriority {
+    #[default]
+    Low,
+    Medium,
+    High,
+}
+
+#[derive(Default, Event, Eq, PartialEq, Clone, Debug)]
 pub struct Msg {
     pub speaker_name: String,
     pub msg: String,
     pub speaker_role: MovementType,
+    speaker_priority: MsgPriority,
 }
+
+impl Ord for Msg {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.speaker_priority.cmp(&other.speaker_priority)
+    }
+}
+
+impl PartialOrd for Msg {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Msg {
+    pub fn new(speaker_name: String, speaker_msg: String, speaker_role: MovementType) -> Self {
+        let speaker_priority = match speaker_role {
+            MovementType::Walk => MsgPriority::High,
+            _ => MsgPriority::Low,
+        };
+
+        Msg {
+            speaker_name,
+            msg: speaker_msg,
+            speaker_role,
+            speaker_priority,
+        }
+    }
+}
+
+/// A Priority Queue that ensures that a Streamer's messages
+/// are always seen right away.
+#[derive(Component, Deref, DerefMut)]
+pub struct MessageQueue(BinaryHeap<Msg>);
 
 #[derive(Component, Deref, DerefMut)]
 pub struct MsgIndex(usize);
@@ -31,6 +75,7 @@ pub struct TypingSpeedInterval(Timer);
 
 #[derive(Bundle)]
 pub struct Chatting {
+    pending_messages: MessageQueue,
     typing_speed: TypingSpeedInterval,
     msg_waiting: MsgWaiting,
     msg_character_idx: MsgIndex,
@@ -60,6 +105,7 @@ pub fn insert_chatting_information(
     let msg_len = MsgLen(0);
 
     commands.entity(ui_fields_entity).insert(Chatting {
+        pending_messages: MessageQueue(BinaryHeap::new()),
         typing_speed: typing_speed_timer,
         msg_waiting: msg_waiting_timer,
         msg_character_idx,

@@ -37,13 +37,12 @@ fn request_streamer_to_move_to_lower_location(world: &mut GameWorld, option: Str
 
     world.app.world.send_event(TilePosEvent::new(tile_pos));
     loop {
-        let streamer_status = world
+        let streamer_status = *world
             .app
             .world
             .query::<&StreamerStatus>()
             .get_single(&world.app.world)
-            .expect("request_streamer_to_move_to_lower_location: Streamer does not have a status.")
-            .clone();
+            .expect("request_streamer_to_move_to_lower_location: Streamer does not have a status.");
 
         if streamer_status == StreamerStatus::Moving {
             break;
@@ -60,13 +59,14 @@ fn streamer_should_have_reached_lower_location(world: &mut GameWorld, option: St
     loop {
         world.app.update();
 
-        let streamer_status = world
+        let streamer_status = *world
             .app
             .world
             .query::<&StreamerStatus>()
             .get_single(&world.app.world)
-            .expect("streamer_should_have_reached_lower_location: Streamer does not have a Status.")
-            .clone();
+            .expect(
+                "streamer_should_have_reached_lower_location: Streamer does not have a Status.",
+            );
 
         if streamer_status == StreamerStatus::Idle {
             break;

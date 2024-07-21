@@ -95,7 +95,7 @@ fn subscriber_should_be_near_coast_closest_to_streamer(world: &mut GameWorld) {
         .get_single(&world.app.world)
         .expect("subscriber_should_be_near_coast_closest_to_streamer: Subscriber does not have a TilePos.");
 
-    let subscriber_tilepos_neighbors = vec![
+    let subscriber_tilepos_neighbors = [
         TilePos::new(subscriber_tilepos.x, subscriber_tilepos.y - 1),
         TilePos::new(subscriber_tilepos.x, subscriber_tilepos.y + 1),
         TilePos::new(subscriber_tilepos.x - 1, subscriber_tilepos.y),

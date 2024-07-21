@@ -214,11 +214,11 @@ pub fn speak_to_streamer_from_chatter(
             .insert(WaitTimer(Timer::from_seconds(10.0, TimerMode::Once)));
 
         *chatter_status = ChatterStatus::Speaking;
-        chat_msg_requester.send(Msg {
-            speaker_name: chatter_msg.name.clone(),
-            speaker_role: chatter_type,
-            msg: chatter_msg.msg.clone(),
-        });
+        chat_msg_requester.send(Msg::new(
+            chatter_msg.name.clone(),
+            chatter_msg.msg.clone(),
+            chatter_type,
+        ));
     }
 }
 

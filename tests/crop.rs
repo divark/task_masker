@@ -53,24 +53,22 @@ fn grow_one_crop_fully(world: &mut GameWorld) {
 
 #[when("the Streamer is over the grown Crop,")]
 fn wait_for_streamer_to_be_over_crop(world: &mut GameWorld) {
-    let crop_tilepos = world
+    let crop_tilepos = *world
         .app
         .world
         .query_filtered::<&TilePos, With<CropState>>()
         .iter(&world.app.world)
         .next()
-        .expect("wait_for_streamer_to_be_over_crop: Crop was not found with TilePos.")
-        .clone();
+        .expect("wait_for_streamer_to_be_over_crop: Crop was not found with TilePos.");
 
     loop {
         world.app.update();
 
-        let streamer_tilepos = world
+        let streamer_tilepos = *world
             .app
             .world
             .query_filtered::<&TilePos, With<StreamerLabel>>()
-            .single(&world.app.world)
-            .clone();
+            .single(&world.app.world);
 
         if streamer_tilepos == crop_tilepos {
             break;
@@ -97,7 +95,7 @@ fn streamer_should_be_heading_towards_crop(world: &mut GameWorld) {
         }
     }
 
-    let streamer_path_destination = world
+    let streamer_path_destination = *world
         .app
         .world
         .query_filtered::<&Path, With<StreamerLabel>>()
@@ -107,8 +105,7 @@ fn streamer_should_be_heading_towards_crop(world: &mut GameWorld) {
         .last()
         .expect(
             "streamer_should_be_heading_towards_crop: Streamer's Path does not contain anything.",
-        )
-        .clone();
+        );
 
     let streamer_destination_transform = world
         .app
@@ -117,18 +114,17 @@ fn streamer_should_be_heading_towards_crop(world: &mut GameWorld) {
         .iter(&world.app.world)
         .filter(|graph_info| *graph_info.1 == GraphType::Ground)
         .map(|graph_info| graph_info.0.0[streamer_path_destination])
-        .map(|found_translation| Transform::from_translation(found_translation))
+        .map(Transform::from_translation)
         .next()
         .expect("streamer_should_be_heading_towards_crop: The destination Transform could not be derived from the Streamer's Path.");
 
-    let crop_transform = world
+    let crop_transform = *world
         .app
         .world
         .query_filtered::<&Transform, With<CropState>>()
         .iter(&world.app.world)
         .next()
-        .expect("streamer_should_be_heading_towards_crop: No Crop with Transform found.")
-        .clone();
+        .expect("streamer_should_be_heading_towards_crop: No Crop with Transform found.");
 
     assert_eq!(crop_transform, streamer_destination_transform);
 }

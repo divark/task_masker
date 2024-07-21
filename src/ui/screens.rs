@@ -15,6 +15,9 @@ pub struct SpeakerUI;
 pub struct SpeakerPortrait;
 
 #[derive(Component)]
+pub struct SpeakerPortraitBackground;
+
+#[derive(Component)]
 pub struct SpeakerChatBox;
 
 #[derive(Component)]
@@ -154,7 +157,7 @@ pub fn despawn_start_screen(
     }
 }
 
-pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub fn spawn_ingame_screen(mut commands: Commands) {
     let background = NodeBundle {
         style: Style {
             width: Val::Percent(100.0),
@@ -248,7 +251,6 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
 
             ..default()
         },
-        image: UiImage::new(asset_server.load("ui/UI_Paper_Textfield_01.png")),
         ..default()
     };
 
@@ -281,14 +283,23 @@ pub fn spawn_ingame_screen(mut commands: Commands, asset_server: Res<AssetServer
                     speaker_section
                         .spawn(dialogue_section)
                         .with_children(|dialogue_section| {
-                            dialogue_section.spawn(dialogue_background).with_children(
-                                |dialogue_background| {
+                            dialogue_section
+                                .spawn((dialogue_background, SpeakerPortraitBackground))
+                                .with_children(|dialogue_background| {
                                     dialogue_background.spawn((dialogue_text, SpeakerChatBox));
-                                },
-                            );
+                                });
                         });
                 });
         });
+}
+
+pub fn insert_speaker_portrait_background(
+    mut chatting_ui_fields: Query<&mut UiImage, Added<SpeakerPortraitBackground>>,
+    asset_server: Res<AssetServer>,
+) {
+    for mut speaker_portrait_image in &mut chatting_ui_fields {
+        *speaker_portrait_image = UiImage::new(asset_server.load("ui/UI_Paper_Textfield_01.png"));
+    }
 }
 
 pub fn insert_counting_information(

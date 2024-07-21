@@ -235,11 +235,11 @@ pub fn speak_to_streamer_from_subscriber(
             .insert(WaitTimer(Timer::from_seconds(60.0, TimerMode::Once)));
 
         *subscriber_status = SubscriberStatus::Speaking;
-        chat_msg_requester.send(Msg {
-            speaker_name: subscriber_msg.name.clone(),
-            speaker_role: subscriber_type,
-            msg: subscriber_msg.msg.clone(),
-        });
+        chat_msg_requester.send(Msg::new(
+            subscriber_msg.name.clone(),
+            subscriber_msg.msg.clone(),
+            subscriber_type,
+        ));
     }
 }
 

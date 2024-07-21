@@ -12,6 +12,7 @@ use task_masker::map::path_finding::*;
 use task_masker::map::tiled::*;
 use task_masker::ui::chatting::*;
 use task_masker::ui::portrait_preferences::*;
+use task_masker::ui::screens::spawn_ingame_screen;
 
 use task_masker::GameState;
 
@@ -22,6 +23,7 @@ pub struct MockChattingPlugin;
 
 impl Plugin for MockChattingPlugin {
     fn build(&self, app: &mut App) {
+        app.add_systems(Update, spawn_ingame_screen.run_if(run_once()));
         app.add_event::<Msg>().add_systems(
             Update,
             (
