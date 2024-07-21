@@ -114,6 +114,21 @@ pub fn insert_chatting_information(
     });
 }
 
+/// Adds a recently captured message into the pending messages queue.
+pub fn add_msg_to_pending(
+    mut message_queue_query: Query<&mut MessageQueue>,
+    mut msg_receiver: EventReader<Msg>,
+) {
+    if message_queue_query.is_empty() {
+        return;
+    }
+
+    let mut pending_messages = message_queue_query.single_mut();
+    for received_msg in msg_receiver.read() {
+        pending_messages.push(received_msg.clone());
+    }
+}
+
 pub fn setup_chatting_from_msg(
     mut chatting_ui_section: Query<&mut Visibility, With<SpeakerUI>>,
     mut chatting_fields: Query<(&mut UiImage, &mut TextureAtlas), With<SpeakerPortrait>>,

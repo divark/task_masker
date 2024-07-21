@@ -15,7 +15,7 @@ use task_masker::GameState;
 pub struct GameWithChatUI {
     pub app: App,
 
-    pub expected_msg: Option<Msg>,
+    pub sent_msgs: Vec<Msg>,
 }
 
 impl GameWithChatUI {
@@ -28,7 +28,7 @@ impl GameWithChatUI {
 
         Self {
             app,
-            expected_msg: None,
+            sent_msgs: Vec::new(),
         }
     }
 }
@@ -66,8 +66,9 @@ fn streamer_sends_msg(world: &mut GameWithChatUI) {
 
     world.app.world.send_event::<Msg>(streamer_msg.clone());
     world.app.update();
+    world.app.update();
 
-    world.expected_msg = Some(streamer_msg);
+    world.sent_msgs.push(streamer_msg);
 }
 
 #[then("the Chatting Queue should contain the Streamer's chat message.")]
@@ -82,7 +83,7 @@ fn chatting_queue_has_streamer_msg(world: &mut GameWithChatUI) {
     assert!(next_chat_msg.is_some());
 
     let next_chat_msg_contents = next_chat_msg.unwrap();
-    assert_eq!(world.expected_msg.clone().unwrap(), *next_chat_msg_contents);
+    assert_eq!(*world.sent_msgs.get(0).unwrap(), *next_chat_msg_contents);
 }
 
 fn main() {
