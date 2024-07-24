@@ -8,6 +8,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
+use bevy::state::app::StatesPlugin;
 use bevy_ecs_tilemap::prelude::*;
 use task_masker::entities::{chatter::*, streamer::*, subscriber::*};
 use task_masker::map::path_finding::{
@@ -47,6 +48,7 @@ impl GameWorld {
     pub fn new() -> Self {
         let mut app = App::new();
 
+        app.add_plugins(StatesPlugin);
         app.init_state::<GameState>();
         app.insert_state(GameState::InGame);
         app.add_plugins(MinimalPlugins);
@@ -66,9 +68,9 @@ impl GameWorld {
         app.update();
 
         let map_size = *app
-            .world
+            .world_mut()
             .query::<&TilemapSize>()
-            .iter(&app.world)
+            .iter(&app.world_mut())
             .next()
             .unwrap();
 
@@ -84,27 +86,27 @@ impl GameWorld {
             EntityType::Streamer => {
                 return self
                     .app
-                    .world
+                    .world_mut()
                     .query::<(Entity, &StreamerLabel)>()
-                    .get_single(&self.app.world)
+                    .get_single(&self.app.world_mut())
                     .expect("spawn: Streamer was not found after trying to spawn it.")
                     .0;
             }
             EntityType::Subscriber => {
                 return self
                     .app
-                    .world
+                    .world_mut()
                     .query::<(Entity, &SubscriberLabel)>()
-                    .get_single(&self.app.world)
+                    .get_single(&self.app.world_mut())
                     .expect("spawn: Subscriber was not found after trying to spawn it.")
                     .0;
             }
             EntityType::Chatter => {
                 return self
                     .app
-                    .world
+                    .world_mut()
                     .query::<(Entity, &ChatterLabel)>()
-                    .get_single(&self.app.world)
+                    .get_single(&self.app.world_mut())
                     .expect("spawn: Chatter was not found after trying to spawn it.")
                     .0;
             }
@@ -117,17 +119,17 @@ impl GameWorld {
     pub fn tiled_tile_at_position(&mut self, tile_pos: TilePos, height: u32) -> Entity {
         let map_size = *self
             .app
-            .world
+            .world_mut()
             .query::<&TilemapSize>()
-            .iter(&self.app.world)
+            .iter(&self.app.world_mut())
             .nth(height as usize)
             .expect("tile_at_position: Could not get map size given the specified height.");
 
         let flipped_tile_pos = convert_tiled_to_bevy_pos(tile_pos, map_size.y);
         self.app
-            .world
+            .world_mut()
             .query::<(Entity, &TilePos, &LayerNumber)>()
-            .iter(&self.app.world)
+            .iter(&self.app.world_mut())
             .find(|tile_entry| {
                 *tile_entry.1 == flipped_tile_pos && tile_entry.2 .0 == height as usize
             })
@@ -139,9 +141,9 @@ impl GameWorld {
     /// desired position.
     fn tile_at_position(&mut self, tile_pos: TilePos, height: u32) -> Entity {
         self.app
-            .world
+            .world_mut()
             .query::<(Entity, &TilePos, &LayerNumber)>()
-            .iter(&self.app.world)
+            .iter(&self.app.world_mut())
             .find(|tile_entry| *tile_entry.1 == tile_pos && tile_entry.2 .0 == height as usize)
             .map(|tile_entry| tile_entry.0)
             .expect("tile_at_position: Could not find Tile at given Tile Pos and height.")
@@ -155,9 +157,9 @@ impl GameWorld {
         // height based on its Layer Number.
         let found_height = if self.get_entity_type(entity) == EntityType::Tile {
             self.app
-                .world
+                .world_mut()
                 .query::<(&TilePos, &LayerNumber)>()
-                .get(&self.app.world, entity)
+                .get(&self.app.world_mut(), entity)
                 .unwrap()
                 .1
                 // A Layer Number is only equivalent to a Translation's z value
@@ -166,9 +168,9 @@ impl GameWorld {
                 * 2.0
         } else {
             self.app
-                .world
+                .world_mut()
                 .query::<&Transform>()
-                .get(&self.app.world, entity)
+                .get(&self.app.world_mut(), entity)
                 .unwrap()
                 .translation
                 .z
@@ -181,20 +183,20 @@ impl GameWorld {
         let source_path = match self.get_entity_type(source_entity) {
             EntityType::Streamer => {
                 self.app
-                    .world
+                    .world_mut()
                     .send_event(TilePosEvent::new(target_pos))
                     .unwrap();
 
                 self.app.update();
                 self.app.update();
                 self.app
-                    .world
+                    .world_mut()
                     .query::<&Path>()
-                    .get(&self.app.world, source_entity)
+                    .get(&self.app.world(), source_entity)
                     .expect("travel_to: Path for Streamer not populated yet.")
             }
             EntityType::Chatter => {
-                self.app.world.send_event(ChatMsg {
+                self.app.world_mut().send_event(ChatMsg {
                     name: "Chatter".to_string(),
                     msg: "Hello Caveman!".to_string(),
                 });
@@ -202,13 +204,13 @@ impl GameWorld {
                 self.app.update();
                 self.app.update();
                 self.app
-                    .world
+                    .world_mut()
                     .query::<&Path>()
-                    .get(&self.app.world, source_entity)
+                    .get(&self.app.world(), source_entity)
                     .expect("travel_to: Path for Streamer not populated yet.")
             }
             EntityType::Subscriber => {
-                self.app.world.send_event(SubscriberMsg {
+                self.app.world_mut().send_event(SubscriberMsg {
                     name: String::from("Subscriber"),
                     msg: String::from("'Ello Caveman!"),
                 });
@@ -216,9 +218,9 @@ impl GameWorld {
                 self.app.update();
                 self.app.update();
                 self.app
-                    .world
+                    .world_mut()
                     .query::<&Path>()
-                    .get(&self.app.world, source_entity)
+                    .get(&self.app.world(), source_entity)
                     .expect("travel_to: Path for Streamer not populated yet.")
             }
             _ => panic!("travel_to: Incompatiable Entity passed for Traveling."),
@@ -239,7 +241,7 @@ impl GameWorld {
         loop {
             self.app.update();
 
-            let target = self.app.world.get::<Target>(source_entity).unwrap();
+            let target = self.app.world_mut().get::<Target>(source_entity).unwrap();
             if target.is_none() {
                 break;
             }
@@ -290,9 +292,9 @@ impl GameWorld {
 
         let ground_nodes = self
             .app
-            .world
+            .world_mut()
             .query::<(&NodeEdges, &GraphType)>()
-            .iter(&self.app.world)
+            .iter(&self.app.world())
             .find(|entry| *entry.1 == GraphType::Ground)
             .map(|entry| entry.0)
             .expect(
@@ -314,9 +316,9 @@ impl GameWorld {
     fn get_tile_neighbors(&mut self, source_pos: &TilePos) -> Vec<usize> {
         let world_size = self
             .app
-            .world
+            .world_mut()
             .query::<&TilemapSize>()
-            .iter(&self.app.world)
+            .iter(&self.app.world())
             .max_by(|&x, &y| {
                 let x_world_area = x.x * x.y;
                 let y_world_area = y.x * y.y;
@@ -349,9 +351,9 @@ impl GameWorld {
 
         let found_tile = *self
             .app
-            .world
+            .world_mut()
             .query::<&TilePos>()
-            .get(&self.app.world, entity)
+            .get(&self.app.world_mut(), entity)
             .unwrap();
 
         if entity_type != EntityType::Tile {
@@ -366,9 +368,9 @@ impl GameWorld {
     fn get_entity_type(&mut self, entity: Entity) -> EntityType {
         let is_streamer = self
             .app
-            .world
+            .world_mut()
             .query::<&StreamerLabel>()
-            .get(&self.app.world, entity)
+            .get(&self.app.world_mut(), entity)
             .is_ok();
 
         if is_streamer {
@@ -377,9 +379,9 @@ impl GameWorld {
 
         let is_subscriber = self
             .app
-            .world
+            .world_mut()
             .query::<&SubscriberLabel>()
-            .get(&self.app.world, entity)
+            .get(&self.app.world_mut(), entity)
             .is_ok();
 
         if is_subscriber {
@@ -388,9 +390,9 @@ impl GameWorld {
 
         let is_chatter = self
             .app
-            .world
+            .world_mut()
             .query::<&ChatterLabel>()
-            .get(&self.app.world, entity)
+            .get(&self.app.world_mut(), entity)
             .is_ok();
 
         if is_chatter {
@@ -407,9 +409,9 @@ impl GameWorld {
 
         let node_edges = self
             .app
-            .world
+            .world_mut()
             .query::<(&NodeEdges, &GraphType)>()
-            .iter(&self.app.world)
+            .iter(&self.app.world())
             .filter(|graph_entry| *graph_entry.1 == graph_type)
             .map(|graph_entry| graph_entry.0)
             .next()
@@ -427,9 +429,9 @@ impl GameWorld {
     pub fn map_info(&mut self, height: usize) -> TiledMapInformation {
         let (grid_size, map_size, map_type, map_transform) = self
             .app
-            .world
+            .world_mut()
             .query::<(&TilemapGridSize, &TilemapSize, &TilemapType, &Transform)>()
-            .iter(&self.app.world)
+            .iter(&self.app.world())
             .nth(height)
             .expect("map_info: Could not generate TiledMapInformation since all required components are missing.");
 
@@ -456,9 +458,9 @@ fn creating_gameworld_does_not_crash() {
     assert_ne!(
         world
             .app
-            .world
+            .world_mut()
             .query::<&TilePos>()
-            .iter(&world.app.world)
+            .iter(&world.app.world_mut())
             .len(),
         0
     );
@@ -624,17 +626,17 @@ fn node_data_from_ground_tiles_works() {
 
     let heighted_tiles = world
         .app
-        .world
+        .world_mut()
         .query::<(&TilePos, &LayerNumber)>()
-        .iter(&world.app.world)
+        .iter(&world.app.world_mut())
         .map(|tile_entry| HeightedTilePos::new(*tile_entry.0, tile_entry.1 .0 as u32))
         .collect::<Vec<HeightedTilePos>>();
 
     let map_layer_information = world
         .app
-        .world
+        .world_mut()
         .query::<(&TilemapGridSize, &TilemapType, &Transform)>()
-        .iter(&world.app.world)
+        .iter(&world.app.world_mut())
         .map(|layer_info| (*layer_info.0, *layer_info.1, *layer_info.2))
         .collect::<Vec<(TilemapGridSize, TilemapType, Transform)>>();
 

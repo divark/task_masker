@@ -24,7 +24,7 @@ pub enum SubscriberStatus {
     Leaving,
 }
 
-#[derive(Component, Event, Clone)]
+#[derive(Event, Clone)]
 pub struct SubscriberMsg {
     pub name: String,
     pub msg: String,
@@ -47,7 +47,7 @@ pub fn replace_subscriber_sprite(
     for (subscriber_entity, subscriber_transform, tile_texture_index) in &subscriber {
         let texture_handle = asset_server.load("subscriber/Fish(32x32).png");
         let subscriber_texture_atlas =
-            TextureAtlasLayout::from_grid(Vec2::new(32.0, 32.0), 16, 16, None, None);
+            TextureAtlasLayout::from_grid(UVec2::new(32, 32), 16, 16, None, None);
         let subscriber_texture_atlas_handle = texture_atlases.add(subscriber_texture_atlas);
 
         let subscriber_sprite = SpriteSheetBundle {

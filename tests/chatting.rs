@@ -1,5 +1,6 @@
 mod mock_plugins;
 
+use bevy::state::app::StatesPlugin;
 use mock_plugins::{
     MockChatterPlugin, MockChattingPlugin, MockStreamerPlugin, MockSubscriberPlugin,
     MockTiledMapPlugin,
@@ -25,6 +26,7 @@ impl GameWithChatUI {
     pub fn new() -> Self {
         let mut app = App::new();
 
+        app.add_plugins(StatesPlugin);
         app.init_state::<GameState>();
         app.insert_state(GameState::InGame);
         app.add_plugins(MinimalPlugins);
@@ -79,7 +81,10 @@ fn streamer_sends_msg(world: &mut GameWithChatUI) {
         MovementType::Walk,
     );
 
-    world.app.world.send_event::<Msg>(streamer_msg.clone());
+    world
+        .app
+        .world_mut()
+        .send_event::<Msg>(streamer_msg.clone());
     world.app.update();
     world.app.update();
 
@@ -94,7 +99,7 @@ fn chatter_sends_msg(world: &mut GameWithChatUI) {
         MovementType::Fly,
     );
 
-    world.app.world.send_event::<Msg>(chatter_msg.clone());
+    world.app.world_mut().send_event::<Msg>(chatter_msg.clone());
     world.app.update();
     world.app.update();
 
@@ -109,7 +114,10 @@ fn subscriber_sends_msg(world: &mut GameWithChatUI) {
         MovementType::Swim,
     );
 
-    world.app.world.send_event::<Msg>(subscriber_msg.clone());
+    world
+        .app
+        .world_mut()
+        .send_event::<Msg>(subscriber_msg.clone());
     world.app.update();
     world.app.update();
 
@@ -124,9 +132,9 @@ fn chatting_queue_has_streamer_msg(world: &mut GameWithChatUI) {
 
     let pending_chat_messages = world
         .app
-        .world
+        .world_mut()
         .query::<&MessageQueue>()
-        .single(&world.app.world);
+        .single(&world.app.world());
 
     let next_chat_msg = pending_chat_messages.peek();
     assert!(next_chat_msg.is_some());
@@ -141,9 +149,9 @@ fn chatting_queue_has_streamer_msg_top_priority(world: &mut GameWithChatUI) {
 
     let pending_chat_messages = world
         .app
-        .world
+        .world_mut()
         .query::<&MessageQueue>()
-        .single(&world.app.world);
+        .single(&world.app.world());
 
     let next_chat_msg = pending_chat_messages.peek();
     assert!(next_chat_msg.is_some());

@@ -39,7 +39,7 @@ fn load_portrait_preference_recorder(world: &mut GamePreferencesWorld) {
 fn user_asks_for_preference_without_entry(world: &mut GamePreferencesWorld) {
     let preference_recorder = world
         .app
-        .world
+        .world_mut()
         .get_resource::<PortraitPreferences>()
         .expect("user_asks_for_preference_without_entry: PortraitPreferences resource not found.");
 
@@ -50,7 +50,7 @@ fn user_asks_for_preference_without_entry(world: &mut GamePreferencesWorld) {
 fn user_changes_preference_without_entry(world: &mut GamePreferencesWorld) {
     let mut preference_recorder = world
         .app
-        .world
+        .world_mut()
         .get_resource_mut::<PortraitPreferences>()
         .expect("user_changes_preference_without_entry: PortraitPreferences resource not found.");
 
@@ -61,7 +61,7 @@ fn user_changes_preference_without_entry(world: &mut GamePreferencesWorld) {
 fn user_changes_preference_with_entry(world: &mut GamePreferencesWorld) {
     let mut preference_recorder = world
         .app
-        .world
+        .world_mut()
         .get_resource_mut::<PortraitPreferences>()
         .expect("user_changes_preference_without_entry: PortraitPreferences resource not found.");
 
@@ -77,7 +77,7 @@ fn should_be_default_preference_when_none_exists(world: &mut GamePreferencesWorl
 fn user_should_have_preference_saved(world: &mut GamePreferencesWorld) {
     let preference_recorder = world
         .app
-        .world
+        .world_mut()
         .get_resource::<PortraitPreferences>()
         .expect("user_should_have_preference_saved: PortraitPreferences resource not found.");
 
@@ -91,7 +91,7 @@ fn user_should_have_preference_saved(world: &mut GamePreferencesWorld) {
 fn user_should_have_recent_preference_saved(world: &mut GamePreferencesWorld) {
     let preference_recorder = world
         .app
-        .world
+        .world_mut()
         .get_resource::<PortraitPreferences>()
         .expect("user_should_have_preference_saved: PortraitPreferences resource not found.");
 

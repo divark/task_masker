@@ -85,7 +85,7 @@ impl TranslationGatherer {
         for tile in unique_tiles {
             let (grid_size, map_type, map_transform) =
                 self.map_information.iter().nth(height).expect(
-                    "lowest_translations_from: Could not find map information at the specified 
+                    "lowest_translations_from: Could not find map information at the specified
                 tile height.",
                 );
 
@@ -347,7 +347,9 @@ impl NodeEdges {
 
         let mut bfs_queue = VecDeque::from([mapped_source_idx]);
         while !bfs_queue.is_empty() {
-            let current_node_idx = bfs_queue.pop_front().unwrap();
+            let current_node_idx = bfs_queue
+                .pop_front()
+                .expect("shortest_path: BFS Queue is Empty, but it shouldn't be?");
             if current_node_idx == mapped_target_idx {
                 node_visited[current_node_idx] = true;
                 break;
@@ -622,19 +624,19 @@ pub fn update_movement_target(
             graph_query
                 .iter()
                 .find(|graph_elements| graph_elements.1 == &GraphType::Ground)
-                .unwrap()
+                .expect("update_movement_target: Could not find Ground Graph")
                 .0
         } else if movement_type == &MovementType::Fly {
             graph_query
                 .iter()
                 .find(|graph_elements| graph_elements.1 == &GraphType::Air)
-                .unwrap()
+                .expect("update_movement_target: Could not find Air Graph")
                 .0
         } else {
             graph_query
                 .iter()
                 .find(|graph_elements| graph_elements.1 == &GraphType::Water)
-                .unwrap()
+                .expect("update_movement_target: Could not find Water Graph")
                 .0
         };
 
@@ -811,7 +813,9 @@ pub mod tests {
     fn spawn_tiles(app: &mut App, length: u32, width: u32, layer: &LayerNumber) {
         for i in 0..length {
             for j in 0..width {
-                app.world.spawn_empty().insert((TilePos::new(i, j), *layer));
+                app.world_mut()
+                    .spawn_empty()
+                    .insert((TilePos::new(i, j), *layer));
             }
         }
     }
@@ -857,7 +861,7 @@ pub mod tests {
         layers: LayerNumber,
     ) {
         for _layer_num in 0..=layers.0 {
-            app.world.spawn_empty().insert((
+            app.world_mut().spawn_empty().insert((
                 map_size,
                 grid_size,
                 map_type,
@@ -887,8 +891,8 @@ pub mod tests {
         let expected_node_edges = NodeEdges(vec![vec![1, 2], vec![0, 3], vec![0, 3], vec![1, 2]]);
         let expected_graph_type = GraphType::Ground;
 
-        let mut graph_query = app.world.query::<(&NodeEdges, &GraphType)>();
-        let (actual_node_edges, actual_graph_type) = graph_query.single(&app.world);
+        let mut graph_query = app.world_mut().query::<(&NodeEdges, &GraphType)>();
+        let (actual_node_edges, actual_graph_type) = graph_query.single(&app.world());
 
         assert_eq!(expected_node_edges, *actual_node_edges);
         assert_eq!(expected_graph_type, *actual_graph_type);
@@ -913,8 +917,8 @@ pub mod tests {
         app.update();
         app.update();
 
-        let mut graph_query = app.world.query::<(&NodeEdges, &GraphType)>();
-        assert_eq!(graph_query.iter(&app.world).count(), 1);
+        let mut graph_query = app.world_mut().query::<(&NodeEdges, &GraphType)>();
+        assert_eq!(graph_query.iter(&app.world()).count(), 1);
     }
 
     #[test]
@@ -938,8 +942,8 @@ pub mod tests {
         let expected_node_edges = NodeEdges(vec![vec![], vec![], vec![], vec![]]);
         let expected_graph_type = GraphType::Ground;
 
-        let mut graph_query = app.world.query::<(&NodeEdges, &GraphType)>();
-        let (actual_node_edges, actual_graph_type) = graph_query.single(&app.world);
+        let mut graph_query = app.world_mut().query::<(&NodeEdges, &GraphType)>();
+        let (actual_node_edges, actual_graph_type) = graph_query.single(&app.world());
 
         assert_eq!(expected_node_edges, *actual_node_edges);
         assert_eq!(expected_graph_type, *actual_graph_type);
@@ -964,13 +968,13 @@ pub mod tests {
         app.add_systems(Update, create_air_graph);
         app.update();
 
-        let mut graph_query = app.world.query::<(&NodeEdges, &GraphType)>();
+        let mut graph_query = app.world_mut().query::<(&NodeEdges, &GraphType)>();
         let (ground_node_edges, ground_graph_type) = graph_query
-            .iter(&app.world)
+            .iter(&app.world())
             .find(|graph_elements| graph_elements.1 == &GraphType::Ground)
             .expect("Ground Graph not created.");
         let (air_node_edges, air_graph_type) = graph_query
-            .iter(&app.world)
+            .iter(&app.world())
             .find(|graph_elements| graph_elements.1 == &GraphType::Air)
             .expect("Air Graph not created.");
 
@@ -1001,9 +1005,9 @@ pub mod tests {
         let expected_node_edges = NodeEdges(vec![vec![1, 2], vec![0, 3], vec![0, 3], vec![1, 2]]);
         let expected_graph_type = GraphType::Ground;
 
-        let mut graph_query = app.world.query::<(&NodeEdges, &GraphType)>();
+        let mut graph_query = app.world_mut().query::<(&NodeEdges, &GraphType)>();
         let (actual_node_edges, actual_graph_type) = graph_query
-            .iter(&app.world)
+            .iter(&app.world())
             .find(|graph_elements| graph_elements.1 == &GraphType::Ground)
             .unwrap();
 
@@ -1025,7 +1029,7 @@ pub mod tests {
 
         let mut app = App::new();
         spawn_tiles(&mut app, map_size.x, map_size.y, &layer);
-        app.world
+        app.world_mut()
             .spawn_empty()
             .insert((TilePos::new(1, 1), LayerNumber(2)));
         spawn_map_information(&mut app, map_size, grid_size, map_type, LayerNumber(2));
@@ -1035,8 +1039,8 @@ pub mod tests {
         let expected_node_edges = NodeEdges(vec![vec![1, 2], vec![0, 3], vec![0, 3], vec![1, 2]]);
         let expected_graph_type = GraphType::Ground;
 
-        let mut graph_query = app.world.query::<(&NodeEdges, &GraphType)>();
-        let (actual_node_edges, actual_graph_type) = graph_query.single(&app.world);
+        let mut graph_query = app.world_mut().query::<(&NodeEdges, &GraphType)>();
+        let (actual_node_edges, actual_graph_type) = graph_query.single(&app.world());
 
         assert_eq!(expected_node_edges, *actual_node_edges);
         assert_eq!(expected_graph_type, *actual_graph_type);
@@ -1056,7 +1060,7 @@ pub mod tests {
 
         let mut app = App::new();
         spawn_tiles(&mut app, map_size.x, map_size.y, &layer);
-        app.world
+        app.world_mut()
             .spawn_empty()
             .insert((TilePos::new(0, 0), LayerNumber(2)));
         spawn_map_information(&mut app, map_size, grid_size, map_type, LayerNumber(2));
@@ -1066,8 +1070,8 @@ pub mod tests {
         let expected_node_edges = NodeEdges(vec![vec![1, 2], vec![0, 3], vec![0, 3], vec![1, 2]]);
         let expected_graph_type = GraphType::Ground;
 
-        let mut graph_query = app.world.query::<(&NodeEdges, &GraphType)>();
-        let (actual_node_edges, actual_graph_type) = graph_query.single(&app.world);
+        let mut graph_query = app.world_mut().query::<(&NodeEdges, &GraphType)>();
+        let (actual_node_edges, actual_graph_type) = graph_query.single(&app.world());
 
         assert_eq!(expected_node_edges, *actual_node_edges);
         assert_eq!(expected_graph_type, *actual_graph_type);

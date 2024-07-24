@@ -24,7 +24,7 @@ pub enum ChatterStatus {
     Leaving,
 }
 
-#[derive(Component, Event, Clone)]
+#[derive(Event, Clone)]
 pub struct ChatMsg {
     pub name: String,
     pub msg: String,
@@ -47,7 +47,7 @@ pub fn replace_chatter_sprite(
     for (chatter_entity, chatter_transform, tile_texture_index) in &chatter {
         let texture_handle = asset_server.load("chatter/BirdSprite (16x16).png");
         let chatter_texture_atlas =
-            TextureAtlasLayout::from_grid(Vec2::new(16.0, 16.0), 8, 3, None, None);
+            TextureAtlasLayout::from_grid(UVec2::new(16, 16), 8, 3, None, None);
         let chatter_texture_atlas_handle = texture_atlases.add(chatter_texture_atlas);
 
         let chatter_sprite = SpriteSheetBundle {

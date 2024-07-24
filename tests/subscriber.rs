@@ -36,7 +36,7 @@ fn spawn_streamer_from_tiled_map(world: &mut GameWorld) {
 
 #[when("the Subscriber wants to speak")]
 fn make_subscriber_approach_to_speak(world: &mut GameWorld) {
-    world.app.world.send_event(SubscriberMsg {
+    world.app.world_mut().send_event(SubscriberMsg {
         name: String::from("Subscriber"),
         msg: String::from("Hello Caveman!"),
     });
@@ -53,9 +53,9 @@ fn wait_for_subscriber_to_approach_to_speak(world: &mut GameWorld) {
 
         let subscriber_status = world
             .app
-            .world
+            .world_mut()
             .query::<&SubscriberStatus>()
-            .get_single(&world.app.world)
+            .get_single(&world.app.world())
             .expect("wait_for_subscriber_to_approach_to_speak: Subscriber does not have a Status.");
 
         if *subscriber_status == SubscriberStatus::Speaking {
@@ -73,9 +73,9 @@ fn wait_for_subscriber_to_finish_speaking(world: &mut GameWorld) {
 
         let subscriber_status = world
             .app
-            .world
+            .world_mut()
             .query::<&SubscriberStatus>()
-            .get_single(&world.app.world)
+            .get_single(&world.app.world())
             .expect("wait_for_subscriber_to_finish_speaking: Subscriber does not have a Status.");
 
         if *subscriber_status != SubscriberStatus::Speaking {
@@ -90,9 +90,9 @@ fn subscriber_should_be_near_coast_closest_to_streamer(world: &mut GameWorld) {
 
     let subscriber_tilepos = world
         .app
-        .world
+        .world_mut()
         .query_filtered::<&TilePos, With<SubscriberLabel>>()
-        .get_single(&world.app.world)
+        .get_single(&world.app.world())
         .expect("subscriber_should_be_near_coast_closest_to_streamer: Subscriber does not have a TilePos.");
 
     let subscriber_tilepos_neighbors = [
@@ -109,9 +109,9 @@ fn subscriber_should_be_near_coast_closest_to_streamer(world: &mut GameWorld) {
 
     let ground_node_neighbors = world
         .app
-        .world
+        .world_mut()
         .query::<(&NodeEdges, &GraphType)>()
-        .iter(&world.app.world)
+        .iter(&world.app.world())
         .find(|graph_data| *graph_data.1 == GraphType::Ground)
         .map(|graph_data| graph_data.0)
         .expect("subscriber_should_be_near_coast_closest_to_streamer: Ground Graph does not have Node Edges. Does the Graph not exist?");
@@ -129,18 +129,18 @@ fn subscriber_should_approach_to_streamer(world: &mut GameWorld) {
 
     let subscriber_status = world
         .app
-        .world
+        .world_mut()
         .query::<&SubscriberStatus>()
-        .get_single(&world.app.world)
+        .get_single(&world.app.world())
         .expect("subscriber_should_approach_to_streamer: Subscriber does not have a Status.");
 
     assert_eq!(*subscriber_status, SubscriberStatus::Approaching);
 
     let subscriber_path = world
         .app
-        .world
+        .world_mut()
         .query_filtered::<&Path, With<SubscriberStatus>>()
-        .get_single(&world.app.world)
+        .get_single(&world.app.world())
         .expect("subscriber_should_approach_to_streamer: Subscriber does not have a Path.");
 
     assert_ne!(subscriber_path.len(), 0);
@@ -152,9 +152,9 @@ fn subscriber_should_start_speaking(world: &mut GameWorld) {
 
     let subscriber_status = world
         .app
-        .world
+        .world_mut()
         .query::<&SubscriberStatus>()
-        .get_single(&world.app.world)
+        .get_single(&world.app.world())
         .expect("subscriber_should_start_speaking: Subscriber does not have a Status.");
 
     assert_eq!(*subscriber_status, SubscriberStatus::Speaking);
@@ -167,9 +167,9 @@ fn subscriber_should_be_leaving_back_to_spawn(world: &mut GameWorld) {
 
         let subscriber_status = world
             .app
-            .world
+            .world_mut()
             .query::<&SubscriberStatus>()
-            .get_single(&world.app.world)
+            .get_single(&world.app.world())
             .expect(
                 "subscriber_should_be_leaving_back_to_spawn: Subscriber does not have a Status.",
             );
@@ -181,9 +181,9 @@ fn subscriber_should_be_leaving_back_to_spawn(world: &mut GameWorld) {
 
     let (subscriber_tilepos, subscriber_spawn) = world
         .app
-        .world
+        .world_mut()
         .query_filtered::<(&TilePos, &SpawnPoint), With<SubscriberStatus>>()
-        .get_single(&world.app.world)
+        .get_single(&world.app.world())
         .expect("subscriber_should_be_leaving_back_to_spawn: Subscriber is missing pathfinding-based information and/or Status.");
 
     assert_eq!(subscriber_spawn.0, *subscriber_tilepos);

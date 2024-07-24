@@ -1,4 +1,5 @@
 use crate::GameState;
+use bevy::color::palettes::css::*;
 use bevy::prelude::*;
 
 #[derive(Component, PartialEq)]
@@ -179,7 +180,7 @@ pub fn spawn_ingame_screen(mut commands: Commands) {
             justify_content: JustifyContent::Center,
             ..default()
         },
-        background_color: Color::GREEN.into(),
+        background_color: GREEN.into(),
         ..default()
     };
 

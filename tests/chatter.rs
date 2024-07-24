@@ -1,5 +1,7 @@
 mod mock_plugins;
 
+use futures::executor::block_on;
+
 use crate::mock_plugins::{
     reduce_wait_times_to_zero, GameWorld, MockChatterPlugin, MockStreamerPlugin, MockTiledMapPlugin,
 };
@@ -48,7 +50,7 @@ fn spawn_streamer_from_tiled_map(world: &mut GameWorld) {
 
 #[when("the Chatter wants to speak")]
 fn make_chatter_approach_to_speak(world: &mut GameWorld) {
-    world.app.world.send_event(ChatMsg {
+    world.app.world_mut().send_event(ChatMsg {
         name: String::from("Chatter"),
         msg: String::from("Hello Caveman!"),
     });
@@ -65,9 +67,9 @@ fn wait_for_chatter_to_approach_to_speak(world: &mut GameWorld) {
 
         let chatter_status = world
             .app
-            .world
+            .world_mut()
             .query::<&ChatterStatus>()
-            .get_single(&world.app.world)
+            .get_single(&world.app.world())
             .expect("wait_for_chatter_to_approach_to_speak: Chatter does not have a Status.");
 
         if *chatter_status == ChatterStatus::Speaking {
@@ -85,9 +87,9 @@ fn wait_for_chatter_to_finish_speaking(world: &mut GameWorld) {
 
         let chatter_status = world
             .app
-            .world
+            .world_mut()
             .query::<&ChatterStatus>()
-            .get_single(&world.app.world)
+            .get_single(&world.app.world())
             .expect("wait_for_chatter_to_finish_speaking: Chatter does not have a Status.");
 
         if *chatter_status != ChatterStatus::Speaking {
@@ -102,18 +104,18 @@ fn chatter_should_approach_to_streamer(world: &mut GameWorld) {
 
     let chatter_status = world
         .app
-        .world
+        .world_mut()
         .query::<&ChatterStatus>()
-        .get_single(&world.app.world)
+        .get_single(&world.app.world())
         .expect("chatter_should_approach_to_streamer: Chatter does not have a Status.");
 
     assert_eq!(*chatter_status, ChatterStatus::Approaching);
 
     let chatter_path = world
         .app
-        .world
+        .world_mut()
         .query_filtered::<&Path, With<ChatterStatus>>()
-        .get_single(&world.app.world)
+        .get_single(&world.app.world())
         .expect("chatter_should_approach_to_streamer: Chatter does not have a Path.");
 
     assert_ne!(chatter_path.len(), 0);
@@ -125,25 +127,25 @@ fn chatter_should_be_two_tiles_away_from_streamer(world: &mut GameWorld) {
 
     let chatter_status = world
         .app
-        .world
+        .world_mut()
         .query::<&ChatterStatus>()
-        .get_single(&world.app.world)
+        .get_single(&world.app.world())
         .expect("chatter_should_approach_to_streamer: Chatter does not have a Status.");
 
     assert_eq!(*chatter_status, ChatterStatus::Speaking);
 
     let chatter_tilepos = *world
         .app
-        .world
+        .world_mut()
         .query_filtered::<&TilePos, With<ChatterLabel>>()
-        .get_single(&world.app.world)
+        .get_single(&world.app.world())
         .expect("chatter_should_be_two_tiles_away_from_streamer: Chatter does not have a TilePos.");
 
     let streamer_tilepos = *world
         .app
-        .world
+        .world_mut()
         .query_filtered::<&TilePos, With<StreamerLabel>>()
-        .get_single(&world.app.world)
+        .get_single(&world.app.world())
         .expect(
             "chatter_should_be_two_tiles_away_from_streamer: Streamer does not have a TilePos.",
         );
@@ -158,9 +160,9 @@ fn chatter_should_start_speaking(world: &mut GameWorld) {
 
     let chatter_status = world
         .app
-        .world
+        .world_mut()
         .query::<&ChatterStatus>()
-        .get_single(&world.app.world)
+        .get_single(&world.app.world())
         .expect("chatter_should_start_speaking: Chatter does not have a Status.");
 
     assert_eq!(*chatter_status, ChatterStatus::Speaking);
@@ -173,9 +175,9 @@ fn chatter_should_be_leaving_back_to_spawn(world: &mut GameWorld) {
 
         let chatter_status = world
             .app
-            .world
+            .world_mut()
             .query::<&ChatterStatus>()
-            .get_single(&world.app.world)
+            .get_single(&world.app.world())
             .expect("chatter_should_be_leaving_back_to_spawn: Chatter does not have a Status.");
 
         if *chatter_status == ChatterStatus::Idle {
@@ -185,14 +187,14 @@ fn chatter_should_be_leaving_back_to_spawn(world: &mut GameWorld) {
 
     let (chatter_tilepos, chatter_spawn) = world
         .app
-        .world
+        .world_mut()
         .query_filtered::<(&TilePos, &SpawnPoint), With<ChatterStatus>>()
-        .get_single(&world.app.world)
+        .get_single(&world.app.world())
         .expect("chatter_should_be_leaving_back_to_spawn: Chatter is missing pathfinding-based information and/or Status.");
 
     assert_eq!(chatter_spawn.0, *chatter_tilepos);
 }
 
 fn main() {
-    futures::executor::block_on(GameWorld::run("tests/feature-files/chatter.feature"));
+    block_on(GameWorld::run("tests/feature-files/chatter.feature"));
 }

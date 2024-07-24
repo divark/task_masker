@@ -1,4 +1,4 @@
-use bevy::ecs::schedule::States;
+use bevy::prelude::States;
 
 pub mod audio;
 pub mod entities;

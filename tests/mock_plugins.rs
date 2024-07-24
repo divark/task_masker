@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 
+use bevy::state::app::StatesPlugin;
 use bevy::utils::Duration;
 
 use task_masker::entities::chatter::*;
@@ -185,6 +186,7 @@ impl GameWorld {
     pub fn new() -> Self {
         let mut app = App::new();
 
+        app.add_plugins(StatesPlugin);
         app.init_state::<GameState>();
         app.insert_state(GameState::InGame);
         app.add_plugins(MinimalPlugins);

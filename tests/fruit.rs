@@ -39,11 +39,11 @@ fn spawn_fruit_from_tiled_map(world: &mut GameWorld) {
 
 #[when("some Fruit is requested to drop,")]
 fn trigger_fruit_to_fall(world: &mut GameWorld) {
-    let mut fruit_queue = world
-        .app
-        .world
+    let mut game_world = world.app.world_mut();
+
+    let mut fruit_queue = game_world
         .query_filtered::<&mut TriggerQueue, With<FruitState>>()
-        .iter_mut(&mut world.app.world)
+        .iter_mut(&mut game_world)
         .next()
         .expect("trigger_fruit_to_fall: Could not find Fruit with Trigger Queue.");
 
@@ -54,11 +54,11 @@ fn trigger_fruit_to_fall(world: &mut GameWorld) {
 
 #[when("the Fruit has been dropped,")]
 fn wait_for_fruit_to_be_dropped(world: &mut GameWorld) {
-    let mut fruit_queue = world
-        .app
-        .world
+    let mut game_world = world.app.world_mut();
+
+    let mut fruit_queue = game_world
         .query_filtered::<&mut TriggerQueue, With<FruitState>>()
-        .iter_mut(&mut world.app.world)
+        .iter_mut(&mut game_world)
         .next()
         .expect("wait_for_fruit_to_be_dropped: Could not find Fruit with Trigger Queue.");
 
@@ -69,9 +69,9 @@ fn wait_for_fruit_to_be_dropped(world: &mut GameWorld) {
 
         let fruit_status = world
             .app
-            .world
+            .world_mut()
             .query::<&FruitState>()
-            .iter(&world.app.world)
+            .iter(&world.app.world())
             .next()
             .expect("wait_for_fruit_to_be_dropped: No piece of Fruit found with its own state.");
 
@@ -85,9 +85,9 @@ fn wait_for_fruit_to_be_dropped(world: &mut GameWorld) {
 fn wait_for_streamer_to_be_over_fruit(world: &mut GameWorld) {
     let fruit_tilepos = *world
         .app
-        .world
+        .world_mut()
         .query_filtered::<&TilePos, With<FruitState>>()
-        .iter(&world.app.world)
+        .iter(&world.app.world())
         .next()
         .expect("wait_for_streamer_to_be_over_fruit: Fruit was not found with TilePos.");
 
@@ -96,9 +96,9 @@ fn wait_for_streamer_to_be_over_fruit(world: &mut GameWorld) {
 
         let streamer_tilepos = *world
             .app
-            .world
+            .world_mut()
             .query_filtered::<&TilePos, With<StreamerLabel>>()
-            .single(&world.app.world);
+            .single(&world.app.world());
 
         if streamer_tilepos == fruit_tilepos {
             break;
@@ -112,9 +112,9 @@ fn fruit_should_be_falling(world: &mut GameWorld) {
 
     let fruit_status = world
         .app
-        .world
+        .world_mut()
         .query::<&FruitState>()
-        .iter(&world.app.world)
+        .iter(&world.app.world())
         .next()
         .expect("fruit_should_be_falling: Could not find Fruit that should be falling.");
 
@@ -130,9 +130,9 @@ fn streamer_should_be_heading_towards_fruit(world: &mut GameWorld) {
 
         let streamer_status = world
             .app
-            .world
+            .world_mut()
             .query::<&StreamerStatus>()
-            .get_single(&world.app.world)
+            .get_single(&world.app.world())
             .expect("streamer_should_be_heading_towards_fruit: Streamer does not have a State.");
 
         if *streamer_status == StreamerStatus::Moving {
@@ -142,9 +142,9 @@ fn streamer_should_be_heading_towards_fruit(world: &mut GameWorld) {
 
     let streamer_path_destination = *world
         .app
-        .world
+        .world_mut()
         .query_filtered::<&Path, With<StreamerLabel>>()
-        .get_single(&world.app.world)
+        .get_single(&world.app.world())
         .expect("streamer_should_be_heading_towards_fruit: Streamer does not have a Path.")
         .iter()
         .last()
@@ -154,9 +154,9 @@ fn streamer_should_be_heading_towards_fruit(world: &mut GameWorld) {
 
     let streamer_destination_transform = world
         .app
-        .world
+        .world_mut()
         .query::<(&NodeData, &GraphType)>()
-        .iter(&world.app.world)
+        .iter(&world.app.world())
         .filter(|graph_info| *graph_info.1 == GraphType::Ground)
         .map(|graph_info| graph_info.0.0[streamer_path_destination])
         .map(Transform::from_translation)
@@ -165,9 +165,9 @@ fn streamer_should_be_heading_towards_fruit(world: &mut GameWorld) {
 
     let fruit_transform = *world
         .app
-        .world
+        .world_mut()
         .query_filtered::<&Transform, With<FruitState>>()
-        .iter(&world.app.world)
+        .iter(&world.app.world())
         .next()
         .expect("streamer_should_be_heading_towards_fruit: No Fruit with Transform found.");
 
@@ -180,9 +180,9 @@ fn fruit_should_respawn(world: &mut GameWorld) {
 
     let fruit_state = world
         .app
-        .world
+        .world_mut()
         .query::<&FruitState>()
-        .iter(&world.app.world)
+        .iter(&world.app.world())
         .next()
         .expect("fruit_should_respawn: Fruit was not found with State.");
 

@@ -47,7 +47,7 @@ pub fn spawn_player_sprite(
         .expect("spawn_player: Could not find Streamer.");
 
     let texture_handle = asset_server.load("caveman/caveman-sheet.png");
-    let texture_atlas = TextureAtlasLayout::from_grid(Vec2::new(16.0, 16.0), 4, 9, None, None);
+    let texture_atlas = TextureAtlasLayout::from_grid(UVec2::new(16, 16), 4, 9, None, None);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     commands.entity(streamer_entity).remove::<Transform>();

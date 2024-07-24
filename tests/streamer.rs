@@ -35,13 +35,16 @@ fn request_streamer_to_move_to_lower_location(world: &mut GameWorld, option: Str
         _ => unreachable!(),
     };
 
-    world.app.world.send_event(TilePosEvent::new(tile_pos));
+    world
+        .app
+        .world_mut()
+        .send_event(TilePosEvent::new(tile_pos));
     loop {
         let streamer_status = *world
             .app
-            .world
+            .world_mut()
             .query::<&StreamerStatus>()
-            .get_single(&world.app.world)
+            .get_single(&world.app.world())
             .expect("request_streamer_to_move_to_lower_location: Streamer does not have a status.");
 
         if streamer_status == StreamerStatus::Moving {
@@ -61,9 +64,9 @@ fn streamer_should_have_reached_lower_location(world: &mut GameWorld, option: St
 
         let streamer_status = *world
             .app
-            .world
+            .world_mut()
             .query::<&StreamerStatus>()
-            .get_single(&world.app.world)
+            .get_single(&world.app.world())
             .expect(
                 "streamer_should_have_reached_lower_location: Streamer does not have a Status.",
             );
@@ -82,9 +85,9 @@ fn streamer_should_have_reached_lower_location(world: &mut GameWorld, option: St
 
     let streamer_tilepos = world
         .app
-        .world
+        .world_mut()
         .query_filtered::<&TilePos, With<StreamerLabel>>()
-        .get_single(&world.app.world)
+        .get_single(&world.app.world())
         .expect("streamer_should_have_reached_lower_location: Streamer does not have a TilePos.");
 
     assert_eq!(expected_tilepos, *streamer_tilepos);

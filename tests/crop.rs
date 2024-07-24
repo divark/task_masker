@@ -40,11 +40,10 @@ fn spawn_crops_from_tiled_map(world: &mut GameWorld) {
 fn grow_one_crop_fully(world: &mut GameWorld) {
     world.app.update();
 
-    let mut crop_state = world
-        .app
-        .world
+    let mut game_world = world.app.world_mut();
+    let mut crop_state = game_world
         .query::<&mut CropState>()
-        .iter_mut(&mut world.app.world)
+        .iter_mut(&mut game_world)
         .next()
         .expect("grow_one_crop_fully: Could not find a Crop with a State.");
 
@@ -55,9 +54,9 @@ fn grow_one_crop_fully(world: &mut GameWorld) {
 fn wait_for_streamer_to_be_over_crop(world: &mut GameWorld) {
     let crop_tilepos = *world
         .app
-        .world
+        .world_mut()
         .query_filtered::<&TilePos, With<CropState>>()
-        .iter(&world.app.world)
+        .iter(&world.app.world())
         .next()
         .expect("wait_for_streamer_to_be_over_crop: Crop was not found with TilePos.");
 
@@ -66,9 +65,9 @@ fn wait_for_streamer_to_be_over_crop(world: &mut GameWorld) {
 
         let streamer_tilepos = *world
             .app
-            .world
+            .world_mut()
             .query_filtered::<&TilePos, With<StreamerLabel>>()
-            .single(&world.app.world);
+            .single(&world.app.world());
 
         if streamer_tilepos == crop_tilepos {
             break;
@@ -85,9 +84,9 @@ fn streamer_should_be_heading_towards_crop(world: &mut GameWorld) {
 
         let streamer_status = world
             .app
-            .world
+            .world_mut()
             .query::<&StreamerStatus>()
-            .get_single(&world.app.world)
+            .get_single(&world.app.world())
             .expect("streamer_should_be_heading_towards_crop: Streamer does not have a State.");
 
         if *streamer_status == StreamerStatus::Moving {
@@ -97,9 +96,9 @@ fn streamer_should_be_heading_towards_crop(world: &mut GameWorld) {
 
     let streamer_path_destination = *world
         .app
-        .world
+        .world_mut()
         .query_filtered::<&Path, With<StreamerLabel>>()
-        .get_single(&world.app.world)
+        .get_single(&world.app.world())
         .expect("streamer_should_be_heading_towards_crop: Streamer does not have a Path.")
         .iter()
         .last()
@@ -109,9 +108,9 @@ fn streamer_should_be_heading_towards_crop(world: &mut GameWorld) {
 
     let streamer_destination_transform = world
         .app
-        .world
+        .world_mut()
         .query::<(&NodeData, &GraphType)>()
-        .iter(&world.app.world)
+        .iter(&world.app.world())
         .filter(|graph_info| *graph_info.1 == GraphType::Ground)
         .map(|graph_info| graph_info.0.0[streamer_path_destination])
         .map(Transform::from_translation)
@@ -120,9 +119,9 @@ fn streamer_should_be_heading_towards_crop(world: &mut GameWorld) {
 
     let crop_transform = *world
         .app
-        .world
+        .world_mut()
         .query_filtered::<&Transform, With<CropState>>()
-        .iter(&world.app.world)
+        .iter(&world.app.world())
         .next()
         .expect("streamer_should_be_heading_towards_crop: No Crop with Transform found.");
 
@@ -135,9 +134,9 @@ fn crop_should_be_planted(world: &mut GameWorld) {
 
     let crop_state = world
         .app
-        .world
+        .world_mut()
         .query::<&CropState>()
-        .iter(&world.app.world)
+        .iter(&world.app.world())
         .next()
         .expect("crop_should_be_planted: Could not find Crop with State.");
 

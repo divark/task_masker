@@ -78,7 +78,7 @@ pub fn replace_crop_sprites(
     for (crop_entity, crop_transform, tile_texture_index) in &crops {
         let texture_handle = asset_server.load("environment/farming crops 1(16x16).png");
         let crop_texture_atlas =
-            TextureAtlasLayout::from_grid(Vec2::new(16.0, 16.0), 16, 16, None, None);
+            TextureAtlasLayout::from_grid(UVec2::new(16, 16), 16, 16, None, None);
         let crop_texture_atlas_handle = texture_atlases.add(crop_texture_atlas);
 
         let crop_sprite = SpriteSheetBundle {
