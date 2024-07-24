@@ -29,12 +29,12 @@ impl Plugin for MockChattingPlugin {
             Update,
             (
                 insert_chatting_information,
-                add_msg_to_pending,
-                setup_chatting_from_msg,
-                teletype_current_message,
-                activate_waiting_timer,
-                clear_current_msg_on_time_up,
-                hide_chatting_ui,
+                add_msg_to_pending.after(insert_chatting_information),
+                setup_chatting_from_msg.after(add_msg_to_pending),
+                teletype_current_message.after(setup_chatting_from_msg),
+                activate_waiting_timer.after(teletype_current_message),
+                clear_current_msg_on_time_up.after(activate_waiting_timer),
+                hide_chatting_ui.after(clear_current_msg_on_time_up),
             )
                 .run_if(in_state(GameState::InGame)),
         );
