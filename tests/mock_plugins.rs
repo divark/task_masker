@@ -30,8 +30,6 @@ impl Plugin for MockChattingPlugin {
                 insert_chatting_information,
                 add_msg_to_pending,
                 setup_chatting_from_msg,
-                speak_to_streamer_from_chatter,
-                speak_to_streamer_from_subscriber,
                 teletype_current_message,
                 activate_waiting_timer,
                 clear_current_msg_on_time_up,

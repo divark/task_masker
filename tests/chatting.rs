@@ -1,6 +1,9 @@
 mod mock_plugins;
 
-use crate::mock_plugins::{MockChattingPlugin, MockStreamerPlugin, MockTiledMapPlugin};
+use mock_plugins::{
+    MockChatterPlugin, MockChattingPlugin, MockStreamerPlugin, MockSubscriberPlugin,
+    MockTiledMapPlugin,
+};
 
 use bevy::prelude::*;
 use cucumber::{given, then, when, World};
@@ -26,6 +29,12 @@ impl GameWithChatUI {
         app.insert_state(GameState::InGame);
         app.add_plugins(MinimalPlugins);
 
+        // A Streamer only exists in context of a map,
+        // so we have to load a Tiled map as a prerequisite.
+        app.add_plugins(MockTiledMapPlugin);
+        app.add_event::<TilePosEvent>();
+        app.update();
+
         Self {
             app,
             sent_msgs: Vec::new(),
@@ -35,18 +44,24 @@ impl GameWithChatUI {
 
 #[given("a Streamer is spawned on the map,")]
 fn spawn_streamer(world: &mut GameWithChatUI) {
-    // A Streamer only exists in context of a map,
-    // so we have to load a Tiled map as a prerequisite.
-    world.app.add_plugins(MockTiledMapPlugin);
-    world.app.update();
-
     // One way a Streamer reacts is by being told
     // where to go. The Mock plugin for the Streamer
     // has systems that depend on this fact, so we
     // include it here, despite it not being used
     // under these tests.
-    world.app.add_event::<TilePosEvent>();
     world.app.add_plugins(MockStreamerPlugin);
+    world.app.update();
+}
+
+#[given("a Chatter is spawned on the map,")]
+fn spawn_chatter(world: &mut GameWithChatUI) {
+    world.app.add_plugins(MockChatterPlugin);
+    world.app.update();
+}
+
+#[given("a Subscriber is spawned on the map,")]
+fn spawn_subscriber(world: &mut GameWithChatUI) {
+    world.app.add_plugins(MockSubscriberPlugin);
     world.app.update();
 }
 
@@ -71,8 +86,42 @@ fn streamer_sends_msg(world: &mut GameWithChatUI) {
     world.sent_msgs.push(streamer_msg);
 }
 
-#[then("the Chatting Queue should contain the Streamer's chat message.")]
+#[when("the Chatter sends a chat message,")]
+fn chatter_sends_msg(world: &mut GameWithChatUI) {
+    let chatter_msg = Msg::new(
+        String::from("Chatter"),
+        String::from("Hello caveman!"),
+        MovementType::Fly,
+    );
+
+    world.app.world.send_event::<Msg>(chatter_msg.clone());
+    world.app.update();
+    world.app.update();
+
+    world.sent_msgs.push(chatter_msg);
+}
+
+#[when("the Subscriber sends a chat message,")]
+fn subscriber_sends_msg(world: &mut GameWithChatUI) {
+    let subscriber_msg = Msg::new(
+        String::from("Subscriber"),
+        String::from("'Ello caveman!"),
+        MovementType::Swim,
+    );
+
+    world.app.world.send_event::<Msg>(subscriber_msg.clone());
+    world.app.update();
+    world.app.update();
+
+    world.sent_msgs.push(subscriber_msg);
+}
+
+#[then(
+    regex = r"^the Chatting Queue should contain the (Streamer|Chatter|Subscriber)'s chat message."
+)]
 fn chatting_queue_has_streamer_msg(world: &mut GameWithChatUI) {
+    world.app.update();
+
     let pending_chat_messages = world
         .app
         .world
@@ -84,6 +133,23 @@ fn chatting_queue_has_streamer_msg(world: &mut GameWithChatUI) {
 
     let next_chat_msg_contents = next_chat_msg.unwrap();
     assert_eq!(*world.sent_msgs.get(0).unwrap(), *next_chat_msg_contents);
+}
+
+#[then("the Chatting Queue should have the Streamer's chat message as the top priority.")]
+fn chatting_queue_has_streamer_msg_top_priority(world: &mut GameWithChatUI) {
+    world.app.update();
+
+    let pending_chat_messages = world
+        .app
+        .world
+        .query::<&MessageQueue>()
+        .single(&world.app.world);
+
+    let next_chat_msg = pending_chat_messages.peek();
+    assert!(next_chat_msg.is_some());
+
+    let next_chat_msg_contents = next_chat_msg.unwrap();
+    assert_eq!(*world.sent_msgs.get(1).unwrap(), *next_chat_msg_contents);
 }
 
 fn main() {
