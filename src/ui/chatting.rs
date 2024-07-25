@@ -139,6 +139,7 @@ pub fn setup_chatting_from_msg(
             &mut MsgLen,
             &mut TypingSpeedInterval,
             &mut ChattingStatus,
+            &mut MessageQueue,
         ),
         With<SpeakerChatBox>,
     >,
@@ -146,13 +147,16 @@ pub fn setup_chatting_from_msg(
         (&TextureAtlas, &Handle<Image>, &MovementType),
         Without<SpeakerPortrait>,
     >,
-    mut msg_receiver: EventReader<Msg>,
 ) {
     if chatting_entities.is_empty() {
         return;
     }
 
-    if msg_receiver.is_empty() || chatting_ui_section.is_empty() {
+    if chatting_ui_section.is_empty() {
+        return;
+    }
+
+    if msg_fields.is_empty() {
         return;
     }
 
@@ -166,13 +170,17 @@ pub fn setup_chatting_from_msg(
         mut msg_len,
         mut typing_speed_timer,
         mut chatting_status,
+        mut pending_msgs_queue,
     ) = msg_fields
         .get_single_mut()
         .expect("Msg elements should be attached by now.");
 
-    let recent_msg = msg_receiver
-        .read()
-        .next()
+    if pending_msgs_queue.is_empty() || msg_len.0 != 0 {
+        return;
+    }
+
+    let recent_msg = pending_msgs_queue
+        .pop()
         .expect("Should have a message pending.");
 
     let (role_image, role_atlas) = match &recent_msg.speaker_role {

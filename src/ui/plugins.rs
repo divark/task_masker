@@ -48,6 +48,7 @@ impl Plugin for ChattingPlugin {
             Update,
             (
                 insert_chatting_information,
+                add_msg_to_pending,
                 setup_chatting_from_msg,
                 speak_to_streamer_from_chatter,
                 speak_to_streamer_from_subscriber,
