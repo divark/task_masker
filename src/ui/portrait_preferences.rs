@@ -45,9 +45,9 @@ impl PortraitPreferences {
             .next();
 
         if let Some(portrait_preference) = found_entry {
-            return portrait_preference.read::<i64, _>("preference") as usize;
+            portrait_preference.read::<i64, _>("preference") as usize
         } else {
-            return self.default_value;
+            self.default_value
         }
     }
 

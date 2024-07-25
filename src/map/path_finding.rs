@@ -83,11 +83,10 @@ impl TranslationGatherer {
 
         let unique_tiles = unique_tiles_from(heighted_tiles);
         for tile in unique_tiles {
-            let (grid_size, map_type, map_transform) =
-                self.map_information.iter().nth(height).expect(
-                    "lowest_translations_from: Could not find map information at the specified
+            let (grid_size, map_type, map_transform) = self.map_information.get(height).expect(
+                "lowest_translations_from: Could not find map information at the specified
                 tile height.",
-                );
+            );
 
             let tile_translation = tile
                 .center_in_world(grid_size, map_type)
@@ -790,7 +789,7 @@ impl HeightedTilePos {
     /// Tile Position with respect to the size of the grid in pixels holding
     /// this tile.
     pub fn transform(&self, map_info: TiledMapInformation) -> Transform {
-        let tile_pos = self.xy.clone();
+        let tile_pos = self.xy;
 
         to_bevy_transform(&tile_pos, map_info)
     }

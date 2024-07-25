@@ -137,18 +137,6 @@ impl GameWorld {
             .expect("tile_at_position: Could not find Tile at given Tile Pos and height.")
     }
 
-    /// Returns a reference to the Bevy Tile Entity found at the
-    /// desired position.
-    fn tile_at_position(&mut self, tile_pos: TilePos, height: u32) -> Entity {
-        self.app
-            .world_mut()
-            .query::<(Entity, &TilePos, &LayerNumber)>()
-            .iter(&self.app.world_mut())
-            .find(|tile_entry| *tile_entry.1 == tile_pos && tile_entry.2 .0 == height as usize)
-            .map(|tile_entry| tile_entry.0)
-            .expect("tile_at_position: Could not find Tile at given Tile Pos and height.")
-    }
-
     /// Returns the Height represented as the Z value
     /// for some given Entity.
     pub fn height_of(&mut self, entity: Entity) -> f32 {
@@ -260,29 +248,6 @@ impl GameWorld {
             }
             _ => assert_eq!(distance_of(source_pos, target_pos), 0),
         }
-    }
-
-    /// Returns the Transform for some given Tile Entity.
-    fn get_tile_transform_from(&mut self, entity: Entity, tile_height: usize) -> Vec2 {
-        let tile_pos = self.get_tiled_tile_pos_from(entity);
-        return to_bevy_transform(&tile_pos, self.map_info(tile_height))
-            .translation
-            .truncate();
-    }
-
-    /// Asserts whether two Tile Entities co-exist in the same location
-    /// at the Transform level.
-    fn has_reached_tile_transform(
-        &mut self,
-        source_entity: Entity,
-        target_entity: Entity,
-        source_height: usize,
-        target_height: usize,
-    ) {
-        let source_tile_transform = self.get_tile_transform_from(source_entity, source_height);
-        let target_tile_transform = self.get_tile_transform_from(target_entity, target_height);
-
-        assert_eq!(source_tile_transform, target_tile_transform);
     }
 
     /// Returns true when the source position has any Ground Tile neighboring
