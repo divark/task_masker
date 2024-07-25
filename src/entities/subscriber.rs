@@ -33,7 +33,8 @@ pub struct SubscriberMsg {
 #[derive(Bundle)]
 pub struct SubscriberBundle {
     label: SubscriberLabel,
-    sprite: SpriteSheetBundle,
+    sprite: SpriteBundle,
+    texture_atlas: TextureAtlas,
     movement_type: MovementType,
     status: SubscriberStatus,
 }
@@ -50,19 +51,22 @@ pub fn replace_subscriber_sprite(
             TextureAtlasLayout::from_grid(UVec2::new(32, 32), 16, 16, None, None);
         let subscriber_texture_atlas_handle = texture_atlases.add(subscriber_texture_atlas);
 
-        let subscriber_sprite = SpriteSheetBundle {
+        let subscriber_texture_atlas = TextureAtlas {
+            layout: subscriber_texture_atlas_handle.clone(),
+            index: tile_texture_index.0 as usize,
+        };
+
+        let subscriber_sprite = SpriteBundle {
             sprite: Sprite::default(),
-            atlas: TextureAtlas {
-                layout: subscriber_texture_atlas_handle.clone(),
-                index: tile_texture_index.0 as usize,
-            },
             texture: texture_handle.clone(),
             transform: *subscriber_transform,
             ..default()
         };
 
         commands.entity(subscriber_entity).remove::<Transform>();
-        commands.entity(subscriber_entity).insert(subscriber_sprite);
+        commands
+            .entity(subscriber_entity)
+            .insert((subscriber_sprite, subscriber_texture_atlas));
     }
 }
 

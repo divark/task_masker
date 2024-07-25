@@ -81,19 +81,22 @@ pub fn replace_crop_sprites(
             TextureAtlasLayout::from_grid(UVec2::new(16, 16), 16, 16, None, None);
         let crop_texture_atlas_handle = texture_atlases.add(crop_texture_atlas);
 
-        let crop_sprite = SpriteSheetBundle {
+        let crop_texture_atlas = TextureAtlas {
+            layout: crop_texture_atlas_handle.clone(),
+            index: tile_texture_index.0 as usize,
+        };
+
+        let crop_sprite = SpriteBundle {
             sprite: Sprite::default(),
-            atlas: TextureAtlas {
-                layout: crop_texture_atlas_handle.clone(),
-                index: tile_texture_index.0 as usize,
-            },
             texture: texture_handle.clone(),
             transform: *crop_transform,
             ..default()
         };
 
         commands.entity(crop_entity).remove::<Transform>();
-        commands.entity(crop_entity).insert(crop_sprite);
+        commands
+            .entity(crop_entity)
+            .insert((crop_sprite, crop_texture_atlas));
     }
 }
 

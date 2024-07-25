@@ -217,7 +217,8 @@ pub fn spawn_ingame_screen(mut commands: Commands) {
         ..default()
     };
 
-    let speaker_portrait = AtlasImageBundle {
+    let speaker_portrait_texture_atlas = TextureAtlas::default();
+    let speaker_portrait = ImageBundle {
         style: Style {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
@@ -278,7 +279,11 @@ pub fn spawn_ingame_screen(mut commands: Commands) {
                     speaker_section
                         .spawn(speaker_portrait_section)
                         .with_children(|speaker_portrait_section| {
-                            speaker_portrait_section.spawn((speaker_portrait, SpeakerPortrait));
+                            speaker_portrait_section.spawn((
+                                speaker_portrait,
+                                speaker_portrait_texture_atlas,
+                                SpeakerPortrait,
+                            ));
                         });
 
                     speaker_section

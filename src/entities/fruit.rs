@@ -80,19 +80,22 @@ pub fn replace_fruit_sprites(
             TextureAtlasLayout::from_grid(UVec2::new(16, 16), 38, 6, None, None);
         let fruit_texture_atlas_handle = texture_atlases.add(fruit_texture_atlas);
 
-        let fruit_sprite = SpriteSheetBundle {
+        let fruit_texture_atlas = TextureAtlas {
+            layout: fruit_texture_atlas_handle.clone(),
+            index: tile_texture_index.0 as usize,
+        };
+
+        let fruit_sprite = SpriteBundle {
             sprite: Sprite::default(),
-            atlas: TextureAtlas {
-                layout: fruit_texture_atlas_handle.clone(),
-                index: tile_texture_index.0 as usize,
-            },
             texture: texture_handle.clone(),
             transform: *fruit_transform,
             ..default()
         };
 
         commands.entity(fruit_entity).remove::<Transform>();
-        commands.entity(fruit_entity).insert(fruit_sprite);
+        commands
+            .entity(fruit_entity)
+            .insert((fruit_sprite, fruit_texture_atlas));
     }
 }
 

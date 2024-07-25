@@ -33,7 +33,8 @@ pub struct ChatMsg {
 #[derive(Bundle)]
 pub struct ChatterBundle {
     label: ChatterLabel,
-    sprite: SpriteSheetBundle,
+    sprite: SpriteBundle,
+    texture_atlas: TextureAtlas,
     movement_type: MovementType,
     status: ChatterStatus,
 }
@@ -50,19 +51,22 @@ pub fn replace_chatter_sprite(
             TextureAtlasLayout::from_grid(UVec2::new(16, 16), 8, 3, None, None);
         let chatter_texture_atlas_handle = texture_atlases.add(chatter_texture_atlas);
 
-        let chatter_sprite = SpriteSheetBundle {
+        let chatter_texture_atlas = TextureAtlas {
+            layout: chatter_texture_atlas_handle.clone(),
+            index: tile_texture_index.0 as usize,
+        };
+
+        let chatter_sprite = SpriteBundle {
             sprite: Sprite::default(),
-            atlas: TextureAtlas {
-                layout: chatter_texture_atlas_handle.clone(),
-                index: tile_texture_index.0 as usize,
-            },
             texture: texture_handle.clone(),
             transform: *chatter_transform,
             ..default()
         };
 
         commands.entity(chatter_entity).remove::<Transform>();
-        commands.entity(chatter_entity).insert(chatter_sprite);
+        commands
+            .entity(chatter_entity)
+            .insert((chatter_sprite, chatter_texture_atlas));
     }
 }
 

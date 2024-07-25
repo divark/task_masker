@@ -25,7 +25,7 @@ pub enum StreamerStatus {
 #[derive(Bundle)]
 pub struct Streamer {
     label: StreamerLabel,
-    sprites: SpriteSheetBundle,
+    sprites: SpriteBundle,
     movement_type: MovementType,
     status: StreamerStatus,
 }
@@ -50,17 +50,22 @@ pub fn spawn_player_sprite(
     let texture_atlas = TextureAtlasLayout::from_grid(UVec2::new(16, 16), 4, 9, None, None);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
-    commands.entity(streamer_entity).remove::<Transform>();
-    commands.entity(streamer_entity).insert(SpriteSheetBundle {
+    let streamer_texture_atlas = TextureAtlas {
+        layout: texture_atlas_handle,
+        index: 0,
+    };
+
+    let streamer_sprite = SpriteBundle {
         sprite: Sprite::default(),
-        atlas: TextureAtlas {
-            layout: texture_atlas_handle,
-            index: 0,
-        },
         transform: *streamer_transform,
         texture: texture_handle,
         ..default()
-    });
+    };
+
+    commands.entity(streamer_entity).remove::<Transform>();
+    commands
+        .entity(streamer_entity)
+        .insert((streamer_sprite, streamer_texture_atlas));
 }
 
 /// Spawns Player without any component related to rendering
