@@ -244,13 +244,22 @@ pub fn spawn_ingame_screen(mut commands: Commands) {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
 
+            ..default()
+        },
+        ..default()
+    };
+
+    let dialogue_text_area = NodeBundle {
+        style: Style {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+
             padding: UiRect {
                 left: Val::Percent(5.),
                 right: Val::Percent(3.),
                 top: Val::Percent(3.),
                 bottom: Val::Percent(3.),
             },
-
             ..default()
         },
         ..default()
@@ -292,7 +301,12 @@ pub fn spawn_ingame_screen(mut commands: Commands) {
                             dialogue_section
                                 .spawn((dialogue_background, SpeakerPortraitBackground))
                                 .with_children(|dialogue_background| {
-                                    dialogue_background.spawn((dialogue_text, SpeakerChatBox));
+                                    dialogue_background.spawn(dialogue_text_area).with_children(
+                                        |dialogue_text_section| {
+                                            dialogue_text_section
+                                                .spawn((dialogue_text, SpeakerChatBox));
+                                        },
+                                    );
                                 });
                         });
                 });
