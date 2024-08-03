@@ -42,6 +42,26 @@ impl GameWithChatUI {
             sent_msgs: Vec::new(),
         }
     }
+
+    /// Advances the game n ticks.
+    pub fn update(&mut self, num_ticks: usize) {
+        for _i in 0..num_ticks {
+            self.app.update();
+        }
+    }
+
+    /// Returns the Component found within the game,
+    /// or None otherwise.
+    pub fn find<T>(&mut self) -> Option<&T>
+    where
+        T: Component,
+    {
+        self.app
+            .world_mut()
+            .query::<&T>()
+            .get_single(&self.app.world())
+            .ok()
+    }
 }
 
 #[given("a Streamer is spawned on the map,")]
@@ -122,6 +142,16 @@ fn subscriber_sends_msg(world: &mut GameWithChatUI) {
     world.app.update();
 
     world.sent_msgs.push(subscriber_msg);
+}
+
+#[when("the first five characters of the chat message has been read,")]
+fn types_five_characters_from_msg(world: &mut GameWithChatUI) {
+    world.update(5);
+
+    let msg = world
+        .find::<TypingMsg>()
+        .expect("types_five_characters_from_msg: Could not find TypingMsg Component.");
+    assert!(msg.num_typed_chars() >= 5);
 }
 
 #[then(

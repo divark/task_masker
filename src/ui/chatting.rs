@@ -83,6 +83,28 @@ pub struct Chatting {
     status: ChattingStatus,
 }
 
+#[derive(Component)]
+pub struct TypingMsg {
+    msg: String,
+
+    msg_idx: usize,
+}
+
+impl TypingMsg {
+    pub fn new(msg_contents: String) -> Self {
+        Self {
+            msg: msg_contents,
+            msg_idx: 0,
+        }
+    }
+
+    /// Returns the number of times this message has been
+    /// told to advance to the next character.
+    pub fn num_typed_chars(&self) -> usize {
+        self.msg_idx
+    }
+}
+
 pub fn insert_chatting_information(
     chatting_fields: Query<Entity, (With<SpeakerChatBox>, Without<TypingSpeedInterval>)>,
     mut commands: Commands,
