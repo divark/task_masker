@@ -62,12 +62,6 @@ impl Msg {
 pub struct MessageQueue(BinaryHeap<Msg>);
 
 #[derive(Component, Deref, DerefMut)]
-pub struct MsgIndex(usize);
-
-#[derive(Component, Deref, DerefMut)]
-pub struct MsgLen(usize);
-
-#[derive(Component, Deref, DerefMut)]
 pub struct MsgWaiting(Timer);
 
 #[derive(Component, Deref, DerefMut)]
@@ -78,8 +72,6 @@ pub struct Chatting {
     pending_messages: MessageQueue,
     typing_speed: TypingSpeedInterval,
     msg_waiting: MsgWaiting,
-    msg_character_idx: MsgIndex,
-    msg_len: MsgLen,
     status: ChattingStatus,
 }
 
@@ -123,21 +115,16 @@ pub fn insert_chatting_information(
     let mut msg_waiting_timer = MsgWaiting(Timer::from_seconds(15.0, TimerMode::Repeating));
     msg_waiting_timer.pause();
 
-    let msg_character_idx = MsgIndex(0);
-    let msg_len = MsgLen(0);
-
     commands.entity(ui_fields_entity).insert(Chatting {
         pending_messages: MessageQueue(BinaryHeap::new()),
         typing_speed: typing_speed_timer,
         msg_waiting: msg_waiting_timer,
-        msg_character_idx,
-        msg_len,
         status: ChattingStatus::Idle,
     });
 }
 
 /// Adds a recently captured message into the pending messages queue.
-pub fn add_msg_to_pending(
+pub fn load_msg_into_queue(
     mut message_queue_query: Query<&mut MessageQueue>,
     mut msg_receiver: EventReader<Msg>,
 ) {
@@ -151,24 +138,96 @@ pub fn add_msg_to_pending(
     }
 }
 
+/// Populates the contents of the next message in the queue
+/// into the Message UI Field.
+pub fn load_queued_msg_into_textfield(
+    mut message_queue_entry: Query<&mut MessageQueue>,
+    mut msg_fields: Query<(Entity, &mut Text), (With<SpeakerChatBox>, Without<TypingMsg>)>,
+    mut commands: Commands,
+) {
+}
+
+/// Loads the Speaker Portrait based on the currently
+/// loaded message.
+pub fn load_portrait_from_msg(
+    msg_fields: Query<&TypingMsg, Added<TypingMsg>>,
+    mut speaker_portrait: Query<(&mut UiImage, &mut TextureAtlas), With<SpeakerPortrait>>,
+    chatting_portraits: Query<
+        (&TextureAtlas, &Handle<Image>, &MovementType),
+        Without<SpeakerPortrait>,
+    >,
+) {
+    if msg_fields.is_empty() || speaker_portrait.is_empty() || chatting_portraits.is_empty() {
+        return;
+    }
+
+    let (mut speaker_image, mut speaker_texture_atlas) = speaker_portrait.single_mut();
+    let current_msg = msg_fields.single();
+
+    let (role_image, role_atlas) = match &current_msg.speaker_role() {
+        MovementType::Walk => {
+            let streamer_texture_entry = chatting_portraits
+                .iter()
+                .find(|entity_texture_info| *entity_texture_info.2 == MovementType::Walk)
+                .expect("setup_chatting_from_msg: Could not find Streamer's Texture Atlas.");
+
+            let streamer_texture_atlas = streamer_texture_entry.0.clone();
+            let streamer_image_handle = streamer_texture_entry.1.clone();
+
+            let streamer_image = UiImage::new(streamer_image_handle);
+
+            (streamer_image, streamer_texture_atlas)
+        }
+        MovementType::Fly => {
+            let chatter_texture_entry = chatting_portraits
+                .iter()
+                .find(|entity_texture_info| *entity_texture_info.2 == MovementType::Fly)
+                .expect("setup_chatting_from_msg: Could not find Chatter's Texture Atlas.");
+
+            let chatter_texture_atlas = chatter_texture_entry.0.clone();
+            let chatter_image_handle = chatter_texture_entry.1.clone();
+
+            let chatter_image = UiImage::new(chatter_image_handle);
+
+            (chatter_image, chatter_texture_atlas)
+        }
+        MovementType::Swim => {
+            let subscriber_texture_entry = chatting_portraits
+                .iter()
+                .find(|entity_texture_info| *entity_texture_info.2 == MovementType::Swim)
+                .expect("setup_chatting_from_msg: Could not find Subscriber's Texture Atlas.");
+
+            let subscriber_texture_atlas = subscriber_texture_entry.0.clone();
+            let subscriber_image_handle = subscriber_texture_entry.1.clone();
+
+            let subscriber_image = UiImage::new(subscriber_image_handle);
+
+            (subscriber_image, subscriber_texture_atlas)
+        }
+    };
+
+    *speaker_image = role_image;
+    *speaker_texture_atlas = role_atlas;
+}
+
 pub fn setup_chatting_from_msg(
     mut chatting_ui_section: Query<&mut Visibility, With<SpeakerUI>>,
     mut chatting_fields: Query<(&mut UiImage, &mut TextureAtlas), With<SpeakerPortrait>>,
     mut msg_fields: Query<
         (
+            Entity,
             &mut Text,
-            &mut MsgIndex,
-            &mut MsgLen,
             &mut TypingSpeedInterval,
             &mut ChattingStatus,
             &mut MessageQueue,
         ),
-        With<SpeakerChatBox>,
+        (With<SpeakerChatBox>, Without<TypingMsg>),
     >,
     chatting_entities: Query<
         (&TextureAtlas, &Handle<Image>, &MovementType),
         Without<SpeakerPortrait>,
     >,
+    mut commands: Commands,
 ) {
     if chatting_entities.is_empty() {
         return;
@@ -187,9 +246,8 @@ pub fn setup_chatting_from_msg(
         .expect("Could not find Speaker UI elements.");
 
     let (
+        chatting_ui_entity,
         mut speaker_textbox,
-        mut msg_index,
-        mut msg_len,
         mut typing_speed_timer,
         mut chatting_status,
         mut pending_msgs_queue,
@@ -197,7 +255,7 @@ pub fn setup_chatting_from_msg(
         .get_single_mut()
         .expect("Msg elements should be attached by now.");
 
-    if pending_msgs_queue.is_empty() || msg_len.0 != 0 {
+    if pending_msgs_queue.is_empty() {
         return;
     }
 
@@ -250,7 +308,6 @@ pub fn setup_chatting_from_msg(
     *speaker_portrait_atlas = role_atlas;
     *speaker_image = role_image;
 
-    speaker_textbox.sections[0].value = String::new();
     speaker_textbox.sections.drain(1..);
 
     speaker_textbox.sections[0].value = format!("{}:\n", recent_msg.speaker_name);
@@ -270,9 +327,6 @@ pub fn setup_chatting_from_msg(
         speaker_textbox.sections.push(untyped_character);
     }
 
-    msg_index.0 = 1;
-    msg_len.0 = recent_msg.msg.len();
-
     let mut speaker_ui_visibility = chatting_ui_section
         .get_single_mut()
         .expect("Speaker UI should exist by now.");
@@ -282,11 +336,15 @@ pub fn setup_chatting_from_msg(
 
     typing_speed_timer.reset();
     typing_speed_timer.unpause();
+
+    commands
+        .entity(chatting_ui_entity)
+        .insert(TypingMsg::new(recent_msg.msg));
 }
 
 pub fn teletype_current_message(
     mut msg_fields: Query<
-        (&mut Text, &mut MsgIndex, &mut TypingSpeedInterval),
+        (&mut Text, &mut TypingMsg, &mut TypingSpeedInterval),
         With<SpeakerChatBox>,
     >,
     time: Res<Time>,
@@ -295,7 +353,7 @@ pub fn teletype_current_message(
         return;
     }
 
-    let (mut speaker_msg, mut msg_index, mut typing_speed_timer) = msg_fields
+    let (mut speaker_msg, mut typing_msg, mut typing_speed_timer) = msg_fields
         .get_single_mut()
         .expect("Msg elements should be attached by now.");
 
@@ -304,34 +362,32 @@ pub fn teletype_current_message(
         return;
     }
 
-    let msg_character = speaker_msg
-        .sections
-        .get_mut(msg_index.0)
-        .expect("Could not find text section in msg.");
-    msg_character.style.color = Color::BLACK;
-
-    msg_index.0 += 1;
+    //let msg_character = speaker_msg
+    //    .sections
+    //    .get_mut(msg_index.0)
+    //    .expect("Could not find text section in msg.");
+    //msg_character.style.color = Color::BLACK;
 }
 
 /// Spawns a noise for each visible character just revealed.
 pub fn play_typing_noise(
-    msg_fields: Query<(&Text, &MsgIndex, &MsgLen), Changed<MsgIndex>>,
+    msg_fields: Query<(&Text, &TypingMsg), Changed<TypingMsg>>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
-    for (speaker_msg, msg_index, msg_len) in &msg_fields {
-        if msg_len.0 == 0 {
-            continue;
-        }
+    for (speaker_msg, typing_msg) in &msg_fields {
+        //if msg_len.0 == 0 {
+        //    continue;
+        //}
 
-        let msg_character = speaker_msg
-            .sections
-            .get(msg_index.0)
-            .expect("play_typing_noise: Could not find text section in msg.");
+        //let msg_character = speaker_msg
+        //    .sections
+        //    .get(msg_index.0)
+        //    .expect("play_typing_noise: Could not find text section in msg.");
 
-        if msg_character.value == " " {
-            continue;
-        }
+        //if msg_character.value == " " {
+        //    continue;
+        //}
 
         let typing_noise = AudioBundle {
             source: asset_server.load("ui/balloon-boop.wav"),
@@ -347,26 +403,21 @@ pub fn play_typing_noise(
 
 pub fn activate_waiting_timer(
     mut chatting_information: Query<
-        (
-            &MsgIndex,
-            &MsgLen,
-            &mut TypingSpeedInterval,
-            &mut MsgWaiting,
-        ),
-        Changed<MsgIndex>,
+        (&TypingMsg, &mut TypingSpeedInterval, &mut MsgWaiting),
+        Changed<TypingMsg>,
     >,
 ) {
     if chatting_information.is_empty() {
         return;
     }
 
-    let (msg_index, msg_len, mut typing_speed_timer, mut msg_waiting_timer) = chatting_information
+    let (typing_msg, mut typing_speed_timer, mut msg_waiting_timer) = chatting_information
         .get_single_mut()
         .expect("Chatting information should exist.");
 
-    if msg_index.0 != msg_len.0 && msg_len.0 != 0 {
-        return;
-    }
+    //if msg_index.0 != msg_len.0 && msg_len.0 != 0 {
+    //    return;
+    //}
 
     typing_speed_timer.pause();
     typing_speed_timer.reset();
@@ -377,7 +428,7 @@ pub fn activate_waiting_timer(
 
 pub fn clear_current_msg_on_time_up(
     mut msg_fields: Query<
-        (&mut MsgLen, &mut MsgWaiting, &mut ChattingStatus),
+        (&mut TypingMsg, &mut MsgWaiting, &mut ChattingStatus),
         With<SpeakerChatBox>,
     >,
     time: Res<Time>,
@@ -402,12 +453,12 @@ pub fn clear_current_msg_on_time_up(
     msg_waiting_timer.pause();
     msg_waiting_timer.reset();
 
-    msg_len.0 = 0;
+    //msg_len.0 = 0;
     *chatting_status = ChattingStatus::Idle;
 }
 
 pub fn hide_chatting_ui(
-    msg_fields: Query<&MsgLen, Changed<MsgLen>>,
+    msg_fields: Query<&TypingMsg, Changed<TypingMsg>>,
     mut speaker_ui_fields: Query<&mut Visibility, With<SpeakerUI>>,
 ) {
     if msg_fields.is_empty() || speaker_ui_fields.is_empty() {
@@ -417,9 +468,9 @@ pub fn hide_chatting_ui(
     let msg_len = msg_fields
         .get_single()
         .expect("Msg Len should be populated by now.");
-    if msg_len.0 != 0 {
-        return;
-    }
+    //if msg_len.0 != 0 {
+    //    return;
+    //}
 
     let mut speaker_ui_visibility = speaker_ui_fields
         .get_single_mut()

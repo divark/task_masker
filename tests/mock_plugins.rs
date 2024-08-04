@@ -29,8 +29,8 @@ impl Plugin for MockChattingPlugin {
             Update,
             (
                 insert_chatting_information,
-                add_msg_to_pending.after(insert_chatting_information),
-                setup_chatting_from_msg.after(add_msg_to_pending),
+                load_msg_into_queue.after(insert_chatting_information),
+                setup_chatting_from_msg.after(load_msg_into_queue),
                 teletype_current_message.after(setup_chatting_from_msg),
                 activate_waiting_timer.after(teletype_current_message),
                 clear_current_msg_on_time_up.after(activate_waiting_timer),
