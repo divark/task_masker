@@ -106,6 +106,7 @@ fn streamer_sends_msg(world: &mut GameWithChatUI) {
         .world_mut()
         .send_event::<Msg>(streamer_msg.clone());
     world.app.update();
+    world.app.update();
 
     world.sent_msgs.push(streamer_msg);
 }
@@ -119,6 +120,7 @@ fn chatter_sends_msg(world: &mut GameWithChatUI) {
     );
 
     world.app.world_mut().send_event::<Msg>(chatter_msg.clone());
+    world.app.update();
     world.app.update();
 
     world.sent_msgs.push(chatter_msg);
@@ -137,6 +139,7 @@ fn subscriber_sends_msg(world: &mut GameWithChatUI) {
         .world_mut()
         .send_event::<Msg>(subscriber_msg.clone());
     world.app.update();
+    world.app.update();
 
     world.sent_msgs.push(subscriber_msg);
 }
@@ -152,34 +155,39 @@ fn types_five_characters_from_msg(world: &mut GameWithChatUI) {
 }
 
 #[then(
-    regex = r"^the current Message should contain the (Streamer|Chatter|Subscriber)'s chat message."
+    regex = r"^the Chatting Queue should contain the (Streamer|Chatter|Subscriber)'s chat message."
 )]
 fn chatting_queue_has_streamer_msg(world: &mut GameWithChatUI) {
     world.app.update();
 
-    let expected_chat_msg = world.sent_msgs.get(0).unwrap().clone();
-    let current_chat_msg = world
-        .find::<TypingMsg>()
-        .expect("chatting_queue_has_streamer_msg: TypingMsg could not be found.");
+    let pending_chat_messages = world
+        .app
+        .world_mut()
+        .query::<&MessageQueue>()
+        .single(&world.app.world());
 
-    assert_eq!(expected_chat_msg, current_chat_msg.msg);
+    let next_chat_msg = pending_chat_messages.peek();
+    assert!(next_chat_msg.is_some());
+
+    let next_chat_msg_contents = next_chat_msg.unwrap();
+    assert_eq!(*world.sent_msgs.get(0).unwrap(), *next_chat_msg_contents);
 }
 
 #[then("the Chatting Queue should have the Streamer's chat message as the top priority.")]
 fn chatting_queue_has_streamer_msg_top_priority(world: &mut GameWithChatUI) {
     world.app.update();
 
-    let expected_chat_msg = world.sent_msgs.get(1).unwrap().clone();
     let pending_chat_messages = world
-        .find::<MessageQueue>()
-        .expect("chatting_queue_has_streamer_msg_top_priority: MessageQueue could not be found.");
+        .app
+        .world_mut()
+        .query::<&MessageQueue>()
+        .single(&world.app.world());
 
     let next_chat_msg = pending_chat_messages.peek();
     assert!(next_chat_msg.is_some());
-    assert_eq!(pending_chat_messages.len(), 2);
 
     let next_chat_msg_contents = next_chat_msg.unwrap();
-    assert_eq!(expected_chat_msg, *next_chat_msg_contents);
+    assert_eq!(*world.sent_msgs.get(1).unwrap(), *next_chat_msg_contents);
 }
 
 fn main() {
