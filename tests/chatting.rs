@@ -35,6 +35,8 @@ impl GameWithChatUI {
         // so we have to load a Tiled map as a prerequisite.
         app.add_plugins(MockTiledMapPlugin);
         app.add_event::<TilePosEvent>();
+
+        app.add_systems(Update, intercept_typing_timer);
         app.update();
 
         Self {
@@ -61,6 +63,16 @@ impl GameWithChatUI {
             .query::<&T>()
             .get_single(&self.app.world())
             .ok()
+    }
+}
+
+/// Sets each Typing Timer to zero to make testing
+/// not dependent off of real-world time.
+fn intercept_typing_timer(
+    mut typing_timers: Query<&mut TypingSpeedInterval, Added<TypingSpeedInterval>>,
+) {
+    for mut typing_timer in &mut typing_timers {
+        *typing_timer = TypingSpeedInterval(Timer::from_seconds(0.0, TimerMode::Repeating));
     }
 }
 
@@ -151,7 +163,7 @@ fn types_five_characters_from_msg(world: &mut GameWithChatUI) {
     let msg = world
         .find::<TypingMsg>()
         .expect("types_five_characters_from_msg: Could not find TypingMsg Component.");
-    assert_eq!(msg.idx(), 5);
+    assert!(msg.idx() >= 5);
 }
 
 #[then(

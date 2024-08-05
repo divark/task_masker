@@ -65,7 +65,7 @@ pub struct MessageQueue(BinaryHeap<Msg>);
 pub struct MsgWaiting(Timer);
 
 #[derive(Component, Deref, DerefMut)]
-pub struct TypingSpeedInterval(Timer);
+pub struct TypingSpeedInterval(pub Timer);
 
 #[derive(Bundle)]
 pub struct Chatting {
@@ -160,7 +160,7 @@ pub fn load_msg_into_queue(
 /// into the Message UI Field.
 pub fn load_queued_msg_into_textfield(
     mut msg_visibility_entry: Query<&mut Visibility, With<SpeakerUI>>,
-    mut message_queue_entry: Query<&mut MessageQueue>,
+    message_queue_entry: Query<&MessageQueue>,
     mut msg_fields: Query<
         (Entity, &mut Text, &mut ChattingStatus),
         (With<SpeakerChatBox>, Without<TypingMsg>),
@@ -172,13 +172,13 @@ pub fn load_queued_msg_into_textfield(
     }
 
     let (msg_entities, mut msg_textfield, mut chatting_status) = msg_fields.single_mut();
-    let mut pending_msgs = message_queue_entry.single_mut();
+    let pending_msgs = message_queue_entry.single();
 
     if pending_msgs.is_empty() {
         return;
     }
 
-    let recent_msg = pending_msgs.pop().unwrap();
+    let recent_msg = pending_msgs.peek().unwrap();
 
     msg_textfield.sections.drain(1..);
 
@@ -206,7 +206,7 @@ pub fn load_queued_msg_into_textfield(
     let typing_speed_timer = TypingSpeedInterval(Timer::from_seconds(0.1, TimerMode::Repeating));
     commands
         .entity(msg_entities)
-        .insert((TypingMsg::new(recent_msg), typing_speed_timer));
+        .insert((TypingMsg::new(recent_msg.clone()), typing_speed_timer));
 }
 
 /// Loads the Speaker Portrait based on the currently
@@ -361,13 +361,15 @@ pub fn activate_waiting_timer(
         .insert(msg_waiting_timer);
 }
 
+/// Removes the most recent message, and hides the Chat UI.
 pub fn unload_msg_on_timeup(
+    mut message_queue_entry: Query<&mut MessageQueue>,
     mut msg_visibility_entry: Query<&mut Visibility, With<SpeakerUI>>,
     mut msg_fields: Query<(Entity, &mut MsgWaiting, &mut ChattingStatus), With<SpeakerChatBox>>,
     time: Res<Time>,
     mut commands: Commands,
 ) {
-    if msg_fields.is_empty() || msg_visibility_entry.is_empty() {
+    if msg_fields.is_empty() || msg_visibility_entry.is_empty() || message_queue_entry.is_empty() {
         return;
     }
 
@@ -382,6 +384,9 @@ pub fn unload_msg_on_timeup(
 
     let mut msg_ui_visibility = msg_visibility_entry.single_mut();
     *msg_ui_visibility = Visibility::Hidden;
+
+    let mut pending_msgs = message_queue_entry.single_mut();
+    pending_msgs.pop();
 
     commands.entity(chatting_ui_entities).remove::<MsgWaiting>();
     commands.entity(chatting_ui_entities).remove::<TypingMsg>();
