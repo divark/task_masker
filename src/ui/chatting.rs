@@ -75,7 +75,7 @@ pub struct Chatting {
 
 #[derive(Component)]
 pub struct TypingMsg {
-    msg: Msg,
+    pub msg: Msg,
 
     msg_idx: usize,
 }
