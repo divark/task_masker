@@ -30,11 +30,10 @@ impl Plugin for MockChattingPlugin {
             (
                 insert_chatting_information,
                 load_msg_into_queue.after(insert_chatting_information),
-                setup_chatting_from_msg.after(load_msg_into_queue),
-                teletype_current_message.after(setup_chatting_from_msg),
+                load_queued_msg_into_textfield.after(load_msg_into_queue),
+                teletype_current_message.after(load_queued_msg_into_textfield),
                 activate_waiting_timer.after(teletype_current_message),
-                clear_current_msg_on_time_up.after(activate_waiting_timer),
-                hide_chatting_ui.after(clear_current_msg_on_time_up),
+                unload_msg_on_timeup.after(activate_waiting_timer),
             )
                 .run_if(in_state(GameState::InGame)),
         );

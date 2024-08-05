@@ -49,14 +49,13 @@ impl Plugin for ChattingPlugin {
             (
                 insert_chatting_information,
                 load_msg_into_queue,
-                setup_chatting_from_msg,
                 speak_to_streamer_from_chatter,
                 speak_to_streamer_from_subscriber,
+                load_queued_msg_into_textfield,
                 teletype_current_message,
                 play_typing_noise,
                 activate_waiting_timer,
-                clear_current_msg_on_time_up,
-                hide_chatting_ui,
+                unload_msg_on_timeup,
             )
                 .run_if(in_state(GameState::InGame)),
         );

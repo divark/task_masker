@@ -151,7 +151,7 @@ fn types_five_characters_from_msg(world: &mut GameWithChatUI) {
     let msg = world
         .find::<TypingMsg>()
         .expect("types_five_characters_from_msg: Could not find TypingMsg Component.");
-    assert!(msg.num_typed_chars() >= 5);
+    assert_eq!(msg.idx(), 5);
 }
 
 #[then(
