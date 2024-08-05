@@ -97,7 +97,7 @@ impl TypingMsg {
     /// Returns whether the read message is at the last
     /// character or not.
     pub fn at_end(&self) -> bool {
-        self.msg_idx == self.msg.msg.len() - 1
+        self.msg_idx == self.msg.msg.len()
     }
 
     /// Returns the index of the current character within
@@ -111,7 +111,7 @@ impl TypingMsg {
     pub fn to_next_char(&mut self) {
         let new_idx = self.msg_idx + 1;
 
-        if new_idx == self.msg.msg.len() {
+        if new_idx > self.msg.msg.len() {
             return;
         }
 
@@ -120,16 +120,20 @@ impl TypingMsg {
 }
 
 pub fn insert_chatting_information(
-    chatting_fields: Query<Entity, (With<SpeakerChatBox>, Without<TypingSpeedInterval>)>,
+    mut msg_visibility_entry: Query<&mut Visibility, With<SpeakerUI>>,
+    chatting_fields: Query<Entity, (With<SpeakerChatBox>, Without<MessageQueue>)>,
     mut commands: Commands,
 ) {
-    if chatting_fields.is_empty() {
+    if chatting_fields.is_empty() || msg_visibility_entry.is_empty() {
         return;
     }
 
     let ui_fields_entity = chatting_fields
         .get_single()
         .expect("Chatting UI should exist by now.");
+
+    let mut msg_ui_visibility = msg_visibility_entry.single_mut();
+    *msg_ui_visibility = Visibility::Hidden;
 
     commands.entity(ui_fields_entity).insert(Chatting {
         pending_messages: MessageQueue(BinaryHeap::new()),
@@ -156,7 +160,7 @@ pub fn load_msg_into_queue(
 /// into the Message UI Field.
 pub fn load_queued_msg_into_textfield(
     mut msg_visibility_entry: Query<&mut Visibility, With<SpeakerUI>>,
-    message_queue_entry: Query<&MessageQueue>,
+    mut message_queue_entry: Query<&mut MessageQueue>,
     mut msg_fields: Query<
         (Entity, &mut Text, &mut ChattingStatus),
         (With<SpeakerChatBox>, Without<TypingMsg>),
@@ -168,13 +172,13 @@ pub fn load_queued_msg_into_textfield(
     }
 
     let (msg_entities, mut msg_textfield, mut chatting_status) = msg_fields.single_mut();
-    let pending_msgs = message_queue_entry.single();
+    let mut pending_msgs = message_queue_entry.single_mut();
 
     if pending_msgs.is_empty() {
         return;
     }
 
-    let recent_msg = pending_msgs.peek().unwrap();
+    let recent_msg = pending_msgs.pop().unwrap();
 
     msg_textfield.sections.drain(1..);
 
@@ -202,7 +206,7 @@ pub fn load_queued_msg_into_textfield(
     let typing_speed_timer = TypingSpeedInterval(Timer::from_seconds(0.1, TimerMode::Repeating));
     commands
         .entity(msg_entities)
-        .insert((TypingMsg::new(recent_msg.clone()), typing_speed_timer));
+        .insert((TypingMsg::new(recent_msg), typing_speed_timer));
 }
 
 /// Loads the Speaker Portrait based on the currently
@@ -351,20 +355,19 @@ pub fn activate_waiting_timer(
         .entity(chatting_ui_entities)
         .remove::<TypingSpeedInterval>();
 
-    let msg_waiting_timer = MsgWaiting(Timer::from_seconds(15.0, TimerMode::Once));
+    let msg_waiting_timer = MsgWaiting(Timer::from_seconds(5.0, TimerMode::Once));
     commands
         .entity(chatting_ui_entities)
         .insert(msg_waiting_timer);
 }
 
 pub fn unload_msg_on_timeup(
-    mut message_queue_entry: Query<&mut MessageQueue>,
     mut msg_visibility_entry: Query<&mut Visibility, With<SpeakerUI>>,
     mut msg_fields: Query<(Entity, &mut MsgWaiting, &mut ChattingStatus), With<SpeakerChatBox>>,
     time: Res<Time>,
     mut commands: Commands,
 ) {
-    if msg_fields.is_empty() || msg_visibility_entry.is_empty() || message_queue_entry.is_empty() {
+    if msg_fields.is_empty() || msg_visibility_entry.is_empty() {
         return;
     }
 
@@ -379,9 +382,6 @@ pub fn unload_msg_on_timeup(
 
     let mut msg_ui_visibility = msg_visibility_entry.single_mut();
     *msg_ui_visibility = Visibility::Hidden;
-
-    let mut pending_msgs = message_queue_entry.single_mut();
-    pending_msgs.pop().unwrap();
 
     commands.entity(chatting_ui_entities).remove::<MsgWaiting>();
     commands.entity(chatting_ui_entities).remove::<TypingMsg>();

@@ -49,6 +49,7 @@ impl Plugin for ChattingPlugin {
             (
                 insert_chatting_information,
                 load_msg_into_queue,
+                load_portrait_from_msg,
                 speak_to_streamer_from_chatter,
                 speak_to_streamer_from_subscriber,
                 load_queued_msg_into_textfield,
