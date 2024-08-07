@@ -62,10 +62,10 @@ impl Msg {
 pub struct MessageQueue(BinaryHeap<Msg>);
 
 #[derive(Component, Deref, DerefMut)]
-pub struct MsgWaiting(Timer);
+pub struct MsgWaitingTimer(pub Timer);
 
 #[derive(Component, Deref, DerefMut)]
-pub struct TypingSpeedInterval(pub Timer);
+pub struct TypingSpeedTimer(pub Timer);
 
 #[derive(Bundle)]
 pub struct Chatting {
@@ -203,7 +203,7 @@ pub fn load_queued_msg_into_textfield(
     *msg_ui_visibility = Visibility::Visible;
     *chatting_status = ChattingStatus::Speaking(recent_msg.speaker_role);
 
-    let typing_speed_timer = TypingSpeedInterval(Timer::from_seconds(0.1, TimerMode::Repeating));
+    let typing_speed_timer = TypingSpeedTimer(Timer::from_seconds(0.1, TimerMode::Repeating));
     commands
         .entity(msg_entities)
         .insert((TypingMsg::new(recent_msg.clone()), typing_speed_timer));
@@ -273,10 +273,7 @@ pub fn load_portrait_from_msg(
 }
 
 pub fn teletype_current_message(
-    mut msg_fields: Query<
-        (&mut Text, &mut TypingMsg, &mut TypingSpeedInterval),
-        With<SpeakerChatBox>,
-    >,
+    mut msg_fields: Query<(&mut Text, &mut TypingMsg, &mut TypingSpeedTimer), With<SpeakerChatBox>>,
     time: Res<Time>,
 ) {
     if msg_fields.is_empty() {
@@ -353,9 +350,9 @@ pub fn activate_waiting_timer(
 
     commands
         .entity(chatting_ui_entities)
-        .remove::<TypingSpeedInterval>();
+        .remove::<TypingSpeedTimer>();
 
-    let msg_waiting_timer = MsgWaiting(Timer::from_seconds(5.0, TimerMode::Once));
+    let msg_waiting_timer = MsgWaitingTimer(Timer::from_seconds(5.0, TimerMode::Once));
     commands
         .entity(chatting_ui_entities)
         .insert(msg_waiting_timer);
@@ -365,7 +362,10 @@ pub fn activate_waiting_timer(
 pub fn unload_msg_on_timeup(
     mut message_queue_entry: Query<&mut MessageQueue>,
     mut msg_visibility_entry: Query<&mut Visibility, With<SpeakerUI>>,
-    mut msg_fields: Query<(Entity, &mut MsgWaiting, &mut ChattingStatus), With<SpeakerChatBox>>,
+    mut msg_fields: Query<
+        (Entity, &mut MsgWaitingTimer, &mut ChattingStatus),
+        With<SpeakerChatBox>,
+    >,
     time: Res<Time>,
     mut commands: Commands,
 ) {
@@ -388,7 +388,9 @@ pub fn unload_msg_on_timeup(
     let mut pending_msgs = message_queue_entry.single_mut();
     pending_msgs.pop();
 
-    commands.entity(chatting_ui_entities).remove::<MsgWaiting>();
+    commands
+        .entity(chatting_ui_entities)
+        .remove::<MsgWaitingTimer>();
     commands.entity(chatting_ui_entities).remove::<TypingMsg>();
     *chatting_status = ChattingStatus::Idle;
 }

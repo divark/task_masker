@@ -12,6 +12,7 @@ use cucumber::{given, then, when, World};
 use task_masker::entities::MovementType;
 use task_masker::map::plugins::TilePosEvent;
 use task_masker::ui::chatting::*;
+use task_masker::ui::screens::{SpeakerChatBox, SpeakerUI};
 use task_masker::GameState;
 
 #[derive(Debug, World)]
@@ -69,11 +70,31 @@ impl GameWithChatUI {
 /// Sets each Typing Timer to zero to make testing
 /// not dependent off of real-world time.
 fn intercept_typing_timer(
-    mut typing_timers: Query<&mut TypingSpeedInterval, Added<TypingSpeedInterval>>,
+    mut typing_timers: Query<&mut TypingSpeedTimer, Added<TypingSpeedTimer>>,
 ) {
     for mut typing_timer in &mut typing_timers {
-        *typing_timer = TypingSpeedInterval(Timer::from_seconds(0.0, TimerMode::Repeating));
+        *typing_timer = TypingSpeedTimer(Timer::from_seconds(0.0, TimerMode::Repeating));
     }
+}
+
+/// Sets each Waiting Timer to zero to make testing
+/// not dependent off of real-world time.
+fn intercept_msg_waiting_timer(mut waiting_timers: Query<&mut MsgWaitingTimer>) {
+    for mut waiting_timer in &mut waiting_timers {
+        *waiting_timer = MsgWaitingTimer(Timer::from_seconds(0.0, TimerMode::Once));
+    }
+}
+
+/// Returns the first n characters found from some
+/// Text field as a String.
+fn read_first_n(textfield: &Text, amount: usize) -> String {
+    let mut msg_contents = String::new();
+
+    for i in 1..=amount {
+        msg_contents += &textfield.sections[i].value;
+    }
+
+    msg_contents
 }
 
 #[given("a Streamer is spawned on the map,")]
@@ -166,6 +187,37 @@ fn types_five_characters_from_msg(world: &mut GameWithChatUI) {
     assert!(msg.idx() >= 5);
 }
 
+#[when("the chat message has been fully read,")]
+fn read_whole_chat_msg(world: &mut GameWithChatUI) {
+    loop {
+        world.update(1);
+
+        let msg_being_typed = world
+            .find::<TypingMsg>()
+            .expect("read_whole_chat_msg: Could not find current chat msg being typed.");
+
+        if msg_being_typed.at_end() {
+            break;
+        }
+    }
+}
+
+#[when("the wait time is up,")]
+fn wait_until_wait_time_is_up(world: &mut GameWithChatUI) {
+    world
+        .app
+        .add_systems(Update, intercept_msg_waiting_timer.run_if(run_once()));
+
+    loop {
+        world.update(1);
+
+        let found_waiting_timer = world.find::<MsgWaitingTimer>();
+        if found_waiting_timer.is_none() {
+            break;
+        }
+    }
+}
+
 #[then(
     regex = r"^the Chatting Queue should contain the (Streamer|Chatter|Subscriber)'s chat message."
 )]
@@ -200,6 +252,44 @@ fn chatting_queue_has_streamer_msg_top_priority(world: &mut GameWithChatUI) {
 
     let next_chat_msg_contents = next_chat_msg.unwrap();
     assert_eq!(*world.sent_msgs.get(1).unwrap(), *next_chat_msg_contents);
+}
+
+#[then("the Chat UI should contain the first five characters typed from the Chat Message.")]
+fn chatting_ui_contains_first_five_chars_from_msg(world: &mut GameWithChatUI) {
+    world.update(1);
+
+    let msg_txtfield = world
+        .app
+        .world_mut()
+        .query_filtered::<&Text, With<SpeakerChatBox>>()
+        .single(&world.app.world());
+
+    let expected_contents = String::from("This ");
+    let msg_contents = read_first_n(&msg_txtfield, 5);
+
+    assert_eq!(expected_contents, msg_contents);
+}
+
+#[then("the Chat Message should no longer be present,")]
+fn chatting_msg_should_be_gone(world: &mut GameWithChatUI) {
+    world.update(1);
+
+    let found_msg = world.find::<TypingMsg>();
+    assert!(found_msg.is_none());
+}
+
+#[then("the Chat UI should be hidden.")]
+fn chat_ui_should_be_hidden(world: &mut GameWithChatUI) {
+    world.update(1);
+
+    let ui_visibility = world
+        .app
+        .world_mut()
+        .query_filtered::<&Visibility, With<SpeakerUI>>()
+        .get_single(&world.app.world())
+        .expect("chat_ui_should_be_hidden: Could not find Visibility for Chat UI.");
+
+    assert_eq!(Visibility::Hidden, *ui_visibility);
 }
 
 fn main() {
