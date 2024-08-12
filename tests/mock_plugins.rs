@@ -194,4 +194,39 @@ impl GameWorld {
 
         Self { app }
     }
+
+    /// Advances the game n ticks.
+    pub fn update(&mut self, num_ticks: usize) {
+        for _i in 0..num_ticks {
+            self.app.update();
+        }
+    }
+
+    /// Returns the Component found within the game,
+    /// or None otherwise.
+    pub fn find<T>(&mut self) -> Option<&T>
+    where
+        T: Component,
+    {
+        self.app
+            .world_mut()
+            .query::<&T>()
+            .get_single(&self.app.world())
+            .ok()
+    }
+
+    /// Returns the requested Component found associated
+    /// with the other Component within the game, or None
+    /// otherwise.
+    pub fn find_with<T, U>(&mut self) -> Option<&T>
+    where
+        T: Component,
+        U: Component,
+    {
+        self.app
+            .world_mut()
+            .query_filtered::<&T, With<U>>()
+            .get_single(&self.app.world())
+            .ok()
+    }
 }

@@ -48,3 +48,7 @@ harness = false
 [[test]]
 name = "chatting"
 harness = false
+
+[[test]]
+name = "environment"
+harness = false
