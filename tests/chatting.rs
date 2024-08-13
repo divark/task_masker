@@ -9,7 +9,7 @@ use mock_plugins::{
 use bevy::prelude::*;
 use cucumber::{given, then, when, World};
 
-use task_masker::entities::MovementType;
+use task_masker::entities::GameEntityType;
 use task_masker::map::plugins::TilePosEvent;
 use task_masker::ui::chatting::*;
 use task_masker::ui::screens::{SpeakerChatBox, SpeakerUI};
@@ -131,7 +131,7 @@ fn streamer_sends_msg(world: &mut GameWithChatUI) {
     let streamer_msg = Msg::new(
         String::from("Caveman"),
         String::from("This is a test message to see if this works and types as expected."),
-        MovementType::Walk,
+        GameEntityType::Walk,
     );
 
     world
@@ -149,7 +149,7 @@ fn chatter_sends_msg(world: &mut GameWithChatUI) {
     let chatter_msg = Msg::new(
         String::from("Chatter"),
         String::from("Hello caveman!"),
-        MovementType::Fly,
+        GameEntityType::Fly,
     );
 
     world.app.world_mut().send_event::<Msg>(chatter_msg.clone());
@@ -164,7 +164,7 @@ fn subscriber_sends_msg(world: &mut GameWithChatUI) {
     let subscriber_msg = Msg::new(
         String::from("Subscriber"),
         String::from("'Ello caveman!"),
-        MovementType::Swim,
+        GameEntityType::Swim,
     );
 
     world

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    entities::{streamer::StreamerLabel, MovementType},
+    entities::{streamer::StreamerLabel, GameEntityType},
     map::path_finding::{tilepos_to_idx, Direction, Path},
 };
 
@@ -10,19 +10,21 @@ pub struct AnimationTimer(Timer);
 
 #[derive(Component)]
 pub struct AnimationIndices {
-    start_idx: usize,
-    end_idx: usize,
+    pub start_idx: usize,
+    pub end_idx: usize,
 }
 
 pub fn insert_animation_information(
-    moving_entities: Query<(Entity, &MovementType), Added<MovementType>>,
+    moving_entities: Query<(Entity, &GameEntityType), Added<GameEntityType>>,
     mut commands: Commands,
 ) {
     for (moving_entity, entity_type) in &moving_entities {
         let start_idx = match entity_type {
-            MovementType::Walk => ground_directional_index_from(&Direction::BottomRight),
-            MovementType::Fly => fly_directional_index_from(&Direction::BottomRight),
-            MovementType::Swim => swim_directional_index_from(&Direction::BottomRight),
+            GameEntityType::Walk => ground_directional_index_from(&Direction::BottomRight),
+            GameEntityType::Fly => fly_directional_index_from(&Direction::BottomRight),
+            GameEntityType::Swim => swim_directional_index_from(&Direction::BottomRight),
+            // This represents the Campfire for now, which consists of a single row.
+            GameEntityType::Environment => 0,
         };
 
         let end_idx = start_idx + movement_type_len(entity_type);
@@ -34,16 +36,18 @@ pub fn insert_animation_information(
     }
 }
 
-fn movement_type_len(entity_type: &MovementType) -> usize {
+pub fn movement_type_len(entity_type: &GameEntityType) -> usize {
     match entity_type {
-        MovementType::Walk => 4,
-        MovementType::Fly => 8,
-        MovementType::Swim => 16,
+        GameEntityType::Walk => 4,
+        GameEntityType::Fly => 8,
+        GameEntityType::Swim => 16,
+        // "Environment" is Campfire for the time being.
+        GameEntityType::Environment => 23,
     }
 }
 
 fn ground_directional_index_from(direction: &Direction) -> usize {
-    let num_ground_sprites_in_row = movement_type_len(&MovementType::Walk) as u32;
+    let num_ground_sprites_in_row = movement_type_len(&GameEntityType::Walk) as u32;
 
     match direction {
         Direction::BottomLeft => tilepos_to_idx(7, 0, num_ground_sprites_in_row),
@@ -54,34 +58,35 @@ fn ground_directional_index_from(direction: &Direction) -> usize {
 }
 
 fn fly_directional_index_from(_direction: &Direction) -> usize {
-    let num_flying_sprites_in_row = movement_type_len(&MovementType::Fly) as u32;
+    let num_flying_sprites_in_row = movement_type_len(&GameEntityType::Fly) as u32;
 
     tilepos_to_idx(1, 0, num_flying_sprites_in_row)
 }
 
 fn swim_directional_index_from(_direction: &Direction) -> usize {
-    let num_swim_sprites_in_row = movement_type_len(&MovementType::Swim) as u32;
+    let num_swim_sprites_in_row = movement_type_len(&GameEntityType::Swim) as u32;
 
     tilepos_to_idx(1, 0, num_swim_sprites_in_row)
 }
 
-fn direction_to_row_index(direction: &Direction, entity_type: &MovementType) -> usize {
+fn direction_to_row_index(direction: &Direction, entity_type: &GameEntityType) -> usize {
     match entity_type {
-        MovementType::Walk => ground_directional_index_from(direction),
-        MovementType::Fly => fly_directional_index_from(direction),
-        MovementType::Swim => swim_directional_index_from(direction),
+        GameEntityType::Walk => ground_directional_index_from(direction),
+        GameEntityType::Fly => fly_directional_index_from(direction),
+        GameEntityType::Swim => swim_directional_index_from(direction),
+        _ => 0,
     }
 }
 
 /// Flips the Fish sprite on Direction change.
 pub fn change_fish_or_chatter_direction(
-    mut moving_entities: Query<(&MovementType, &Direction, &mut Sprite), Changed<Direction>>,
+    mut moving_entities: Query<(&GameEntityType, &Direction, &mut Sprite), Changed<Direction>>,
 ) {
     for (entity_type, entity_direction, mut entity_spritesheet) in &mut moving_entities {
         // Since Fish have no animation, flipping the sprite serves
         // as a good enough solution to at least make it seem like
         // the fish is facing something or someone.
-        if *entity_type == MovementType::Swim || *entity_type == MovementType::Fly {
+        if *entity_type == GameEntityType::Swim || *entity_type == GameEntityType::Fly {
             match entity_direction {
                 Direction::BottomLeft | Direction::TopLeft => entity_spritesheet.flip_x = false,
                 Direction::BottomRight | Direction::TopRight => entity_spritesheet.flip_x = true,
@@ -97,7 +102,7 @@ pub fn change_sprite_direction(
         (
             &mut AnimationIndices,
             &mut TextureAtlas,
-            &MovementType,
+            &GameEntityType,
             &Direction,
         ),
         Changed<Direction>,
@@ -106,7 +111,7 @@ pub fn change_sprite_direction(
     for (mut animation_indices, mut entity_spritesheet, entity_type, entity_direction) in
         &mut moving_entities
     {
-        if *entity_type == MovementType::Swim || *entity_type == MovementType::Fly {
+        if *entity_type == GameEntityType::Swim || *entity_type == GameEntityType::Fly {
             continue;
         }
 
@@ -144,7 +149,7 @@ pub fn animate(
     mut moving_entities: Query<(
         &mut AnimationTimer,
         &mut AnimationIndices,
-        &MovementType,
+        &GameEntityType,
         &mut TextureAtlas,
     )>,
     time: Res<Time>,
@@ -154,7 +159,7 @@ pub fn animate(
     {
         // Fish do not have animation, at least with the
         // currently used sprite sheet.
-        if *movement_type == MovementType::Swim {
+        if *movement_type == GameEntityType::Swim {
             continue;
         }
 

@@ -3,7 +3,7 @@ use std::collections::{HashSet, VecDeque};
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
-use crate::entities::{subscriber::SUBSCRIBER_LAYER_NUM, MovementType};
+use crate::entities::{subscriber::SUBSCRIBER_LAYER_NUM, GameEntityType};
 
 use super::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
 
@@ -568,7 +568,7 @@ pub struct PathInfo {
 }
 
 pub fn insert_pathing_information(
-    moving_entities: Query<(Entity, &Transform, &TilePos), (With<MovementType>, Without<Path>)>,
+    moving_entities: Query<(Entity, &Transform, &TilePos), (With<GameEntityType>, Without<Path>)>,
     mut spawner: Commands,
 ) {
     for (moving_entity, entity_transform, entity_tilepos) in &moving_entities {
@@ -590,7 +590,7 @@ pub fn update_movement_target(
         &mut Path,
         &Transform,
         &mut Direction,
-        &MovementType,
+        &GameEntityType,
     )>,
     map_information: Query<&TilemapSize>,
     graph_query: Query<(&NodeData, &GraphType)>,
@@ -619,13 +619,13 @@ pub fn update_movement_target(
     for (mut target, mut path, current_pos, mut direction, movement_type) in
         moving_entity.iter_mut()
     {
-        let nodes = if *movement_type == MovementType::Walk {
+        let nodes = if *movement_type == GameEntityType::Walk {
             graph_query
                 .iter()
                 .find(|graph_elements| graph_elements.1 == &GraphType::Ground)
                 .expect("update_movement_target: Could not find Ground Graph")
                 .0
-        } else if movement_type == &MovementType::Fly {
+        } else if movement_type == &GameEntityType::Fly {
             graph_query
                 .iter()
                 .find(|graph_elements| graph_elements.1 == &GraphType::Air)

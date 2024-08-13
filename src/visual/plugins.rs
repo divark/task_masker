@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use super::animations::*;
+use super::environment::*;
 
 #[derive(Default)]
 pub struct AnimationPlugin;
@@ -17,5 +18,14 @@ impl Plugin for AnimationPlugin {
                 check_if_idle,
             ),
         );
+    }
+}
+
+#[derive(Default)]
+pub struct EnvironmentAnimationsPlugin;
+
+impl Plugin for EnvironmentAnimationsPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Update, (replace_campfire_tile, replace_campfire_sprite));
     }
 }

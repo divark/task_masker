@@ -14,6 +14,8 @@ use task_masker::map::tiled::*;
 use task_masker::ui::chatting::*;
 use task_masker::ui::portrait_preferences::*;
 use task_masker::ui::screens::spawn_ingame_screen;
+use task_masker::visual::animations::*;
+use task_masker::visual::environment::*;
 
 use task_masker::GameState;
 
@@ -157,6 +159,16 @@ impl Plugin for MockPortraitPreferencePlugin {
             String::from(":memory:"),
             DEFAULT_SUBSCRIBER_SPRITE_IDX,
         ));
+    }
+}
+
+#[derive(Default)]
+pub struct MockEnvironmentAnimationsPlugin;
+
+impl Plugin for MockEnvironmentAnimationsPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Update, replace_campfire_tile);
+        app.add_systems(Update, insert_animation_information);
     }
 }
 

@@ -8,7 +8,7 @@ use crate::map::path_finding::*;
 use crate::map::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
 use crate::ui::chatting::Msg;
 
-use super::MovementType;
+use super::GameEntityType;
 
 pub const SUBSCRIBER_LAYER_NUM: usize = 18;
 pub const DESIRED_SUBSCRIBER_LAYER_NUM: usize = 1;
@@ -35,7 +35,7 @@ pub struct SubscriberBundle {
     label: SubscriberLabel,
     sprite: SpriteBundle,
     texture_atlas: TextureAtlas,
-    movement_type: MovementType,
+    movement_type: GameEntityType,
     status: SubscriberStatus,
 }
 
@@ -102,7 +102,7 @@ pub fn replace_subscriber_tile(
         commands.spawn((
             (
                 SubscriberLabel,
-                MovementType::Swim,
+                GameEntityType::Swim,
                 tile_transform,
                 SubscriberStatus::Idle,
                 *tile_texture_index,
@@ -211,7 +211,7 @@ pub fn speak_to_streamer_from_subscriber(
             &Path,
             &Target,
             &mut SubscriberStatus,
-            &MovementType,
+            &GameEntityType,
         ),
         Without<WaitTimer>,
     >,

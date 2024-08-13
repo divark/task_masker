@@ -1,12 +1,11 @@
 mod mock_plugins;
 
-use crate::mock_plugins::{GameWorld, MockTiledMapPlugin};
+use crate::mock_plugins::{GameWorld, MockEnvironmentAnimationsPlugin, MockTiledMapPlugin};
 
-use bevy::prelude::*;
-use bevy_ecs_tilemap::prelude::*;
 use cucumber::{given, then, when, World};
 use task_masker::map::plugins::PathFindingPlugin;
 use task_masker::visual::animations::{AnimationIndices, AnimationTimer};
+use task_masker::visual::environment::*;
 
 #[given("a Tiled Map,")]
 fn spawn_tiled_map(world: &mut GameWorld) {
@@ -35,9 +34,11 @@ fn campfire_has_animation_speed(world: &mut GameWorld) {
 
 #[then("the Campfire should have 23 frames to flicker through while animating.")]
 fn campfire_has_23_frames(world: &mut GameWorld) {
-    let campfire_animation_indices = world.find_with::<AnimationIndices, CampfireLabel>();
+    let campfire_animation_indices = world
+        .find_with::<AnimationIndices, CampfireLabel>()
+        .expect("campfire_has_23_frames: Unable to find Campfire's Animation Indices information.");
 
-    assert_eq!(23, campfire_animation_indices.len());
+    assert_eq!(23, campfire_animation_indices.end_idx);
 }
 
 fn main() {

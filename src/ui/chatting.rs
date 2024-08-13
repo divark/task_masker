@@ -4,12 +4,12 @@ use std::collections::BinaryHeap;
 use bevy::prelude::*;
 
 use super::screens::{SpeakerChatBox, SpeakerPortrait, SpeakerUI};
-use crate::entities::MovementType;
+use crate::entities::GameEntityType;
 
 #[derive(Component, PartialEq)]
 pub enum ChattingStatus {
     Idle,
-    Speaking(MovementType),
+    Speaking(GameEntityType),
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
@@ -24,7 +24,7 @@ pub enum MsgPriority {
 pub struct Msg {
     pub speaker_name: String,
     pub msg: String,
-    pub speaker_role: MovementType,
+    pub speaker_role: GameEntityType,
     speaker_priority: MsgPriority,
 }
 
@@ -41,9 +41,9 @@ impl PartialOrd for Msg {
 }
 
 impl Msg {
-    pub fn new(speaker_name: String, speaker_msg: String, speaker_role: MovementType) -> Self {
+    pub fn new(speaker_name: String, speaker_msg: String, speaker_role: GameEntityType) -> Self {
         let speaker_priority = match speaker_role {
-            MovementType::Walk => MsgPriority::High,
+            GameEntityType::Walk => MsgPriority::High,
             _ => MsgPriority::Low,
         };
 
@@ -90,7 +90,7 @@ impl TypingMsg {
 
     /// Returns the Entity's type for the currently
     /// loaded message.
-    pub fn speaker_role(&self) -> MovementType {
+    pub fn speaker_role(&self) -> GameEntityType {
         self.msg.speaker_role
     }
 
@@ -215,7 +215,7 @@ pub fn load_portrait_from_msg(
     msg_fields: Query<&TypingMsg, Added<TypingMsg>>,
     mut speaker_portrait: Query<(&mut UiImage, &mut TextureAtlas), With<SpeakerPortrait>>,
     chatting_portraits: Query<
-        (&TextureAtlas, &Handle<Image>, &MovementType),
+        (&TextureAtlas, &Handle<Image>, &GameEntityType),
         Without<SpeakerPortrait>,
     >,
 ) {
@@ -227,10 +227,10 @@ pub fn load_portrait_from_msg(
     let current_msg = msg_fields.single();
 
     let (role_image, role_atlas) = match &current_msg.speaker_role() {
-        MovementType::Walk => {
+        GameEntityType::Walk => {
             let streamer_texture_entry = chatting_portraits
                 .iter()
-                .find(|entity_texture_info| *entity_texture_info.2 == MovementType::Walk)
+                .find(|entity_texture_info| *entity_texture_info.2 == GameEntityType::Walk)
                 .expect("setup_chatting_from_msg: Could not find Streamer's Texture Atlas.");
 
             let streamer_texture_atlas = streamer_texture_entry.0.clone();
@@ -240,10 +240,10 @@ pub fn load_portrait_from_msg(
 
             (streamer_image, streamer_texture_atlas)
         }
-        MovementType::Fly => {
+        GameEntityType::Fly => {
             let chatter_texture_entry = chatting_portraits
                 .iter()
-                .find(|entity_texture_info| *entity_texture_info.2 == MovementType::Fly)
+                .find(|entity_texture_info| *entity_texture_info.2 == GameEntityType::Fly)
                 .expect("setup_chatting_from_msg: Could not find Chatter's Texture Atlas.");
 
             let chatter_texture_atlas = chatter_texture_entry.0.clone();
@@ -253,10 +253,10 @@ pub fn load_portrait_from_msg(
 
             (chatter_image, chatter_texture_atlas)
         }
-        MovementType::Swim => {
+        GameEntityType::Swim => {
             let subscriber_texture_entry = chatting_portraits
                 .iter()
-                .find(|entity_texture_info| *entity_texture_info.2 == MovementType::Swim)
+                .find(|entity_texture_info| *entity_texture_info.2 == GameEntityType::Swim)
                 .expect("setup_chatting_from_msg: Could not find Subscriber's Texture Atlas.");
 
             let subscriber_texture_atlas = subscriber_texture_entry.0.clone();
@@ -266,6 +266,7 @@ pub fn load_portrait_from_msg(
 
             (subscriber_image, subscriber_texture_atlas)
         }
+        _ => panic!("load_portrait_from_msg: Unsupported role detected."),
     };
 
     *speaker_image = role_image;

@@ -7,7 +7,7 @@ use bevy_ecs_tilemap::prelude::*;
 use entities::plugins::{ChatterPlugin, CropPlugin, FruitPlugin, StreamerPlugin, SubscriberPlugin};
 use map::plugins::{PathFindingPlugin, TiledCameraPlugin, TiledMapPlugin};
 use ui::plugins::{ChattingPlugin, StartupScreenPlugin};
-use visual::plugins::AnimationPlugin;
+use visual::plugins::{AnimationPlugin, EnvironmentAnimationsPlugin};
 
 fn main() {
     App::new()
@@ -34,6 +34,7 @@ fn main() {
         .add_plugins(StartupScreenPlugin)
         .add_plugins(ChattingPlugin)
         .add_plugins(BackgroundMusicPlugin)
+        .add_plugins(EnvironmentAnimationsPlugin)
         .add_plugins(AnimationPlugin)
         .add_plugins(StreamerPlugin)
         .add_plugins(FruitPlugin)

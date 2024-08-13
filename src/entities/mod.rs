@@ -10,11 +10,12 @@ pub mod streamer;
 pub mod subscriber;
 
 #[derive(Component, Debug, Default, PartialEq, Eq, Clone, Copy)]
-pub enum MovementType {
+pub enum GameEntityType {
     Walk,
     #[default]
     Fly,
     Swim,
+    Environment,
 }
 
 #[derive(Component)]

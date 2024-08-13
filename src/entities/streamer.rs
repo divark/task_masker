@@ -9,7 +9,7 @@ use crate::map::plugins::TilePosEvent;
 use crate::map::tiled::{convert_tiled_to_bevy_pos, to_bevy_transform, TiledMapInformation};
 use crate::ui::chatting::{ChattingStatus, Msg};
 
-use super::MovementType;
+use super::GameEntityType;
 
 #[derive(Component)]
 pub struct StreamerLabel;
@@ -26,7 +26,7 @@ pub enum StreamerStatus {
 pub struct Streamer {
     label: StreamerLabel,
     sprites: SpriteBundle,
-    movement_type: MovementType,
+    movement_type: GameEntityType,
     status: StreamerStatus,
 }
 
@@ -98,7 +98,7 @@ pub fn spawn_player_tile(
     commands.spawn((
         (
             StreamerLabel,
-            MovementType::Walk,
+            GameEntityType::Walk,
             StreamerStatus::Idle,
             streamer_transform,
         ),
@@ -224,7 +224,7 @@ pub fn test_streamer_msg(
     let streamer_msg = Msg::new(
         "Caveman".to_string(),
         "This is a test message to see if this works and types as expected.".to_string(),
-        MovementType::Walk,
+        GameEntityType::Walk,
     );
 
     msg_writer.send(streamer_msg);
@@ -242,7 +242,7 @@ pub fn update_status_when_speaking(
         .get_single_mut()
         .expect("update_status_when_speaking: Streamer's status should exist by now.");
     for chatting_status in &chatting_query {
-        if *chatting_status != ChattingStatus::Speaking(MovementType::Walk) {
+        if *chatting_status != ChattingStatus::Speaking(GameEntityType::Walk) {
             continue;
         }
 

@@ -8,7 +8,7 @@ use crate::map::path_finding::*;
 use crate::map::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
 use crate::ui::chatting::Msg;
 
-use super::MovementType;
+use super::GameEntityType;
 
 pub const CHATTER_LAYER_NUM: usize = 19;
 pub const DIST_AWAY_FROM_STREAMER: usize = 2;
@@ -35,7 +35,7 @@ pub struct ChatterBundle {
     label: ChatterLabel,
     sprite: SpriteBundle,
     texture_atlas: TextureAtlas,
-    movement_type: MovementType,
+    movement_type: GameEntityType,
     status: ChatterStatus,
 }
 
@@ -103,7 +103,7 @@ pub fn replace_chatter_tile(
             (
                 ChatterLabel,
                 tile_transform,
-                MovementType::Fly,
+                GameEntityType::Fly,
                 ChatterStatus::Idle,
                 *tile_texture_index,
             ),
@@ -190,7 +190,7 @@ pub fn speak_to_streamer_from_chatter(
             &Path,
             &Target,
             &mut ChatterStatus,
-            &MovementType,
+            &GameEntityType,
         ),
         Without<WaitTimer>,
     >,
