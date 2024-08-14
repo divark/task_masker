@@ -23,7 +23,7 @@ pub enum StreamerState {
 }
 
 /// This represents the Online presense of the
-/// Streamer, unlike the StreamerStatus, which
+/// Streamer, unlike the StreamerState, which
 /// represents the Streamer Entity's State in the
 /// game.
 #[derive(Event)]
@@ -214,12 +214,14 @@ pub fn queue_destination_for_streamer(
     }
 }
 
-pub fn move_streamer_on_spacebar(
+pub fn change_status_for_streamer(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut destination_request_writer: EventWriter<TilePosEvent>,
+    mut online_status_writer: EventWriter<OnlineStatus>,
 ) {
-    if keyboard_input.just_pressed(KeyCode::Space) {
-        destination_request_writer.send(TilePosEvent::new(TilePos { x: 64, y: 47 }));
+    if keyboard_input.just_pressed(KeyCode::Numpad1) {
+        online_status_writer.send(OnlineStatus::Online);
+    } else if keyboard_input.just_pressed(KeyCode::Numpad2) {
+        online_status_writer.send(OnlineStatus::Away);
     }
 }
 
