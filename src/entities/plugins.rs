@@ -54,6 +54,7 @@ pub struct StreamerPlugin;
 
 impl Plugin for StreamerPlugin {
     fn build(&self, app: &mut App) {
+        app.add_event::<OnlineStatus>();
         app.add_systems(
             Update,
             (
@@ -62,6 +63,7 @@ impl Plugin for StreamerPlugin {
                 move_streamer,
                 make_streamer_idle_when_not_moving,
                 move_streamer_on_spacebar,
+                move_streamer_on_status_change,
                 test_streamer_msg,
                 queue_destination_for_streamer,
                 update_status_when_speaking,

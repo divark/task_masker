@@ -131,11 +131,11 @@ fn streamer_should_be_heading_towards_fruit(world: &mut GameWorld) {
         let streamer_status = world
             .app
             .world_mut()
-            .query::<&StreamerStatus>()
+            .query::<&StreamerState>()
             .get_single(&world.app.world())
             .expect("streamer_should_be_heading_towards_fruit: Streamer does not have a State.");
 
-        if *streamer_status == StreamerStatus::Moving {
+        if *streamer_status == StreamerState::Moving {
             break;
         }
     }

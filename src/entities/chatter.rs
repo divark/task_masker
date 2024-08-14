@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use std::collections::VecDeque;
 
-use crate::entities::streamer::{StreamerLabel, StreamerStatus};
+use crate::entities::streamer::{StreamerLabel, StreamerState};
 use crate::entities::WaitTimer;
 use crate::map::path_finding::*;
 use crate::map::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
@@ -308,8 +308,8 @@ pub fn return_chatter_to_idle(
 }
 
 pub fn follow_streamer_while_speaking(
-    streamer_info: Query<(&StreamerStatus, &Path), Changed<StreamerStatus>>,
-    mut chatter_info: Query<(&ChatterStatus, &mut Path), Without<StreamerStatus>>,
+    streamer_info: Query<(&StreamerState, &Path), Changed<StreamerState>>,
+    mut chatter_info: Query<(&ChatterStatus, &mut Path), Without<StreamerState>>,
     map_info: Query<&TilemapSize>,
 ) {
     if streamer_info.is_empty() || chatter_info.is_empty() || map_info.is_empty() {
@@ -325,7 +325,7 @@ pub fn follow_streamer_while_speaking(
         .get_single()
         .expect("follow_streamer_while_speaking: Streamer should exist by now.");
 
-    if *streamer_status != StreamerStatus::Moving {
+    if *streamer_status != StreamerState::Moving {
         return;
     }
 
@@ -352,8 +352,8 @@ pub fn follow_streamer_while_speaking(
 }
 
 pub fn follow_streamer_while_approaching_for_chatter(
-    streamer_info: Query<(&StreamerStatus, &Path), Without<ChatterStatus>>,
-    mut chatter_info: Query<(&ChatterStatus, &TilePos, &mut Path), Without<StreamerStatus>>,
+    streamer_info: Query<(&StreamerState, &Path), Without<ChatterStatus>>,
+    mut chatter_info: Query<(&ChatterStatus, &TilePos, &mut Path), Without<StreamerState>>,
     air_graph_info: Query<(&NodeEdges, &GraphType)>,
     map_info: Query<&TilemapSize>,
 ) {
@@ -370,7 +370,7 @@ pub fn follow_streamer_while_approaching_for_chatter(
         .get_single()
         .expect("follow_streamer_while_approaching: Streamer should exist by now.");
 
-    if *streamer_status != StreamerStatus::Moving {
+    if *streamer_status != StreamerState::Moving {
         return;
     }
 

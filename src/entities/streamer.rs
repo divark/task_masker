@@ -15,11 +15,21 @@ use super::GameEntityType;
 pub struct StreamerLabel;
 
 #[derive(Component, PartialEq, Copy, Clone, Debug, Eq, Hash)]
-pub enum StreamerStatus {
+pub enum StreamerState {
     Idle,
     Moving,
     Speaking,
     // TODO: Should Action be included?
+}
+
+/// This represents the Online presense of the
+/// Streamer, unlike the StreamerStatus, which
+/// represents the Streamer Entity's State in the
+/// game.
+#[derive(Event)]
+pub enum OnlineStatus {
+    Online,
+    Away,
 }
 
 #[derive(Bundle)]
@@ -27,7 +37,7 @@ pub struct Streamer {
     label: StreamerLabel,
     sprites: SpriteBundle,
     movement_type: GameEntityType,
-    status: StreamerStatus,
+    status: StreamerState,
 }
 
 pub const STREAMER_LAYER_NUM: usize = 6;
@@ -99,7 +109,7 @@ pub fn spawn_player_tile(
         (
             StreamerLabel,
             GameEntityType::Walk,
-            StreamerStatus::Idle,
+            StreamerState::Idle,
             streamer_transform,
         ),
         streamer_bevy_tilepos,
@@ -113,7 +123,7 @@ pub fn move_streamer(
             &StartingPoint,
             &Target,
             &mut DestinationQueue,
-            &mut StreamerStatus,
+            &mut StreamerState,
         ),
         With<StreamerLabel>,
     >,
@@ -170,14 +180,14 @@ pub fn move_streamer(
     if let Some(found_path) = edges.shortest_path(streamer_tile_pos.1, streamer_target, map_size.x)
     {
         *streamer_path = found_path;
-        *streamer_status = StreamerStatus::Moving;
+        *streamer_status = StreamerState::Moving;
     }
 }
 
 /// Updates the Status of the Streamer to Idle when the Streamer
 /// is no longer following some path.
 pub fn make_streamer_idle_when_not_moving(
-    mut streamer: Query<(&mut StreamerStatus, &Path, &Target)>,
+    mut streamer: Query<(&mut StreamerState, &Path, &Target)>,
 ) {
     if streamer.is_empty() {
         return;
@@ -186,7 +196,7 @@ pub fn make_streamer_idle_when_not_moving(
     let (mut streamer_status, streamer_path, streamer_target) = streamer.single_mut();
 
     if streamer_path.len() == 0 && streamer_target.is_none() {
-        *streamer_status = StreamerStatus::Idle;
+        *streamer_status = StreamerState::Idle;
     }
 }
 
@@ -213,6 +223,22 @@ pub fn move_streamer_on_spacebar(
     }
 }
 
+/// Requests the Streamer to move to a point of interest
+/// based on a change in Online Status.
+pub fn move_streamer_on_status_change(
+    mut online_status_listener: EventReader<OnlineStatus>,
+    mut destination_request_writer: EventWriter<TilePosEvent>,
+) {
+    for new_online_status in &mut online_status_listener.read() {
+        let new_destination = match new_online_status {
+            OnlineStatus::Online => TilePos::new(41, 49),
+            OnlineStatus::Away => TilePos::new(39, 40),
+        };
+
+        destination_request_writer.send(TilePosEvent::new(new_destination));
+    }
+}
+
 pub fn test_streamer_msg(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut msg_writer: EventWriter<Msg>,
@@ -232,7 +258,7 @@ pub fn test_streamer_msg(
 
 pub fn update_status_when_speaking(
     chatting_query: Query<&ChattingStatus, Changed<ChattingStatus>>,
-    mut streamer_query: Query<&mut StreamerStatus>,
+    mut streamer_query: Query<&mut StreamerState>,
 ) {
     if streamer_query.is_empty() {
         return;
@@ -246,6 +272,6 @@ pub fn update_status_when_speaking(
             continue;
         }
 
-        *streamer_status = StreamerStatus::Speaking;
+        *streamer_status = StreamerState::Speaking;
     }
 }

@@ -69,11 +69,13 @@ pub struct MockStreamerPlugin;
 
 impl Plugin for MockStreamerPlugin {
     fn build(&self, app: &mut App) {
+        app.add_event::<OnlineStatus>();
         app.add_systems(
             Update,
             (
                 spawn_player_tile,
                 move_streamer,
+                move_streamer_on_status_change,
                 queue_destination_for_streamer.after(spawn_player_tile),
                 make_streamer_idle_when_not_moving,
                 update_status_when_speaking,
@@ -169,6 +171,7 @@ impl Plugin for MockEnvironmentAnimationsPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, replace_campfire_tile);
         app.add_systems(Update, insert_animation_information);
+        app.add_systems(Update, make_streamer_face_campfire);
     }
 }
 
@@ -240,5 +243,14 @@ impl GameWorld {
             .query_filtered::<&T, With<U>>()
             .get_single(&self.app.world())
             .ok()
+    }
+
+    /// Sends an Event to all systems listening to it
+    /// in the game.
+    pub fn broadcast_event<T>(&mut self, event: T)
+    where
+        T: Event,
+    {
+        self.app.world_mut().send_event(event);
     }
 }

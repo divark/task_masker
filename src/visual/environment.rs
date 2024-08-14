@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
+use crate::entities::streamer::StreamerLabel;
 use crate::entities::GameEntityType;
+use crate::map::path_finding::Direction;
 use crate::map::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
 
 pub const CAMPFIRE_LAYER_NUM: usize = 20;
@@ -81,4 +83,25 @@ pub fn replace_campfire_tile(
             *tile_pos,
         ));
     }
+}
+
+/// Makes the Streamer face towards the Campfire when
+/// next to it.
+pub fn make_streamer_face_campfire(
+    mut streamer_query: Query<(&TilePos, &mut Direction), (With<StreamerLabel>, Changed<TilePos>)>,
+    campfire: Query<&TilePos, With<CampfireLabel>>,
+) {
+    if streamer_query.is_empty() || campfire.is_empty() {
+        return;
+    }
+
+    let (streamer_tilepos, mut streamer_direction) = streamer_query.single_mut();
+    let campfire_tilepos = campfire.single();
+    let left_of_campfire = TilePos::new(campfire_tilepos.x, campfire_tilepos.y - 1);
+
+    if *streamer_tilepos != left_of_campfire {
+        return;
+    }
+
+    *streamer_direction = Direction::BottomRight;
 }
