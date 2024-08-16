@@ -1,6 +1,7 @@
 use bevy::prelude::States;
 
 pub mod audio;
+pub mod chat_interactions;
 pub mod entities;
 pub mod map;
 pub mod ui;

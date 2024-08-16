@@ -12,6 +12,8 @@ thiserror = "^1.0"
 tiled = "^0.12"
 rand = "^0.8"
 sqlite = "^0.36"
+twitch-irc = "^5.0"
+tokio = { version = "^1", features = ["rt", "time", "sync", "macros"] }
 
 [dev-dependencies]
 cucumber = "^0.21"
