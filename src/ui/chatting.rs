@@ -313,9 +313,16 @@ pub fn play_typing_noise(
     asset_server: Res<AssetServer>,
 ) {
     for (speaker_msg, typing_msg) in &msg_fields {
+        if typing_msg.at_end() {
+            continue;
+        }
+
         let msg_character = speaker_msg
             .sections
-            .get(typing_msg.idx())
+            // The 2nd section is what actually holds
+            // the chat message, so we have to shift it
+            // accordingly.
+            .get(typing_msg.idx() + 1)
             .expect("play_typing_noise: Could not find text section in msg.");
 
         if msg_character.value == " " {
