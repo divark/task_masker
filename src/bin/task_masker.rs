@@ -4,6 +4,7 @@ use task_masker::*;
 use audio::plugins::BackgroundMusicPlugin;
 use bevy::window::WindowResolution;
 use bevy_ecs_tilemap::prelude::*;
+use chat_interactions::plugins::TwitchChatPlugin;
 use entities::plugins::{ChatterPlugin, CropPlugin, FruitPlugin, StreamerPlugin, SubscriberPlugin};
 use map::plugins::{PathFindingPlugin, TiledCameraPlugin, TiledMapPlugin};
 use ui::plugins::{ChattingPlugin, StartupScreenPlugin};
@@ -33,6 +34,7 @@ fn main() {
         .add_plugins(PathFindingPlugin)
         .add_plugins(StartupScreenPlugin)
         .add_plugins(ChattingPlugin)
+        .add_plugins(TwitchChatPlugin)
         .add_plugins(BackgroundMusicPlugin)
         .add_plugins(EnvironmentAnimationsPlugin)
         .add_plugins(AnimationPlugin)

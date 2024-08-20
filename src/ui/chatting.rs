@@ -296,7 +296,10 @@ pub fn teletype_current_message(
 
     let msg_character = speaker_msg
         .sections
-        .get_mut(typing_msg.idx())
+        // The 2nd section is what actually holds
+        // the chat message, so we have to shift it
+        // accordingly.
+        .get_mut(typing_msg.idx() + 1)
         .expect("Could not find text section in msg.");
     msg_character.style.color = Color::BLACK;
 
