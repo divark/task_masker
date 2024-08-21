@@ -236,7 +236,7 @@ pub fn speak_to_streamer_from_subscriber(
 
         commands
             .entity(subscriber_entity)
-            .insert(WaitTimer(Timer::from_seconds(60.0, TimerMode::Once)));
+            .insert(WaitTimer(Timer::from_seconds(10.0, TimerMode::Once)));
 
         *subscriber_status = SubscriberStatus::Speaking;
         chat_msg_requester.send(Msg::new(

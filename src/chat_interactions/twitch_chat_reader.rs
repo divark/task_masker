@@ -8,7 +8,23 @@ use twitch_irc::login::StaticLoginCredentials;
 use twitch_irc::message::{ServerMessage, ServerMessage::Privmsg};
 use twitch_irc::{ClientConfig, SecureTCPTransport, TwitchIRCClient};
 
+use crate::chat_interactions::plugins::CHANNEL_NAME;
 use crate::entities::chatter::ChatMsg;
+use crate::entities::subscriber::SubscriberMsg;
+
+/// Represents a chatter's role sending
+/// messages from Twitch.
+pub enum TwitchRole {
+    Chatter,
+    Subscriber,
+    Streamer,
+}
+
+/// Represents the different type of
+/// Twitch events for some Notification.
+pub enum NotificationType {
+    Msg(TwitchRole),
+}
 
 /// A Message found from Twitch that has not been parsed
 /// yet.
@@ -24,7 +40,7 @@ impl Notification {
 
     /// Converts the contents of the Notification into
     /// a Msg if possible, or returns None otherwise.
-    pub fn as_msg(&self) -> Option<ChatMsg> {
+    pub fn as_chat_msg(&self) -> Option<ChatMsg> {
         if let Privmsg(current_msg) = &self.msg {
             let speaker_name = current_msg.sender.name.clone();
             let speaker_msg = current_msg.message_text.clone();
@@ -33,6 +49,42 @@ impl Notification {
                 name: speaker_name,
                 msg: speaker_msg,
             })
+        } else {
+            None
+        }
+    }
+
+    /// Converts the contents of the Notification into a
+    /// SubscriberMsg if possible, or returns None otherwise.
+    pub fn as_subscriber_msg(&self) -> Option<SubscriberMsg> {
+        if let Privmsg(current_msg) = &self.msg {
+            let speaker_name = current_msg.sender.name.clone();
+            let speaker_msg = current_msg.message_text.clone();
+
+            Some(SubscriberMsg {
+                name: speaker_name,
+                msg: speaker_msg,
+            })
+        } else {
+            None
+        }
+    }
+
+    /// Returns the type of chat message that was captured
+    /// from Twitch.
+    pub fn msg_type(&self) -> Option<NotificationType> {
+        if let Privmsg(current_msg) = &self.msg {
+            let speaker_name = current_msg.sender.name.clone();
+            if speaker_name == CHANNEL_NAME {
+                return Some(NotificationType::Msg(TwitchRole::Streamer));
+            }
+
+            let is_subscriber = current_msg.badge_info.len() > 0;
+            if is_subscriber {
+                return Some(NotificationType::Msg(TwitchRole::Subscriber));
+            }
+
+            Some(NotificationType::Msg(TwitchRole::Chatter))
         } else {
             None
         }
@@ -108,18 +160,36 @@ pub fn notify_all_about_twitch_msg(
     }
 }
 
-/// Converts Notifications from Twitch messages into Msgs to be
+/// Converts Notifications from Twitch messages into a Message to be
 /// shown if found.
 pub fn convert_notification_to_msg(
     mut notification_reader: EventReader<Notification>,
-    mut msg_writer: EventWriter<ChatMsg>,
+    mut chat_msg_writer: EventWriter<ChatMsg>,
+    mut subscriber_msg_writer: EventWriter<SubscriberMsg>,
 ) {
     for notification in notification_reader.read() {
-        let found_msg = notification.as_msg();
+        let found_msg_type = notification.msg_type();
+        if found_msg_type.is_none() {
+            continue;
+        }
+
+        let msg_type = found_msg_type.unwrap();
+        match msg_type {
+            NotificationType::Msg(TwitchRole::Chatter) => {
+                chat_msg_writer.send(notification.as_chat_msg().unwrap());
+            }
+            NotificationType::Msg(TwitchRole::Subscriber) => {
+                subscriber_msg_writer.send(notification.as_subscriber_msg().unwrap());
+            }
+            _ => unimplemented!(),
+            //NotificationType::Msg(TwitchRole::Streamer) => { streamer_msg_writer.send(notification.as_streamer_msg().unwrap()); },
+        };
+
+        let found_msg = notification.as_chat_msg();
         if found_msg.is_none() {
             continue;
         }
 
-        msg_writer.send(found_msg.unwrap());
+        chat_msg_writer.send(found_msg.unwrap());
     }
 }
