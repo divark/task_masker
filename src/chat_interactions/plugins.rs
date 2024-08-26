@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::chat_interactions::twitch_chat_reader::*;
 
-pub const CHANNEL_NAME: &str = "divarktech";
+pub const CHANNEL_NAME: &str = "piratesoftware";
 
 #[derive(Default)]
 pub struct TwitchChatPlugin;
@@ -16,7 +16,11 @@ impl Plugin for TwitchChatPlugin {
         app.insert_resource(twitch_msg_reader);
         app.add_systems(
             Update,
-            (notify_all_about_twitch_msg, convert_notification_to_msg),
+            (
+                notify_all_about_twitch_msg,
+                convert_notification_to_msg,
+                convert_notification_to_event,
+            ),
         );
     }
 }

@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use rand::seq::IteratorRandom;
+
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Receiver;
@@ -10,7 +12,10 @@ use twitch_irc::{ClientConfig, SecureTCPTransport, TwitchIRCClient};
 
 use crate::chat_interactions::plugins::CHANNEL_NAME;
 use crate::entities::chatter::ChatMsg;
+use crate::entities::crop::CropState;
+use crate::entities::fruit::FruitState;
 use crate::entities::subscriber::SubscriberMsg;
+use crate::entities::TriggerQueue;
 
 /// Represents a chatter's role sending
 /// messages from Twitch.
@@ -20,10 +25,17 @@ pub enum TwitchRole {
     Streamer,
 }
 
+/// Represents common Twitch events that
+/// could take place in a stream.
+pub enum TwitchEvent {
+    Donation,
+}
+
 /// Represents the different type of
 /// Twitch events for some Notification.
 pub enum NotificationType {
     Msg(TwitchRole),
+    Event(TwitchEvent),
 }
 
 /// A Message found from Twitch that has not been parsed
@@ -67,6 +79,18 @@ impl Notification {
             })
         } else {
             None
+        }
+    }
+
+    /// Returns whether the message has a donation attached to it
+    /// or not.
+    pub fn has_bits(&self) -> bool {
+        if let Privmsg(current_msg) = &self.msg {
+            let has_bits = current_msg.bits.is_some();
+
+            return has_bits;
+        } else {
+            false
         }
     }
 
@@ -191,5 +215,27 @@ pub fn convert_notification_to_msg(
         }
 
         chat_msg_writer.send(found_msg.unwrap());
+    }
+}
+
+/// Converts Notifications from Twitch messages into an Event to be
+/// triggered if found.
+pub fn convert_notification_to_event(
+    mut notification_reader: EventReader<Notification>,
+    mut fruit_queues: Query<&mut TriggerQueue, (With<FruitState>, Without<CropState>)>,
+) {
+    if fruit_queues.is_empty() {
+        return;
+    }
+
+    for notification in notification_reader.read() {
+        let mut random_fruit_queue = fruit_queues
+            .iter_mut()
+            .choose(&mut rand::thread_rng())
+            .expect("convert_notification_to_event: Fruit should exist.");
+
+        if notification.has_bits() {
+            random_fruit_queue.push_back(());
+        }
     }
 }
