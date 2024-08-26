@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::chat_interactions::twitch_chat_reader::*;
 
-pub const CHANNEL_NAME: &str = "piratesoftware";
+pub const CHANNEL_NAME: &str = "divarktech";
 
 #[derive(Default)]
 pub struct TwitchChatPlugin;
