@@ -7,7 +7,11 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::Receiver;
 use tokio::task::JoinHandle;
 use twitch_irc::login::StaticLoginCredentials;
-use twitch_irc::message::{ServerMessage, ServerMessage::Privmsg};
+use twitch_irc::message::{
+    ServerMessage::Privmsg,
+    ServerMessage::{self, UserNotice},
+    UserNoticeEvent,
+};
 use twitch_irc::{ClientConfig, SecureTCPTransport, TwitchIRCClient};
 
 use crate::chat_interactions::plugins::CHANNEL_NAME;
@@ -89,6 +93,22 @@ impl Notification {
             let has_bits = current_msg.bits.is_some();
 
             return has_bits;
+        } else {
+            false
+        }
+    }
+
+    /// Returns whether the message has a subscribed event attached
+    /// to it or not.
+    pub fn has_subscribed(&self) -> bool {
+        if let UserNotice(current_msg) = &self.msg {
+            let has_subscribed = match &current_msg.event {
+                UserNoticeEvent::SubOrResub { .. } => true,
+                UserNoticeEvent::SubGift { .. } => true,
+                _ => false,
+            };
+
+            return has_subscribed;
         } else {
             false
         }
@@ -223,8 +243,9 @@ pub fn convert_notification_to_msg(
 pub fn convert_notification_to_event(
     mut notification_reader: EventReader<Notification>,
     mut fruit_queues: Query<&mut TriggerQueue, (With<FruitState>, Without<CropState>)>,
+    mut crop_queues: Query<&mut TriggerQueue, (With<CropState>, Without<FruitState>)>,
 ) {
-    if fruit_queues.is_empty() {
+    if fruit_queues.is_empty() || crop_queues.is_empty() {
         return;
     }
 
@@ -234,8 +255,17 @@ pub fn convert_notification_to_event(
             .choose(&mut rand::thread_rng())
             .expect("convert_notification_to_event: Fruit should exist.");
 
+        let mut random_crop_queue = crop_queues
+            .iter_mut()
+            .choose(&mut rand::thread_rng())
+            .expect("Crop should exist by now.");
+
         if notification.has_bits() {
             random_fruit_queue.push_back(());
+        }
+
+        if notification.has_subscribed() {
+            random_crop_queue.push_back(());
         }
     }
 }
