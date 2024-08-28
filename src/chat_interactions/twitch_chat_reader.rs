@@ -19,7 +19,8 @@ use crate::entities::chatter::ChatMsg;
 use crate::entities::crop::CropState;
 use crate::entities::fruit::FruitState;
 use crate::entities::subscriber::SubscriberMsg;
-use crate::entities::TriggerQueue;
+use crate::entities::{GameEntityType, TriggerQueue};
+use crate::ui::chatting::Msg;
 
 /// Represents a chatter's role sending
 /// messages from Twitch.
@@ -55,7 +56,7 @@ impl Notification {
     }
 
     /// Converts the contents of the Notification into
-    /// a Msg if possible, or returns None otherwise.
+    /// a ChatMsg if possible, or returns None otherwise.
     pub fn as_chat_msg(&self) -> Option<ChatMsg> {
         if let Privmsg(current_msg) = &self.msg {
             let speaker_name = current_msg.sender.name.clone();
@@ -84,6 +85,25 @@ impl Notification {
         } else {
             None
         }
+    }
+
+    /// Converts the contents of the Notification into a
+    /// StreamerMsg (a Msg) if possible, or returns None otherwise.
+    pub fn as_streamer_msg(&self) -> Option<Msg> {
+        if let Privmsg(current_msg) = &self.msg {
+            let speaker_name = current_msg.sender.name.clone();
+            // Channel names are always lower case, but Twitch usernames can have
+            // upper case characters. I'm assuming here that a channel name is equivalent
+            // to the streamer's username, so this conversion has to take place.
+            if speaker_name.to_lowercase() != CHANNEL_NAME {
+                return None;
+            }
+
+            let speaker_msg = current_msg.message_text.clone();
+
+            return Some(Msg::new(speaker_name, speaker_msg, GameEntityType::Walk));
+        }
+        None
     }
 
     /// Returns whether the message has a donation attached to it
@@ -118,7 +138,10 @@ impl Notification {
     /// from Twitch.
     pub fn msg_type(&self) -> Option<NotificationType> {
         if let Privmsg(current_msg) = &self.msg {
-            let speaker_name = current_msg.sender.name.clone();
+            // Channel names are always lower case, but Twitch usernames can have
+            // upper case characters. I'm assuming here that a channel name is equivalent
+            // to the streamer's username, so this conversion has to take place.
+            let speaker_name = current_msg.sender.name.clone().to_lowercase();
             if speaker_name == CHANNEL_NAME {
                 return Some(NotificationType::Msg(TwitchRole::Streamer));
             }
@@ -210,6 +233,7 @@ pub fn convert_notification_to_msg(
     mut notification_reader: EventReader<Notification>,
     mut chat_msg_writer: EventWriter<ChatMsg>,
     mut subscriber_msg_writer: EventWriter<SubscriberMsg>,
+    mut streamer_msg_writer: EventWriter<Msg>,
 ) {
     for notification in notification_reader.read() {
         let found_msg_type = notification.msg_type();
@@ -225,16 +249,13 @@ pub fn convert_notification_to_msg(
             NotificationType::Msg(TwitchRole::Subscriber) => {
                 subscriber_msg_writer.send(notification.as_subscriber_msg().unwrap());
             }
-            _ => unimplemented!(),
-            //NotificationType::Msg(TwitchRole::Streamer) => { streamer_msg_writer.send(notification.as_streamer_msg().unwrap()); },
+            NotificationType::Msg(TwitchRole::Streamer) => {
+                streamer_msg_writer.send(notification.as_streamer_msg().unwrap());
+            }
+            _ => panic!(
+                "convert_notification_to_msg: A new type of NotificationType was not handled."
+            ),
         };
-
-        let found_msg = notification.as_chat_msg();
-        if found_msg.is_none() {
-            continue;
-        }
-
-        chat_msg_writer.send(found_msg.unwrap());
     }
 }
 
