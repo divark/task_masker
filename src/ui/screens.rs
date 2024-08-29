@@ -403,7 +403,7 @@ pub fn despawn_ingame_screen(
     }
 }
 
-pub fn spawn_end_screen(mut commands: Commands) {
+pub fn spawn_end_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
     let background = NodeBundle {
         style: Style {
             width: Val::Percent(100.0),
@@ -428,6 +428,19 @@ pub fn spawn_end_screen(mut commands: Commands) {
         ..default()
     };
 
+    let title_background = ImageBundle {
+        style: Style {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            ..default()
+        },
+        image: UiImage::new(asset_server.load("ui/UI_Paper_Frame_01_Horizontal.png")),
+        ..default()
+    };
+
     let title_text = TextBundle::from_section(
         "Thanks for Watching!",
         TextStyle {
@@ -443,7 +456,11 @@ pub fn spawn_end_screen(mut commands: Commands) {
             background
                 .spawn(title_section)
                 .with_children(|title_section| {
-                    title_section.spawn(title_text);
+                    title_section
+                        .spawn(title_background)
+                        .with_children(|title_background| {
+                            title_background.spawn(title_text);
+                        });
                 });
         });
 }
