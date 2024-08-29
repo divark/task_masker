@@ -69,7 +69,7 @@ pub fn spawn_start_screen(mut commands: Commands, asset_server: Res<AssetServer>
     };
 
     let title_text = TextBundle::from_section(
-        "Task Masker",
+        "Escaping Exile",
         TextStyle {
             font_size: 64.0,
             color: Color::BLACK,
