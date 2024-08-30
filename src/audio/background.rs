@@ -1,3 +1,4 @@
+use bevy::audio::Volume;
 use bevy::{audio::PlaybackMode, prelude::*};
 use rand::seq::SliceRandom;
 
@@ -14,6 +15,7 @@ pub fn insert_background_noises(asset_loader: Res<AssetServer>, mut commands: Co
         source: asset_loader.load("music/start_screen.wav"),
         settings: PlaybackSettings {
             mode: PlaybackMode::Loop,
+            volume: Volume::new(0.25),
             ..default()
         },
     };
