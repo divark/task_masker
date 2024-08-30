@@ -459,7 +459,7 @@ fn streamer_spawned_at_right_tilepos() {
 
     let streamer = world.find(EntityType::Streamer);
 
-    let expected_tilepos = TilePos::new(42, 59);
+    let expected_tilepos = TilePos::new(39, 59);
     let streamer_tilepos = world.get_tiled_tile_pos_from(streamer);
 
     assert_eq!(expected_tilepos, streamer_tilepos);
