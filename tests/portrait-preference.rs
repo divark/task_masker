@@ -2,7 +2,6 @@ mod mock_plugins;
 
 use bevy::prelude::*;
 use cucumber::{given, then, when, World};
-use mock_plugins::DEFAULT_SUBSCRIBER_SPRITE_IDX;
 
 use crate::mock_plugins::MockPortraitPreferencePlugin;
 use task_masker::ui::portrait_preferences::*;

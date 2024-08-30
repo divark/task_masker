@@ -4,6 +4,7 @@ use super::chatting::*;
 use super::screens::*;
 use crate::entities::chatter::speak_to_streamer_from_chatter;
 use crate::entities::subscriber::speak_to_streamer_from_subscriber;
+use crate::ui::portrait_preferences::{PortraitPreferences, DEFAULT_SUBSCRIBER_SPRITE_IDX};
 use crate::GameState;
 
 #[derive(Default)]
@@ -44,6 +45,10 @@ pub struct ChattingPlugin;
 
 impl Plugin for ChattingPlugin {
     fn build(&self, app: &mut App) {
+        app.insert_resource(PortraitPreferences::new(
+            String::from("twitch_portrait_preferences.db"),
+            DEFAULT_SUBSCRIBER_SPRITE_IDX,
+        ));
         app.add_event::<Msg>().add_systems(
             Update,
             (

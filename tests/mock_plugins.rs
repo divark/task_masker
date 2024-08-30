@@ -150,8 +150,6 @@ impl Plugin for MockCropPlugin {
     }
 }
 
-pub const DEFAULT_SUBSCRIBER_SPRITE_IDX: usize = 210;
-
 #[derive(Default)]
 pub struct MockPortraitPreferencePlugin;
 

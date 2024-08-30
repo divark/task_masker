@@ -5,6 +5,7 @@ use bevy::prelude::*;
 
 use super::screens::{SpeakerChatBox, SpeakerPortrait, SpeakerUI};
 use crate::entities::GameEntityType;
+use crate::ui::portrait_preferences::PortraitPreferences;
 
 #[derive(Component, PartialEq)]
 pub enum ChattingStatus {
@@ -218,6 +219,7 @@ pub fn load_portrait_from_msg(
         (&TextureAtlas, &Handle<Image>, &GameEntityType),
         Without<SpeakerPortrait>,
     >,
+    portrait_preferences: Res<PortraitPreferences>,
 ) {
     if msg_fields.is_empty() || speaker_portrait.is_empty() || chatting_portraits.is_empty() {
         return;
@@ -259,7 +261,9 @@ pub fn load_portrait_from_msg(
                 .find(|entity_texture_info| *entity_texture_info.2 == GameEntityType::Swim)
                 .expect("setup_chatting_from_msg: Could not find Subscriber's Texture Atlas.");
 
-            let subscriber_texture_atlas = subscriber_texture_entry.0.clone();
+            let mut subscriber_texture_atlas = subscriber_texture_entry.0.clone();
+            subscriber_texture_atlas.index =
+                portrait_preferences.get(current_msg.msg.speaker_name.clone());
             let subscriber_image_handle = subscriber_texture_entry.1.clone();
 
             let subscriber_image = UiImage::new(subscriber_image_handle);

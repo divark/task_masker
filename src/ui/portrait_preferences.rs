@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use sqlite::{Connection, ConnectionThreadSafe};
 
+pub const DEFAULT_SUBSCRIBER_SPRITE_IDX: usize = 210;
+
 #[derive(Resource)]
 pub struct PortraitPreferences {
     db_connection: ConnectionThreadSafe,
