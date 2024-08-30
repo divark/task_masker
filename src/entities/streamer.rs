@@ -7,7 +7,7 @@ use bevy_ecs_tilemap::{
 use crate::map::path_finding::*;
 use crate::map::plugins::TilePosEvent;
 use crate::map::tiled::{convert_tiled_to_bevy_pos, to_bevy_transform, TiledMapInformation};
-use crate::ui::chatting::{ChattingStatus, Msg};
+use crate::ui::chatting::ChattingStatus;
 
 use super::GameEntityType;
 
@@ -239,23 +239,6 @@ pub fn move_streamer_on_status_change(
 
         destination_request_writer.send(TilePosEvent::new(new_destination));
     }
-}
-
-pub fn test_streamer_msg(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut msg_writer: EventWriter<Msg>,
-) {
-    if !keyboard_input.just_pressed(KeyCode::KeyQ) {
-        return;
-    }
-
-    let streamer_msg = Msg::new(
-        "Caveman".to_string(),
-        "This is a test message to see if this works and types as expected.".to_string(),
-        GameEntityType::Walk,
-    );
-
-    msg_writer.send(streamer_msg);
 }
 
 pub fn update_status_when_speaking(

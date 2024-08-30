@@ -64,7 +64,6 @@ impl Plugin for StreamerPlugin {
                 make_streamer_idle_when_not_moving,
                 change_status_for_streamer,
                 move_streamer_on_status_change,
-                test_streamer_msg,
                 queue_destination_for_streamer,
                 update_status_when_speaking,
             )
