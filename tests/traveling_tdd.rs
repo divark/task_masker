@@ -447,7 +447,7 @@ fn chatter_spawned_at_right_tilepos() {
 
     let chatter = world.find(EntityType::Chatter);
 
-    let expected_tilepos = TilePos::new(69, 20);
+    let expected_tilepos = TilePos::new(35, 15);
     let chatter_tilepos = world.get_tiled_tile_pos_from(chatter);
 
     assert_eq!(expected_tilepos, chatter_tilepos);
