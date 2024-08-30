@@ -6,7 +6,7 @@ use bevy_ecs_tilemap::{
 
 use crate::map::path_finding::*;
 use crate::map::plugins::TilePosEvent;
-use crate::map::tiled::{convert_tiled_to_bevy_pos, to_bevy_transform, TiledMapInformation};
+use crate::map::tiled::{to_bevy_transform, TiledMapInformation};
 use crate::ui::chatting::ChattingStatus;
 
 use super::GameEntityType;
@@ -101,8 +101,7 @@ pub fn spawn_player_tile(
         .expect("Could not load map information. Is world loaded?");
     let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
 
-    let streamer_tiled_tilepos = TilePos { x: 42, y: 59 };
-    let streamer_bevy_tilepos = convert_tiled_to_bevy_pos(streamer_tiled_tilepos, map_size.x);
+    let streamer_bevy_tilepos = TilePos::new(39, 40);
     let streamer_transform = to_bevy_transform(&streamer_bevy_tilepos, map_info);
 
     commands.spawn((
@@ -218,9 +217,14 @@ pub fn change_status_for_streamer(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut online_status_writer: EventWriter<OnlineStatus>,
 ) {
-    if keyboard_input.just_pressed(KeyCode::Numpad1) {
+    let one_pressed = keyboard_input.just_pressed(KeyCode::Numpad1)
+        || keyboard_input.just_pressed(KeyCode::Digit1);
+    let two_pressed = keyboard_input.just_pressed(KeyCode::Numpad2)
+        || keyboard_input.just_pressed(KeyCode::Digit2);
+
+    if one_pressed {
         online_status_writer.send(OnlineStatus::Online);
-    } else if keyboard_input.just_pressed(KeyCode::Numpad2) {
+    } else if two_pressed {
         online_status_writer.send(OnlineStatus::Away);
     }
 }

@@ -330,7 +330,7 @@ pub fn insert_counting_information(
         return;
     }
 
-    let hours_total = 2;
+    let hours_total = 8;
     let minutes_total = hours_total * 60;
     let seconds_total = minutes_total * 60;
 
