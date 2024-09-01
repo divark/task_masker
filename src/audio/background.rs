@@ -34,7 +34,7 @@ pub fn remove_music(mut commands: Commands, music_query: Query<(Entity, &AudioSi
     }
 }
 
-const NUM_TRACKS: u32 = 12;
+const NUM_TRACKS: u32 = 20;
 
 pub fn add_soundtrack(mut commands: Commands) {
     let mut music_files = Vec::new();
