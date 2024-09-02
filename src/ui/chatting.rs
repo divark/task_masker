@@ -298,13 +298,20 @@ pub fn teletype_current_message(
         return;
     }
 
-    let msg_character = speaker_msg
+    let msg_character_found = speaker_msg
         .sections
         // The 2nd section is what actually holds
         // the chat message, so we have to shift it
         // accordingly.
-        .get_mut(typing_msg.idx() + 1)
+        .get_mut(typing_msg.idx() + 1);
+
+    if msg_character_found.is_none() {
+        return;
+    }
+
+    let msg_character = msg_character_found
         .expect("Could not find text section in msg.");
+
     msg_character.style.color = Color::BLACK;
 
     typing_msg.to_next_char();
@@ -321,13 +328,18 @@ pub fn play_typing_noise(
             continue;
         }
 
-        let msg_character = speaker_msg
+        let msg_character_found = speaker_msg
             .sections
             // The 2nd section is what actually holds
             // the chat message, so we have to shift it
             // accordingly.
-            .get(typing_msg.idx() + 1)
-            .expect("play_typing_noise: Could not find text section in msg.");
+            .get(typing_msg.idx() + 1);
+
+        if msg_character_found.is_none() {
+            continue;
+        }
+
+        let msg_character = msg_character_found.unwrap();
 
         if msg_character.value == " " {
             continue;
