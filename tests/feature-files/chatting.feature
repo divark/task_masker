@@ -40,3 +40,14 @@ Feature: Chat Messages mapped for Streamer, Subscriber, and Chatter.
         And the wait time is up,
         Then the Chat Message should no longer be present,
         And the Chat UI should be hidden.
+
+    Scenario: A Chatter with two back-to-back messages will stick around.
+        Given a Streamer is spawned on the map,
+        And a Chatter is spawned on the map,
+        And the Chatting interface exists,
+        When the Chatter sends a chat message,
+        And the Chatter sends a chat message,
+        And the Chatter has finished traveling to the Streamer,
+        And the Chatter has finished speaking to the Streamer the first time,
+        Then the Chatter should not be leaving,
+        And the Chatter should start speaking from the next chat message,
