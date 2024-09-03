@@ -79,6 +79,7 @@ pub struct TypingMsg {
     msg: Msg,
 
     msg_idx: usize,
+    is_at_end: bool,
 }
 
 impl TypingMsg {
@@ -86,6 +87,7 @@ impl TypingMsg {
         Self {
             msg: msg_contents,
             msg_idx: 0,
+            is_at_end: false,
         }
     }
 
@@ -98,7 +100,7 @@ impl TypingMsg {
     /// Returns whether the read message is at the last
     /// character or not.
     pub fn at_end(&self) -> bool {
-        self.msg_idx == self.msg.msg.len()
+        self.is_at_end
     }
 
     /// Returns the index of the current character within
@@ -110,11 +112,18 @@ impl TypingMsg {
     /// Adjusts the index to point to the next character within
     /// the message.
     pub fn to_next_char(&mut self) {
-        let new_idx = self.msg_idx + 1;
-
-        if new_idx > self.msg.msg.len() {
+        let next_char_found = self.msg.msg.chars().nth(self.msg_idx + 1);
+        if next_char_found.is_none() {
+            self.is_at_end = true;
             return;
         }
+
+        let next_char = next_char_found.unwrap();
+        // We could very well have an emoji in chat, so rather than
+        // naively adding 1 to the index, we want to be extra careful
+        // and assume that some of these characters are unicode, being
+        // more than 1 byte long.
+        let new_idx = self.msg_idx + next_char.len_utf8();
 
         self.msg_idx = new_idx;
     }
@@ -309,8 +318,7 @@ pub fn teletype_current_message(
         return;
     }
 
-    let msg_character = msg_character_found
-        .expect("Could not find text section in msg.");
+    let msg_character = msg_character_found.expect("Could not find text section in msg.");
 
     msg_character.style.color = Color::BLACK;
 

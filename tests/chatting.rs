@@ -130,7 +130,7 @@ fn spawn_chatting_ui(world: &mut GameWithChatUI) {
 fn streamer_sends_msg(world: &mut GameWithChatUI) {
     let streamer_msg = Msg::new(
         String::from("Caveman"),
-        String::from("This is a test message to see if this works and types as expected."),
+        String::from("👍This is a test message to see if this works and types as expected."),
         GameEntityType::Walk,
     );
 
@@ -264,7 +264,7 @@ fn chatting_ui_contains_first_five_chars_from_msg(world: &mut GameWithChatUI) {
         .query_filtered::<&Text, With<SpeakerChatBox>>()
         .single(&world.app.world());
 
-    let expected_contents = String::from("This ");
+    let expected_contents = String::from("👍This");
     let msg_contents = read_first_n(&msg_txtfield, 5);
 
     assert_eq!(expected_contents, msg_contents);
