@@ -91,7 +91,15 @@ fn read_first_n(textfield: &Text, amount: usize) -> String {
     let mut msg_contents = String::new();
 
     for i in 1..=amount {
-        msg_contents += &textfield.sections[i].value;
+        let msg_char = &textfield.sections[i];
+        // All characters are invisible by default, which
+        // we don't want to read, since that means that
+        // these characters are not rendered on the screen.
+        if msg_char.style.color != Color::BLACK {
+            break;
+        }
+
+        msg_contents += &msg_char.value;
     }
 
     msg_contents

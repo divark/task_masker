@@ -46,7 +46,7 @@ Feature: Chat Messages mapped for Streamer, Subscriber, and Chatter.
         And a Chatter is spawned on the map,
         And the Chatting interface exists,
         When the Chatter sends a chat message,
-        And the Chatter sends a chat message,
+        And the Chatter sends a different chat message,
         And the Chatter has finished traveling to the Streamer,
         And the Chatter has finished speaking to the Streamer the first time,
         Then the Chatter should not be leaving,
