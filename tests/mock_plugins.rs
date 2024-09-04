@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use bevy::ecs::query::QueryFilter;
+
 use bevy::state::app::StatesPlugin;
 use bevy::utils::Duration;
 
@@ -241,6 +243,21 @@ impl GameWorld {
             .query_filtered::<&T, With<U>>()
             .get_single(&self.app.world())
             .ok()
+    }
+
+    /// Returns true whenever there exists one or more of the
+    /// requested Component within the game when a condition is met,
+    /// or false otherwise.
+    pub fn contains_when<T, U>(&mut self) -> bool
+    where
+        T: Component,
+        U: QueryFilter,
+    {
+        self.app
+            .world_mut()
+            .query_filtered::<&T, U>()
+            .iter(&self.app.world())
+            .count() > 0
     }
 
     /// Sends an Event to all systems listening to it

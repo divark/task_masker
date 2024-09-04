@@ -54,3 +54,7 @@ harness = false
 [[test]]
 name = "environment"
 harness = false
+
+[[test]]
+name = "pathfinding"
+harness = false

@@ -100,7 +100,16 @@ impl TranslationGatherer {
     }
 }
 
+#[derive(Component, PartialEq, Debug)]
+pub struct GroundGraph;
+
 #[derive(Component)]
+pub struct UndirectedGraph {
+    nodes: NodeData,
+    edges: NodeEdges,
+}
+
+#[derive(Component, Clone)]
 pub struct NodeData(pub Vec<Vec3>);
 
 impl NodeData {
@@ -139,7 +148,7 @@ impl NodeData {
     }
 }
 
-#[derive(Component, PartialEq, Debug)]
+#[derive(Component, Clone, PartialEq, Debug)]
 pub struct NodeEdges(pub Vec<Vec<usize>>);
 
 /// Returns the Length, Width, and Height derived from
@@ -446,6 +455,11 @@ pub fn create_ground_graph(
 
     let node_data = NodeData::from_ground_tiles(&heighted_tiles, layer_map_information);
     let node_edges = NodeEdges::from_ground_tiles(heighted_tiles);
+
+    spawner.spawn((UndirectedGraph {
+        nodes: node_data.clone(),
+        edges: node_edges.clone(),
+    }, GroundGraph));
 
     spawner.spawn(Graph {
         graph_type: GraphType::Ground,
