@@ -15,11 +15,11 @@ pub enum GraphType {
 }
 
 pub struct TranslationGatherer {
-    map_information: Vec<(TilemapGridSize, TilemapType, Transform)>,
+    map_information: Vec<TileLayerPosition>,
 }
 
 impl TranslationGatherer {
-    pub fn new(map_information: Vec<(TilemapGridSize, TilemapType, Transform)>) -> Self {
+    pub fn new(map_information: Vec<TileLayerPosition>) -> Self {
         Self { map_information }
     }
 
@@ -35,15 +35,19 @@ impl TranslationGatherer {
             let tile_idx = tilepos_to_idx(tile.x, tile.y, length);
             let tile_height = tile_height_map[tile_idx];
 
-            let (grid_size, map_type, map_transform) = self
+            let tile_layer_position = self
                 .map_information
                 .get(tile_height)
                 .expect("translations_from: Could not find map information at given tile height.");
 
+            let grid_size = tile_layer_position.get_grid_size();
+            let map_type = tile_layer_position.get_map_type();
+            let map_position = tile_layer_position.get_position();
+
             let tile_translation = tile
                 .center_in_world(grid_size, map_type)
-                .extend(map_transform.translation.z);
-            let tile_transform = *map_transform * Transform::from_translation(tile_translation);
+                .extend(map_position.translation.z);
+            let tile_transform = *map_position * Transform::from_translation(tile_translation);
 
             heighted_tile_translations.push(tile_transform.translation);
         }
@@ -57,15 +61,19 @@ impl TranslationGatherer {
 
         let unique_tiles = unique_tiles_from(heighted_tiles);
         for tile in unique_tiles {
-            let (grid_size, map_type, map_transform) = self.map_information.iter().last().expect(
+            let tile_layer_position = self.map_information.iter().last().expect(
                 "highest_translations_from: Could not find map information at the highest
                 tile height.",
             );
 
+            let grid_size = tile_layer_position.get_grid_size();
+            let map_type = tile_layer_position.get_map_type();
+            let map_position = tile_layer_position.get_position();
+
             let tile_translation = tile
                 .center_in_world(grid_size, map_type)
-                .extend(map_transform.translation.z);
-            let tile_transform = *map_transform * Transform::from_translation(tile_translation);
+                .extend(map_position.translation.z);
+            let tile_transform = *map_position * Transform::from_translation(tile_translation);
 
             heighted_tile_translations.push(tile_transform.translation);
         }
@@ -83,15 +91,19 @@ impl TranslationGatherer {
 
         let unique_tiles = unique_tiles_from(heighted_tiles);
         for tile in unique_tiles {
-            let (grid_size, map_type, map_transform) = self.map_information.get(height).expect(
+            let tile_layer_position = self.map_information.get(height).expect(
                 "lowest_translations_from: Could not find map information at the specified
                 tile height.",
             );
 
+            let grid_size = tile_layer_position.get_grid_size();
+            let map_type = tile_layer_position.get_map_type();
+            let map_position = tile_layer_position.get_position();
+
             let tile_translation = tile
                 .center_in_world(grid_size, map_type)
-                .extend(map_transform.translation.z);
-            let tile_transform = *map_transform * Transform::from_translation(tile_translation);
+                .extend(map_position.translation.z);
+            let tile_transform = *map_position * Transform::from_translation(tile_translation);
 
             heighted_tile_translations.push(tile_transform.translation);
         }
@@ -100,22 +112,102 @@ impl TranslationGatherer {
     }
 }
 
-#[derive(Component, PartialEq, Debug)]
-pub struct GroundGraph;
-
 #[derive(Component)]
 pub struct UndirectedGraph {
+    tile_type: GraphType,
+    length: u32,
     nodes: NodeData,
     edges: NodeEdges,
+}
+
+impl UndirectedGraph {
+    /// Converts a Tile map with layers into an
+    /// Undirected Graph depending on the type
+    /// of Tiles being considered.
+    pub fn from_tiles(
+        tile_type: GraphType,
+        tiles: Vec<HeightedTilePos>,
+        tile_layers: Vec<TileLayerPosition>,
+    ) -> Self {
+        let (length, _width, _height) = dimensions_from(&tiles);
+        let (nodes, edges) = match tile_type {
+            GraphType::Ground => (
+                NodeData::from_ground_tiles(&tiles, tile_layers),
+                NodeEdges::from_ground_tiles(tiles),
+            ),
+            GraphType::Air => (
+                NodeData::from_air_tiles(&tiles, tile_layers),
+                NodeEdges::from_air_tiles(tiles),
+            ),
+            GraphType::Water => (
+                NodeData::from_water_tiles(&tiles, tile_layers),
+                NodeEdges::from_water_tiles(tiles),
+            ),
+        };
+
+        Self {
+            tile_type,
+            length,
+            nodes,
+            edges,
+        }
+    }
+
+    /// Returns a Shortest Path for some start and destination
+    /// Tile Positions.
+    pub fn shortest_path(&self, start: TilePos, end: TilePos) -> Option<Path> {
+        self.edges.shortest_path(start, end, self.length)
+    }
+
+    /// Returns the contents of a Node found in the
+    /// Undirected Graph.
+    pub fn get_node(&self, index: usize) -> Option<&Vec3> {
+        self.nodes.0.get(index)
+    }
+
+    /// Returns what type of Nodes are being held in
+    /// the Undirected Graph.
+    pub fn get_node_type(&self) -> &GraphType {
+        &self.tile_type
+    }
 }
 
 #[derive(Component, Clone)]
 pub struct NodeData(pub Vec<Vec3>);
 
+#[derive(Clone)]
+pub struct TileLayerPosition {
+    grid_size: TilemapGridSize,
+    map_type: TilemapType,
+    position: Transform,
+}
+
+impl TileLayerPosition {
+    pub fn new(grid_size: TilemapGridSize, map_type: TilemapType, position: Transform) -> Self {
+        Self {
+            grid_size,
+            map_type,
+            position,
+        }
+    }
+
+    pub fn get_grid_size(&self) -> &TilemapGridSize {
+        &self.grid_size
+    }
+
+    pub fn get_map_type(&self) -> &TilemapType {
+        &self.map_type
+    }
+
+    pub fn get_position(&self) -> &Transform {
+        &self.position
+    }
+}
+
 impl NodeData {
     pub fn from_ground_tiles(
         heighted_tiles: &Vec<HeightedTilePos>,
-        layer_map_information: Vec<(TilemapGridSize, TilemapType, Transform)>,
+        layer_map_information: Vec<TileLayerPosition>,
     ) -> Self {
         let translation_gatherer = TranslationGatherer::new(layer_map_information);
 
@@ -126,7 +218,7 @@ impl NodeData {
 
     pub fn from_air_tiles(
         heighted_tiles: &Vec<HeightedTilePos>,
-        layer_map_information: Vec<(TilemapGridSize, TilemapType, Transform)>,
+        layer_map_information: Vec<TileLayerPosition>,
     ) -> Self {
         let translation_gatherer = TranslationGatherer::new(layer_map_information);
 
@@ -137,7 +229,7 @@ impl NodeData {
 
     pub fn from_water_tiles(
         heighted_tiles: &Vec<HeightedTilePos>,
-        layer_map_information: Vec<(TilemapGridSize, TilemapType, Transform)>,
+        layer_map_information: Vec<TileLayerPosition>,
     ) -> Self {
         let translation_gatherer = TranslationGatherer::new(layer_map_information);
 
@@ -429,7 +521,7 @@ pub fn idx_to_tilepos(mapped_idx: usize, world_size: u32) -> TilePos {
 pub fn create_ground_graph(
     tile_positions: Query<(&TilePos, &LayerNumber)>,
     map_information: Query<(&TilemapGridSize, &TilemapType, &Transform)>,
-    ground_graph_query: Query<(&NodeEdges, &NodeData, &GraphType)>,
+    ground_graph_query: Query<&UndirectedGraph>,
     mut spawner: Commands,
 ) {
     if map_information.is_empty() {
@@ -438,7 +530,7 @@ pub fn create_ground_graph(
 
     let has_ground_graph = ground_graph_query
         .iter()
-        .any(|graph_elements| graph_elements.2 == &GraphType::Ground);
+        .any(|graph| *graph.get_node_type() == GraphType::Ground);
     if has_ground_graph {
         return;
     }
@@ -450,16 +542,17 @@ pub fn create_ground_graph(
 
     let layer_map_information = map_information
         .iter()
-        .map(|layer_entry| (*layer_entry.0, *layer_entry.1, *layer_entry.2))
-        .collect::<Vec<(TilemapGridSize, TilemapType, Transform)>>();
+        .map(|layer_entry| TileLayerPosition::new(*layer_entry.0, *layer_entry.1, *layer_entry.2))
+        .collect::<Vec<TileLayerPosition>>();
 
-    let node_data = NodeData::from_ground_tiles(&heighted_tiles, layer_map_information);
-    let node_edges = NodeEdges::from_ground_tiles(heighted_tiles);
+    let node_data = NodeData::from_ground_tiles(&heighted_tiles, layer_map_information.clone());
+    let node_edges = NodeEdges::from_ground_tiles(heighted_tiles.clone());
 
-    spawner.spawn((UndirectedGraph {
-        nodes: node_data.clone(),
-        edges: node_edges.clone(),
-    }, GroundGraph));
+    spawner.spawn(UndirectedGraph::from_tiles(
+        GraphType::Ground,
+        heighted_tiles,
+        layer_map_information,
+    ));
 
     spawner.spawn(Graph {
         graph_type: GraphType::Ground,
@@ -472,7 +565,7 @@ pub fn create_ground_graph(
 pub fn create_water_graph(
     tile_positions: Query<(&TilePos, &LayerNumber)>,
     map_information: Query<(&TilemapGridSize, &TilemapType, &Transform)>,
-    water_graph_query: Query<(&NodeEdges, &NodeData, &GraphType)>,
+    water_graph_query: Query<&UndirectedGraph>,
     mut spawner: Commands,
 ) {
     if map_information.is_empty() {
@@ -481,7 +574,7 @@ pub fn create_water_graph(
 
     let has_water_graph = water_graph_query
         .iter()
-        .any(|graph_elements| graph_elements.2 == &GraphType::Water);
+        .any(|graph| *graph.get_node_type() == GraphType::Water);
     if has_water_graph {
         return;
     }
@@ -493,11 +586,17 @@ pub fn create_water_graph(
 
     let layer_map_information = map_information
         .iter()
-        .map(|layer_entry| (*layer_entry.0, *layer_entry.1, *layer_entry.2))
-        .collect::<Vec<(TilemapGridSize, TilemapType, Transform)>>();
+        .map(|layer_entry| TileLayerPosition::new(*layer_entry.0, *layer_entry.1, *layer_entry.2))
+        .collect::<Vec<TileLayerPosition>>();
 
-    let node_data = NodeData::from_water_tiles(&heighted_tiles, layer_map_information);
-    let node_edges = NodeEdges::from_water_tiles(heighted_tiles);
+    let node_data = NodeData::from_water_tiles(&heighted_tiles, layer_map_information.clone());
+    let node_edges = NodeEdges::from_water_tiles(heighted_tiles.clone());
+
+    spawner.spawn(UndirectedGraph::from_tiles(
+        GraphType::Water,
+        heighted_tiles,
+        layer_map_information,
+    ));
 
     spawner.spawn(Graph {
         graph_type: GraphType::Water,
@@ -510,7 +609,7 @@ pub fn create_water_graph(
 pub fn create_air_graph(
     tile_positions: Query<(&TilePos, &LayerNumber)>,
     map_information: Query<(&TilemapGridSize, &TilemapType, &Transform)>,
-    air_graph_query: Query<(&NodeEdges, &NodeData, &GraphType)>,
+    air_graph_query: Query<&UndirectedGraph>,
     mut spawner: Commands,
 ) {
     if map_information.is_empty() {
@@ -519,7 +618,7 @@ pub fn create_air_graph(
 
     let has_air_graph = air_graph_query
         .iter()
-        .any(|graph_elements| graph_elements.2 == &GraphType::Air);
+        .any(|graph| *graph.get_node_type() == GraphType::Air);
     if has_air_graph {
         return;
     }
@@ -531,11 +630,17 @@ pub fn create_air_graph(
 
     let layer_map_information = map_information
         .iter()
-        .map(|layer_entry| (*layer_entry.0, *layer_entry.1, *layer_entry.2))
-        .collect::<Vec<(TilemapGridSize, TilemapType, Transform)>>();
+        .map(|layer_entry| TileLayerPosition::new(*layer_entry.0, *layer_entry.1, *layer_entry.2))
+        .collect::<Vec<TileLayerPosition>>();
 
-    let node_data = NodeData::from_air_tiles(&heighted_tiles, layer_map_information);
-    let node_edges = NodeEdges::from_air_tiles(heighted_tiles);
+    let node_data = NodeData::from_air_tiles(&heighted_tiles, layer_map_information.clone());
+    let node_edges = NodeEdges::from_air_tiles(heighted_tiles.clone());
+
+    spawner.spawn(UndirectedGraph::from_tiles(
+        GraphType::Air,
+        heighted_tiles,
+        layer_map_information,
+    ));
 
     spawner.spawn(Graph {
         graph_type: GraphType::Air,
@@ -607,7 +712,7 @@ pub fn update_movement_target(
         &GameEntityType,
     )>,
     map_information: Query<&TilemapSize>,
-    graph_query: Query<(&NodeData, &GraphType)>,
+    graph_query: Query<&UndirectedGraph>,
 ) {
     if graph_query.is_empty() {
         return;
@@ -633,24 +738,21 @@ pub fn update_movement_target(
     for (mut target, mut path, current_pos, mut direction, movement_type) in
         moving_entity.iter_mut()
     {
-        let nodes = if *movement_type == GameEntityType::Walk {
+        let tile_graph = if *movement_type == GameEntityType::Walk {
             graph_query
                 .iter()
-                .find(|graph_elements| graph_elements.1 == &GraphType::Ground)
+                .find(|graph| graph.get_node_type() == &GraphType::Ground)
                 .expect("update_movement_target: Could not find Ground Graph")
-                .0
         } else if movement_type == &GameEntityType::Fly {
             graph_query
                 .iter()
-                .find(|graph_elements| graph_elements.1 == &GraphType::Air)
+                .find(|graph| graph.get_node_type() == &GraphType::Air)
                 .expect("update_movement_target: Could not find Air Graph")
-                .0
         } else {
             graph_query
                 .iter()
-                .find(|graph_elements| graph_elements.1 == &GraphType::Water)
+                .find(|graph| graph.get_node_type() == &GraphType::Water)
                 .expect("update_movement_target: Could not find Water Graph")
-                .0
         };
 
         if target.0.is_some() || path.0.is_empty() {
@@ -662,15 +764,15 @@ pub fn update_movement_target(
             .pop_front()
             .expect("The path was not supposed to be empty by here.");
         let target_tile_pos = idx_to_tilepos(new_target, world_size.y);
-        let target_pos = nodes.0[new_target];
+        let target_pos = tile_graph.get_node(new_target).unwrap();
 
         if let Some(new_direction) =
-            get_direction(*current_pos, Transform::from_translation(target_pos))
+            get_direction(*current_pos, Transform::from_translation(*target_pos))
         {
             *direction = new_direction;
         }
 
-        target.0 = Some((target_pos, target_tile_pos));
+        target.0 = Some((*target_pos, target_tile_pos));
     }
 }
 

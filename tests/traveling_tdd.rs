@@ -13,7 +13,7 @@ use bevy_ecs_tilemap::prelude::*;
 use task_masker::entities::{chatter::*, streamer::*, subscriber::*};
 use task_masker::map::path_finding::{
     tilepos_to_idx, unique_tiles_from, GraphType, HeightedTilePos, MovementTimer, NodeData,
-    NodeEdges, Path, Target,
+    NodeEdges, Path, Target, TileLayerPosition,
 };
 use task_masker::map::plugins::{PathFindingPlugin, TilePosEvent};
 use task_masker::map::tiled::{
@@ -602,8 +602,8 @@ fn node_data_from_ground_tiles_works() {
         .world_mut()
         .query::<(&TilemapGridSize, &TilemapType, &Transform)>()
         .iter(&world.app.world_mut())
-        .map(|layer_info| (*layer_info.0, *layer_info.1, *layer_info.2))
-        .collect::<Vec<(TilemapGridSize, TilemapType, Transform)>>();
+        .map(|layer_info| TileLayerPosition::new(*layer_info.0, *layer_info.1, *layer_info.2))
+        .collect::<Vec<TileLayerPosition>>();
 
     let number_of_tiles = unique_tiles_from(&heighted_tiles).len();
     let node_data = NodeData::from_ground_tiles(&heighted_tiles, map_layer_information);

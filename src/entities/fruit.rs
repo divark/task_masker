@@ -2,7 +2,9 @@ use std::collections::VecDeque;
 
 use crate::entities::TriggerQueue;
 use crate::map::{
-    path_finding::{tilepos_to_idx, GraphType, MovementTimer, NodeData, StartingPoint, Target},
+    path_finding::{
+        tilepos_to_idx, GraphType, MovementTimer, NodeData, StartingPoint, Target, UndirectedGraph,
+    },
     plugins::TilePosEvent,
     tiled::*,
 };
@@ -101,7 +103,7 @@ pub fn replace_fruit_sprites(
 
 pub fn make_fruit_fall(
     mut fruit_query: Query<(&TilePos, &mut FruitState, &mut Target, &TriggerQueue)>,
-    ground_graph_query: Query<(&NodeData, &GraphType)>,
+    ground_graph_query: Query<&UndirectedGraph>,
     map_info_query: Query<(&Transform, &TilemapSize)>,
 ) {
     if ground_graph_query.is_empty() {
@@ -110,12 +112,8 @@ pub fn make_fruit_fall(
 
     let ground_graph = ground_graph_query
         .iter()
-        .find(|graph_elements| graph_elements.1 == &GraphType::Ground);
-    if ground_graph.is_none() {
-        return;
-    }
-
-    let ground_graph_nodes = ground_graph.unwrap().0;
+        .find(|graph| *graph.get_node_type() == GraphType::Ground)
+        .expect("make_fruit_fall: Could not find Undirected Graph representing Ground tiles.");
 
     let map_information = map_info_query
         .iter()
@@ -140,9 +138,14 @@ pub fn make_fruit_fall(
         }
 
         let tile_target_pos = TilePos::new(fruit_tile_pos.x + 3, fruit_tile_pos.y - 3);
-        let tile_translation: Vec3 = ground_graph_nodes.0
-            [tilepos_to_idx(tile_target_pos.x, tile_target_pos.y, world_size.x)];
-        let tile_transform = Transform::from_translation(tile_translation);
+        let tile_translation = ground_graph
+            .get_node(tilepos_to_idx(
+                tile_target_pos.x,
+                tile_target_pos.y,
+                world_size.x,
+            ))
+            .unwrap();
+        let tile_transform = Transform::from_translation(*tile_translation);
 
         fruit_pathing_target.0 = Some((tile_transform.translation, tile_target_pos));
         *fruit_state = FruitState::Falling;

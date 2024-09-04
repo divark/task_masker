@@ -230,6 +230,18 @@ impl GameWorld {
             .ok()
     }
 
+    /// Returns a list of Components found within the game
+    pub fn find_all<T>(&mut self) -> Vec<&T>
+    where
+        T: Component,
+    {
+        self.app
+            .world_mut()
+            .query::<&T>()
+            .iter(&self.app.world())
+            .collect::<Vec<&T>>()
+    }
+
     /// Returns the requested Component found associated
     /// with the other Component within the game, or None
     /// otherwise.
@@ -257,7 +269,8 @@ impl GameWorld {
             .world_mut()
             .query_filtered::<&T, U>()
             .iter(&self.app.world())
-            .count() > 0
+            .count()
+            > 0
     }
 
     /// Sends an Event to all systems listening to it
