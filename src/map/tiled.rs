@@ -29,7 +29,7 @@ use bevy_ecs_tilemap::prelude::*;
 use thiserror::Error;
 
 pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let map_handle: Handle<TiledMap> = asset_server.load("TM_v3.tmx");
+    let map_handle: Handle<TiledMap> = asset_server.load("TM_map.tmx");
 
     commands.spawn(TiledMapBundle {
         tiled_map: map_handle,
@@ -520,7 +520,7 @@ pub fn spawn_tiles_from_tiledmap(mut commands: Commands) {
     if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
         tiled_map_path.push(manifest_dir);
     }
-    tiled_map_path.push("assets/TM_v3.tmx");
+    tiled_map_path.push("assets/TM_map.tmx");
 
     let tiled_map = load_tmx_map(&tiled_map_path);
     for (tileset_index, tileset) in tiled_map.map.tilesets().iter().enumerate() {
