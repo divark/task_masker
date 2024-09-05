@@ -11,7 +11,7 @@ use cucumber::{given, then, when, World};
 
 use task_masker::entities::chatter::ChatterStatus;
 use task_masker::entities::GameEntityType;
-use task_masker::map::plugins::TilePosEvent;
+use task_masker::map::plugins::{PathFindingPlugin, TilePosEvent};
 use task_masker::ui::chatting::*;
 use task_masker::ui::screens::{SpeakerChatBox, SpeakerUI};
 use task_masker::GameState;
@@ -37,6 +37,8 @@ impl GameWithChatUI {
         // so we have to load a Tiled map as a prerequisite.
         app.add_plugins(MockTiledMapPlugin);
         app.add_event::<TilePosEvent>();
+
+        app.add_plugins(PathFindingPlugin);
 
         app.add_systems(Update, intercept_typing_timer);
         app.update();
