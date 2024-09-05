@@ -19,6 +19,16 @@ Feature: A Chatter, represented as a Bird, can approach the Streamer to speak, a
         Given a Tiled Map
         And a Streamer spawned on the Tiled Map
         And a Chatter spawned on the Tiled Map
+        And the Chatting interface exists
         When the Chatter has approached the Streamer
         And the Chatter is done speaking
         Then the Chatter leaves back to its resting point
+
+    Scenario: A Chatter should not leave until done speaking.
+        Given a Tiled Map
+        And a Streamer spawned on the Tiled Map
+        And a Chatter spawned on the Tiled Map
+        And the Chatting interface exists
+        When the Chatter sends a long chat message
+        And the Chatter is almost done speaking to the Streamer
+        Then the Chatter should still be speaking

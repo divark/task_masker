@@ -10,7 +10,7 @@ use task_masker::entities::crop::*;
 use task_masker::entities::fruit::*;
 use task_masker::entities::streamer::*;
 use task_masker::entities::subscriber::*;
-use task_masker::entities::WaitTimer;
+use task_masker::entities::WaitToLeaveTimer;
 use task_masker::map::path_finding::*;
 use task_masker::map::tiled::*;
 use task_masker::ui::chatting::*;
@@ -57,7 +57,8 @@ impl Plugin for MockChatterPlugin {
                 replace_chatter_tile,
                 fly_to_streamer_to_speak.after(replace_chatter_tile),
                 speak_to_streamer_from_chatter.after(fly_to_streamer_to_speak),
-                leave_from_streamer_from_chatter.after(speak_to_streamer_from_chatter),
+                chatter_waits_to_leave_from_streamer.after(speak_to_streamer_from_chatter),
+                leave_from_streamer_from_chatter.after(chatter_waits_to_leave_from_streamer),
                 return_chatter_to_idle,
                 follow_streamer_while_speaking,
                 follow_streamer_while_approaching_for_chatter,
@@ -184,7 +185,9 @@ fn reduce_movement_times_to_zero(mut timer_query: Query<&mut MovementTimer, Adde
 }
 
 /// Intercepts and sets the Wait Timer interval to 0 seconds for testing purposes.
-pub fn reduce_wait_times_to_zero(mut waiting_timers: Query<&mut WaitTimer, Added<WaitTimer>>) {
+pub fn reduce_wait_times_to_zero(
+    mut waiting_timers: Query<&mut WaitToLeaveTimer, Added<WaitToLeaveTimer>>,
+) {
     for mut waiting_timer in &mut waiting_timers {
         waiting_timer.0 = Timer::new(Duration::from_secs(0), TimerMode::Once);
     }

@@ -1,9 +1,13 @@
 mod mock_plugins;
 
 use futures::executor::block_on;
+use task_masker::entities::WaitToLeaveTimer;
+use task_masker::ui::chatting::TypingMsg;
+use task_masker::ui::chatting::TypingSpeedTimer;
 
 use crate::mock_plugins::{
-    reduce_wait_times_to_zero, GameWorld, MockChatterPlugin, MockStreamerPlugin, MockTiledMapPlugin,
+    reduce_wait_times_to_zero, GameWorld, MockChatterPlugin, MockChattingPlugin,
+    MockStreamerPlugin, MockTiledMapPlugin,
 };
 
 use bevy::prelude::*;
@@ -27,6 +31,16 @@ fn distance_of(source_pos: TilePos, target_pos: TilePos) -> usize {
     ((x2 - x1).powi(2) + (y2 - y1).powi(2)).sqrt().floor() as usize
 }
 
+/// Sets each Typing Timer to zero to make testing
+/// not dependent off of real-world time.
+fn intercept_typing_timer(
+    mut typing_timers: Query<&mut TypingSpeedTimer, Added<TypingSpeedTimer>>,
+) {
+    for mut typing_timer in &mut typing_timers {
+        *typing_timer = TypingSpeedTimer(Timer::from_seconds(0.0, TimerMode::Repeating));
+    }
+}
+
 #[given("a Tiled Map")]
 fn spawn_tiled_map(world: &mut GameWorld) {
     world.app.add_plugins(MockTiledMapPlugin);
@@ -48,6 +62,13 @@ fn spawn_streamer_from_tiled_map(world: &mut GameWorld) {
     world.update(1);
 }
 
+#[given("the Chatting interface exists")]
+fn spawn_chatting_ui(world: &mut GameWorld) {
+    world.app.add_plugins(MockChattingPlugin);
+    world.app.add_systems(Update, intercept_typing_timer);
+    world.update(1);
+}
+
 #[when("the Chatter wants to speak")]
 fn make_chatter_approach_to_speak(world: &mut GameWorld) {
     world.broadcast_event(ChatMsg {
@@ -55,6 +76,19 @@ fn make_chatter_approach_to_speak(world: &mut GameWorld) {
         msg: String::from("Hello Caveman!"),
     });
 
+    world.update(1);
+}
+
+#[when("the Chatter sends a long chat message")]
+fn chatter_sends_long_msg(world: &mut GameWorld) {
+    let long_msg = String::from("So, if you're learning a subject of math for the first time, it's helpful to actually learn about the concepts behind it before going into the course, since you're otherwise being overloaded with a bunch of terminology. Doing it this way, it's important to do so with the angle of finding how it's important to your work, using analogies and metaphors to make the knowledge personal");
+
+    let chatter_msg = ChatMsg {
+        name: String::from("Chatter"),
+        msg: long_msg,
+    };
+
+    world.broadcast_event::<ChatMsg>(chatter_msg);
     world.update(1);
 }
 
@@ -73,6 +107,48 @@ fn wait_for_chatter_to_approach_to_speak(world: &mut GameWorld) {
             break;
         }
     }
+}
+
+#[when("the Chatter is almost done speaking to the Streamer")]
+fn wait_until_chatter_near_end_of_speaking(world: &mut GameWorld) {
+    loop {
+        world.update(1);
+
+        let typing_msg = world.find::<TypingMsg>();
+        if typing_msg.is_none() {
+            continue;
+        }
+
+        let msg_index = typing_msg
+            .expect(
+                "wait_until_chatter_near_end_of_speaking: Could not find Typing Indicator type.",
+            )
+            .idx();
+        if msg_index > 356 {
+            break;
+        }
+    }
+}
+
+#[then("the Chatter should still be speaking")]
+fn chatter_should_still_be_speaking(world: &mut GameWorld) {
+    world.update(1);
+
+    let msg_is_still_being_typed = !world
+        .find::<TypingMsg>()
+        .expect("chatter_should_still_be_speaking: Typing Indicator could not be found")
+        .at_end();
+    assert!(msg_is_still_being_typed);
+
+    let expected_chatter_status = ChatterStatus::Speaking;
+    let actual_chatter_status = world
+        .find::<ChatterStatus>()
+        .expect("chatter_should_still_be_speaking: Chatter status could not be found.");
+
+    assert_eq!(expected_chatter_status, *actual_chatter_status);
+
+    let has_waiting_timer = world.find::<WaitToLeaveTimer>().is_some();
+    assert!(!has_waiting_timer);
 }
 
 #[when("the Chatter is done speaking")]

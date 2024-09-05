@@ -19,6 +19,7 @@ impl Plugin for ChatterPlugin {
                 replace_chatter_sprite,
                 trigger_flying_to_streamer,
                 fly_to_streamer_to_speak,
+                chatter_waits_to_leave_from_streamer,
                 leave_from_streamer_from_chatter,
                 return_chatter_to_idle,
                 follow_streamer_while_speaking,

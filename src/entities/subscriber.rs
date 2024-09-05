@@ -3,7 +3,7 @@ use bevy_ecs_tilemap::prelude::*;
 use std::collections::VecDeque;
 
 use crate::entities::streamer::{StreamerLabel, StreamerState};
-use crate::entities::WaitTimer;
+use crate::entities::WaitToLeaveTimer;
 use crate::map::path_finding::*;
 use crate::map::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
 use crate::ui::chatting::Msg;
@@ -213,7 +213,7 @@ pub fn speak_to_streamer_from_subscriber(
             &mut SubscriberStatus,
             &GameEntityType,
         ),
-        Without<WaitTimer>,
+        Without<WaitToLeaveTimer>,
     >,
     mut chat_msg_requester: EventWriter<Msg>,
     mut commands: Commands,
@@ -236,7 +236,7 @@ pub fn speak_to_streamer_from_subscriber(
 
         commands
             .entity(subscriber_entity)
-            .insert(WaitTimer(Timer::from_seconds(10.0, TimerMode::Once)));
+            .insert(WaitToLeaveTimer(Timer::from_seconds(10.0, TimerMode::Once)));
 
         *subscriber_status = SubscriberStatus::Speaking;
         chat_msg_requester.send(Msg::new(
@@ -251,7 +251,7 @@ pub fn leave_from_streamer_from_subscriber(
     time: Res<Time>,
     mut subscriber: Query<(
         Entity,
-        &mut WaitTimer,
+        &mut WaitToLeaveTimer,
         &mut Path,
         &StartingPoint,
         &SpawnPoint,
@@ -300,7 +300,7 @@ pub fn leave_from_streamer_from_subscriber(
 
             commands
                 .entity(subscriber_entity)
-                .remove::<WaitTimer>()
+                .remove::<WaitToLeaveTimer>()
                 .remove::<SubscriberMsg>();
 
             *subscriber_status = SubscriberStatus::Leaving;

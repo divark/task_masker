@@ -19,7 +19,7 @@ pub enum GameEntityType {
 }
 
 #[derive(Component)]
-pub struct WaitTimer(pub Timer);
+pub struct WaitToLeaveTimer(pub Timer);
 
 #[derive(Component, Deref, DerefMut)]
 pub struct TriggerQueue(pub VecDeque<()>);

@@ -56,10 +56,3 @@ Feature: Chat Messages mapped for Streamer, Subscriber, and Chatter.
         Then the Chatter should not be leaving,
         And the Chatter should start speaking from the next chat message,
 
-    Scenario: A Chatter should not leave until done speaking.
-        Given a Streamer is spawned on the map,
-        And a Chatter is spawned on the map,
-        And the Chatting interface exists,
-        When the Chatter sends a long chat message,
-        And the Chatter is almost done speaking to the Streamer,
-        Then the Chatter should still be speaking.

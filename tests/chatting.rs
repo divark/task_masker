@@ -9,7 +9,6 @@ use mock_plugins::{
 use bevy::prelude::*;
 use cucumber::{given, then, when, World};
 
-use task_masker::entities::chatter::ChatterStatus;
 use task_masker::entities::GameEntityType;
 use task_masker::map::plugins::{PathFindingPlugin, TilePosEvent};
 use task_masker::ui::chatting::*;
@@ -38,7 +37,10 @@ impl GameWithChatUI {
         app.add_plugins(MockTiledMapPlugin);
         app.add_event::<TilePosEvent>();
 
+        app.update();
+
         app.add_plugins(PathFindingPlugin);
+        app.update();
 
         app.add_systems(Update, intercept_typing_timer);
         app.update();
@@ -189,18 +191,6 @@ fn chatter_sends_msg(world: &mut GameWithChatUI) {
     world.sent_msgs.push(chatter_msg);
 }
 
-#[when("the Chatter sends a long chat message,")]
-fn chatter_sends_long_msg(world: &mut GameWithChatUI) {
-    let long_msg = String::from("So, if you're learning a subject of math for the first time, it's helpful to actually learn about the concepts behind it before going into the course, since you're otherwise being overloaded with a bunch of terminology. Doing it this way, it's important to do so with the angle of finding how it's important to your work, using analogies and metaphors to make the knowledge personal");
-
-    let chatter_msg = Msg::new(String::from("Chatter"), long_msg, GameEntityType::Fly);
-
-    world.broadcast_event::<Msg>(chatter_msg.clone());
-    world.update(2);
-
-    world.sent_msgs.push(chatter_msg);
-}
-
 #[when("the Subscriber sends a chat message,")]
 fn subscriber_sends_msg(world: &mut GameWithChatUI) {
     let subscriber_msg = Msg::new(
@@ -254,41 +244,6 @@ fn wait_until_wait_time_is_up(world: &mut GameWithChatUI) {
             break;
         }
     }
-}
-
-#[when("the Chatter is almost done speaking to the Streamer,")]
-fn wait_until_chatter_near_end_of_speaking(world: &mut GameWithChatUI) {
-    loop {
-        world.update(1);
-
-        let msg_index = world
-            .find::<TypingMsg>()
-            .expect(
-                "wait_until_chatter_near_end_of_speaking: Could not find Typing Indicator type.",
-            )
-            .idx();
-        if msg_index > 30 {
-            break;
-        }
-    }
-}
-
-#[then("the Chatter should still be speaking.")]
-fn chatter_should_still_be_speaking(world: &mut GameWithChatUI) {
-    world.update(1);
-
-    let msg_is_still_being_typed = !world
-        .find::<TypingMsg>()
-        .expect("chatter_should_still_be_speaking: Typing Indicator could not be found")
-        .at_end();
-    assert!(msg_is_still_being_typed);
-
-    let expected_chatter_status = ChatterStatus::Speaking;
-    let actual_chatter_status = world
-        .find::<ChatterStatus>()
-        .expect("chatter_should_still_be_speaking: Chatter status could not be found.");
-
-    assert_eq!(expected_chatter_status, *actual_chatter_status);
 }
 
 #[then(

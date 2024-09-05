@@ -3,10 +3,10 @@ use bevy_ecs_tilemap::prelude::*;
 use std::collections::VecDeque;
 
 use crate::entities::streamer::{StreamerLabel, StreamerState};
-use crate::entities::WaitTimer;
+use crate::entities::WaitToLeaveTimer;
 use crate::map::path_finding::*;
 use crate::map::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
-use crate::ui::chatting::Msg;
+use crate::ui::chatting::{ChattingStatus, Msg, TypingMsg};
 
 use super::GameEntityType;
 
@@ -122,7 +122,7 @@ pub fn trigger_flying_to_streamer(
 
     let chat_msg = ChatMsg {
         name: String::from("Bob"),
-        msg: String::from("Hello Caveman!"),
+        msg: String::from("So, if you're learning a subject of math for the first time, it's helpful to actually learn about the concepts behind it before going into the course, since you're otherwise being overloaded with a bunch of terminology. Doing it this way, it's important to do so with the angle of finding how it's important to your work, using analogies and metaphors to make the knowledge personal")
     };
 
     chatter_msg.send(chat_msg);
@@ -183,28 +183,17 @@ pub fn fly_to_streamer_to_speak(
 }
 
 pub fn speak_to_streamer_from_chatter(
-    mut chatter_query: Query<
-        (
-            Entity,
-            &ChatMsg,
-            &Path,
-            &Target,
-            &mut ChatterStatus,
-            &GameEntityType,
-        ),
-        Without<WaitTimer>,
-    >,
+    mut chatter_query: Query<(
+        &ChatMsg,
+        &Path,
+        &Target,
+        &mut ChatterStatus,
+        &GameEntityType,
+    )>,
     mut chat_msg_requester: EventWriter<Msg>,
-    mut commands: Commands,
 ) {
-    for (
-        chatter_entity,
-        chatter_msg,
-        chatter_path,
-        chatter_target,
-        mut chatter_status,
-        &chatter_type,
-    ) in &mut chatter_query
+    for (chatter_msg, chatter_path, chatter_target, mut chatter_status, &chatter_type) in
+        &mut chatter_query
     {
         if !chatter_path.0.is_empty()
             || chatter_target.is_some()
@@ -212,10 +201,6 @@ pub fn speak_to_streamer_from_chatter(
         {
             continue;
         }
-
-        commands
-            .entity(chatter_entity)
-            .insert(WaitTimer(Timer::from_seconds(10.0, TimerMode::Once)));
 
         *chatter_status = ChatterStatus::Speaking;
         chat_msg_requester.send(Msg::new(
@@ -226,11 +211,34 @@ pub fn speak_to_streamer_from_chatter(
     }
 }
 
+/// Starts to wait to leave when the Chatter is finished speaking.
+pub fn chatter_waits_to_leave_from_streamer(
+    typed_messages: Query<&TypingMsg>,
+    chatters: Query<(Entity, &ChatterStatus), Without<WaitToLeaveTimer>>,
+    mut commands: Commands,
+) {
+    if typed_messages.is_empty() || chatters.is_empty() {
+        return;
+    }
+
+    let (chatter_entity, chatter_status) = chatters.single();
+    if *chatter_status != ChatterStatus::Speaking {
+        return;
+    }
+
+    let typing_msg = typed_messages.single();
+    if typing_msg.at_end() {
+        commands
+            .entity(chatter_entity)
+            .insert(WaitToLeaveTimer(Timer::from_seconds(10.0, TimerMode::Once)));
+    }
+}
+
 pub fn leave_from_streamer_from_chatter(
     time: Res<Time>,
     mut chatter: Query<(
         Entity,
-        &mut WaitTimer,
+        &mut WaitToLeaveTimer,
         &mut Path,
         &StartingPoint,
         &SpawnPoint,
@@ -276,7 +284,7 @@ pub fn leave_from_streamer_from_chatter(
             *chatter_path = path;
             commands
                 .entity(chatter_entity)
-                .remove::<WaitTimer>()
+                .remove::<WaitToLeaveTimer>()
                 .remove::<ChatMsg>();
 
             *chatter_status = ChatterStatus::Leaving;
