@@ -19,6 +19,16 @@ Feature: A Subscriber, represented as a Fish, can approach the Streamer to speak
         Given a Tiled Map
         And a Streamer spawned on the Tiled Map
         And a Subscriber spawned on the Tiled Map
+        And the Chatting interface exists
         When the Subscriber has approached the Streamer
         And the Subscriber is done speaking
         Then the Subscriber leaves back to its resting point
+
+    Scenario: A Subscriber should not leave until done speaking.
+        Given a Tiled Map
+        And a Streamer spawned on the Tiled Map
+        And a Subscriber spawned on the Tiled Map
+        And the Chatting interface exists
+        When the Subscriber sends a long chat message
+        And the Subscriber is almost done speaking to the Streamer
+        Then the Subscriber should still be speaking

@@ -6,7 +6,7 @@ use crate::entities::streamer::{StreamerLabel, StreamerState};
 use crate::entities::WaitToLeaveTimer;
 use crate::map::path_finding::*;
 use crate::map::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
-use crate::ui::chatting::Msg;
+use crate::ui::chatting::{Msg, TypingMsg};
 
 use super::GameEntityType;
 
@@ -206,7 +206,6 @@ pub fn swim_to_streamer_to_speak(
 pub fn speak_to_streamer_from_subscriber(
     mut subscriber_query: Query<
         (
-            Entity,
             &SubscriberMsg,
             &Path,
             &Target,
@@ -216,10 +215,8 @@ pub fn speak_to_streamer_from_subscriber(
         Without<WaitToLeaveTimer>,
     >,
     mut chat_msg_requester: EventWriter<Msg>,
-    mut commands: Commands,
 ) {
     for (
-        subscriber_entity,
         subscriber_msg,
         subscriber_path,
         subscriber_target,
@@ -234,16 +231,35 @@ pub fn speak_to_streamer_from_subscriber(
             continue;
         }
 
-        commands
-            .entity(subscriber_entity)
-            .insert(WaitToLeaveTimer(Timer::from_seconds(10.0, TimerMode::Once)));
-
         *subscriber_status = SubscriberStatus::Speaking;
         chat_msg_requester.send(Msg::new(
             subscriber_msg.name.clone(),
             subscriber_msg.msg.clone(),
             subscriber_type,
         ));
+    }
+}
+
+/// Starts to wait to leave when the Subscriber is finished speaking.
+pub fn subscriber_waits_to_leave_from_streamer(
+    typed_messages: Query<&TypingMsg>,
+    subscribers: Query<(Entity, &SubscriberStatus), Without<WaitToLeaveTimer>>,
+    mut commands: Commands,
+) {
+    if typed_messages.is_empty() || subscribers.is_empty() {
+        return;
+    }
+
+    let (subscriber_entity, subscriber_status) = subscribers.single();
+    if *subscriber_status != SubscriberStatus::Speaking {
+        return;
+    }
+
+    let typing_msg = typed_messages.single();
+    if typing_msg.at_end() {
+        commands
+            .entity(subscriber_entity)
+            .insert(WaitToLeaveTimer(Timer::from_seconds(10.0, TimerMode::Once)));
     }
 }
 

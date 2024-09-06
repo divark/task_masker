@@ -6,7 +6,7 @@ use crate::entities::streamer::{StreamerLabel, StreamerState};
 use crate::entities::WaitToLeaveTimer;
 use crate::map::path_finding::*;
 use crate::map::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
-use crate::ui::chatting::{ChattingStatus, Msg, TypingMsg};
+use crate::ui::chatting::{Msg, TypingMsg};
 
 use super::GameEntityType;
 

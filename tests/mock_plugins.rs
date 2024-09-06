@@ -109,7 +109,8 @@ impl Plugin for MockSubscriberPlugin {
                 replace_subscriber_tile,
                 swim_to_streamer_to_speak.after(replace_subscriber_tile),
                 speak_to_streamer_from_subscriber.after(swim_to_streamer_to_speak),
-                leave_from_streamer_from_subscriber.after(speak_to_streamer_from_subscriber),
+                subscriber_waits_to_leave_from_streamer.after(speak_to_streamer_from_subscriber),
+                leave_from_streamer_from_subscriber.after(subscriber_waits_to_leave_from_streamer),
                 return_subscriber_to_idle,
                 follow_streamer_while_approaching_for_subscriber,
             ),
@@ -190,6 +191,16 @@ pub fn reduce_wait_times_to_zero(
 ) {
     for mut waiting_timer in &mut waiting_timers {
         waiting_timer.0 = Timer::new(Duration::from_secs(0), TimerMode::Once);
+    }
+}
+
+/// Sets each Typing Timer to zero to make testing
+/// not dependent off of real-world time.
+pub fn intercept_typing_timer(
+    mut typing_timers: Query<&mut TypingSpeedTimer, Added<TypingSpeedTimer>>,
+) {
+    for mut typing_timer in &mut typing_timers {
+        *typing_timer = TypingSpeedTimer(Timer::from_seconds(0.0, TimerMode::Repeating));
     }
 }
 

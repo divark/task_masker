@@ -42,6 +42,7 @@ impl Plugin for SubscriberPlugin {
                 replace_subscriber_tile,
                 trigger_swimming_to_streamer,
                 swim_to_streamer_to_speak,
+                subscriber_waits_to_leave_from_streamer,
                 leave_from_streamer_from_subscriber,
                 return_subscriber_to_idle,
                 follow_streamer_while_approaching_for_subscriber,

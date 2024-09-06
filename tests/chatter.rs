@@ -3,11 +3,10 @@ mod mock_plugins;
 use futures::executor::block_on;
 use task_masker::entities::WaitToLeaveTimer;
 use task_masker::ui::chatting::TypingMsg;
-use task_masker::ui::chatting::TypingSpeedTimer;
 
 use crate::mock_plugins::{
-    reduce_wait_times_to_zero, GameWorld, MockChatterPlugin, MockChattingPlugin,
-    MockStreamerPlugin, MockTiledMapPlugin,
+    intercept_typing_timer, reduce_wait_times_to_zero, GameWorld, MockChatterPlugin,
+    MockChattingPlugin, MockStreamerPlugin, MockTiledMapPlugin,
 };
 
 use bevy::prelude::*;
@@ -29,16 +28,6 @@ fn distance_of(source_pos: TilePos, target_pos: TilePos) -> usize {
     let y2 = target_pos.y as f32;
 
     ((x2 - x1).powi(2) + (y2 - y1).powi(2)).sqrt().floor() as usize
-}
-
-/// Sets each Typing Timer to zero to make testing
-/// not dependent off of real-world time.
-fn intercept_typing_timer(
-    mut typing_timers: Query<&mut TypingSpeedTimer, Added<TypingSpeedTimer>>,
-) {
-    for mut typing_timer in &mut typing_timers {
-        *typing_timer = TypingSpeedTimer(Timer::from_seconds(0.0, TimerMode::Repeating));
-    }
 }
 
 #[given("a Tiled Map")]

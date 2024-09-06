@@ -1,8 +1,8 @@
 mod mock_plugins;
 
 use crate::mock_plugins::{
-    reduce_wait_times_to_zero, GameWorld, MockStreamerPlugin, MockSubscriberPlugin,
-    MockTiledMapPlugin,
+    intercept_typing_timer, reduce_wait_times_to_zero, GameWorld, MockChattingPlugin,
+    MockStreamerPlugin, MockSubscriberPlugin, MockTiledMapPlugin,
 };
 
 use bevy::prelude::*;
@@ -10,8 +10,10 @@ use bevy_ecs_tilemap::prelude::*;
 use cucumber::{given, then, when, World};
 
 use task_masker::entities::subscriber::*;
+use task_masker::entities::WaitToLeaveTimer;
 use task_masker::map::path_finding::*;
 use task_masker::map::plugins::PathFindingPlugin;
+use task_masker::ui::chatting::TypingMsg;
 
 #[given("a Tiled Map")]
 fn spawn_tiled_map(world: &mut GameWorld) {
@@ -32,6 +34,13 @@ fn spawn_subscriber_from_tiled_map(world: &mut GameWorld) {
 fn spawn_streamer_from_tiled_map(world: &mut GameWorld) {
     world.app.add_plugins(MockStreamerPlugin);
     world.app.update();
+}
+
+#[given("the Chatting interface exists")]
+fn spawn_chatting_ui(world: &mut GameWorld) {
+    world.app.add_plugins(MockChattingPlugin);
+    world.app.add_systems(Update, intercept_typing_timer);
+    world.update(1);
 }
 
 #[when("the Subscriber wants to speak")]
@@ -64,6 +73,19 @@ fn wait_for_subscriber_to_approach_to_speak(world: &mut GameWorld) {
     }
 }
 
+#[when("the Subscriber sends a long chat message")]
+fn subscriber_sends_long_msg(world: &mut GameWorld) {
+    let long_msg = String::from("So, if you're learning a subject of math for the first time, it's helpful to actually learn about the concepts behind it before going into the course, since you're otherwise being overloaded with a bunch of terminology. Doing it this way, it's important to do so with the angle of finding how it's important to your work, using analogies and metaphors to make the knowledge personal");
+
+    let subscriber_msg = SubscriberMsg {
+        name: String::from("Subscriber"),
+        msg: long_msg,
+    };
+
+    world.broadcast_event::<SubscriberMsg>(subscriber_msg);
+    world.update(1);
+}
+
 #[when("the Subscriber is done speaking")]
 fn wait_for_subscriber_to_finish_speaking(world: &mut GameWorld) {
     world.app.add_systems(Update, reduce_wait_times_to_zero);
@@ -79,6 +101,27 @@ fn wait_for_subscriber_to_finish_speaking(world: &mut GameWorld) {
             .expect("wait_for_subscriber_to_finish_speaking: Subscriber does not have a Status.");
 
         if *subscriber_status != SubscriberStatus::Speaking {
+            break;
+        }
+    }
+}
+
+#[when("the Subscriber is almost done speaking to the Streamer")]
+fn wait_until_subscriber_near_end_of_speaking(world: &mut GameWorld) {
+    loop {
+        world.update(1);
+
+        let typing_msg = world.find::<TypingMsg>();
+        if typing_msg.is_none() {
+            continue;
+        }
+
+        let msg_index = typing_msg
+            .expect(
+                "wait_until_subscriber_near_end_of_speaking: Could not find Typing Indicator type.",
+            )
+            .idx();
+        if msg_index > 356 {
             break;
         }
     }
@@ -158,6 +201,27 @@ fn subscriber_should_start_speaking(world: &mut GameWorld) {
         .expect("subscriber_should_start_speaking: Subscriber does not have a Status.");
 
     assert_eq!(*subscriber_status, SubscriberStatus::Speaking);
+}
+
+#[then("the Subscriber should still be speaking")]
+fn subscriber_should_still_be_speaking(world: &mut GameWorld) {
+    world.update(1);
+
+    let msg_is_still_being_typed = !world
+        .find::<TypingMsg>()
+        .expect("subscriber_should_still_be_speaking: Typing Indicator could not be found")
+        .at_end();
+    assert!(msg_is_still_being_typed);
+
+    let expected_subscriber_status = SubscriberStatus::Speaking;
+    let actual_subscriber_status = world
+        .find::<SubscriberStatus>()
+        .expect("subscriber_should_still_be_speaking: Subscriber status could not be found.");
+
+    assert_eq!(expected_subscriber_status, *actual_subscriber_status);
+
+    let has_waiting_timer = world.find::<WaitToLeaveTimer>().is_some();
+    assert!(!has_waiting_timer);
 }
 
 #[then("the Subscriber leaves back to its resting point")]
