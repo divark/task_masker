@@ -127,6 +127,12 @@ impl TypingMsg {
 
         self.msg_idx = new_idx;
     }
+
+    /// Returns a reference to the contents of the current
+    /// message being typed.
+    pub fn contents(&self) -> &str {
+        &self.msg.msg
+    }
 }
 
 pub fn insert_chatting_information(

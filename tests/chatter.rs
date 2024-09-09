@@ -68,13 +68,19 @@ fn make_chatter_approach_to_speak(world: &mut GameWorld) {
     world.update(1);
 }
 
-#[when("the Chatter sends a long chat message")]
-fn chatter_sends_long_msg(world: &mut GameWorld) {
-    let long_msg = String::from("So, if you're learning a subject of math for the first time, it's helpful to actually learn about the concepts behind it before going into the course, since you're otherwise being overloaded with a bunch of terminology. Doing it this way, it's important to do so with the angle of finding how it's important to your work, using analogies and metaphors to make the knowledge personal");
+#[when(regex = r"the Chatter sends a(( different )|( long )| )?chat message")]
+fn chatter_sends_long_msg(world: &mut GameWorld, msg_type: String) {
+    let msg_contents = if msg_type.contains("long") {
+        String::from("So, if you're learning a subject of math for the first time, it's helpful to actually learn about the concepts behind it before going into the course, since you're otherwise being overloaded with a bunch of terminology. Doing it this way, it's important to do so with the angle of finding how it's important to your work, using analogies and metaphors to make the knowledge personal")
+    } else if msg_type.contains("different") {
+        String::from("How are you doing?")
+    } else {
+        String::from("Hello caveman!")
+    };
 
     let chatter_msg = ChatMsg {
-        name: String::from("Chatter"),
-        msg: long_msg,
+        name: String::from("Birdo"),
+        msg: msg_contents,
     };
 
     world.broadcast_event::<ChatMsg>(chatter_msg);
@@ -117,6 +123,37 @@ fn wait_until_chatter_near_end_of_speaking(world: &mut GameWorld) {
             break;
         }
     }
+}
+
+#[when("the Chatter has finished speaking the first message to the Streamer")]
+fn wait_until_chatter_done_speaking_first_msg(world: &mut GameWorld) {
+    loop {
+        world.update(1);
+
+        let currently_typed_msg = world.find::<TypingMsg>().expect("wait_until_chatter_done_speaking_first_msg: Chatter should be speaking, but message being typed could not be found.");
+        if currently_typed_msg.at_end() {
+            break;
+        }
+    }
+}
+
+#[then("the Chatter should not be waiting to leave")]
+fn chatter_is_not_leaving(world: &mut GameWorld) {
+    world.update(1);
+
+    let chatter_waiting_to_leave = world.find::<WaitToLeaveTimer>();
+    assert!(chatter_waiting_to_leave.is_none());
+}
+
+#[then("the Chatter should start speaking from the next chat message")]
+fn chatter_starts_speaking_next_msg(world: &mut GameWorld) {
+    world.update(1);
+
+    let currently_typing_msg = world.find::<TypingMsg>().expect("chatter_starts_speaking_next_msg: Chatter should be speaking, but could not find a message being typed currently.");
+    assert_eq!(
+        currently_typing_msg.contents(),
+        String::from("How are you doing?")
+    );
 }
 
 #[then("the Chatter should still be speaking")]
