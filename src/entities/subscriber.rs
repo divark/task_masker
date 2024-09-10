@@ -150,7 +150,7 @@ pub fn swim_to_streamer_to_speak(
         (Entity, &TilePos, &mut Path, &mut SubscriberStatus),
         (With<SubscriberLabel>, Without<SubscriberMsg>),
     >,
-    water_graph: Query<(&NodeEdges, &GraphType)>,
+    water_graph: Query<&UndirectedGraph>,
     streamer: Query<&TilePos, With<StreamerLabel>>,
     map_info: Query<&TilemapSize>,
     mut commands: Commands,
@@ -164,23 +164,17 @@ pub fn swim_to_streamer_to_speak(
     // map, meaning this would be a great reference for an initial
     // path to the Streamer before stripping out the tiles that a
     // Subscriber cannot traverse.
-    let air_graph_edges = water_graph
+    let air_graph = water_graph
         .iter()
-        .find(|graph_elements| graph_elements.1 == &GraphType::Air)
-        .map(|graph_elements| graph_elements.0)
+        .find(|graph| *graph.get_node_type() == GraphType::Air)
         .expect("swim_to_streamer_to_speak: There should only be one air graph for reference.");
-    let water_graph_edges = water_graph
+    let water_graph = water_graph
         .iter()
-        .find(|graph_elements| graph_elements.1 == &GraphType::Water)
-        .map(|graph_elements| graph_elements.0)
+        .find(|graph| *graph.get_node_type() == GraphType::Water)
         .expect("swim_to_streamer_to_speak: There should only be one water graph.");
     let streamer_tilepos = streamer
         .get_single()
         .expect("swim_to_streamer_to_speak: There should only be one streamer.");
-    let map_size = map_info
-        .iter()
-        .next()
-        .expect("swim_to_streamer_to_speak: There should be only one map.");
     for (subscriber_entity, subscriber_tilepos, mut subscriber_path, mut subscriber_status) in
         &mut subscriber
     {
@@ -188,10 +182,8 @@ pub fn swim_to_streamer_to_speak(
             break;
         }
 
-        if let Some(path) =
-            air_graph_edges.shortest_path(*subscriber_tilepos, *streamer_tilepos, map_size.x)
-        {
-            let path_to_shore = include_nodes_only_from(path, water_graph_edges);
+        if let Some(path) = air_graph.shortest_path(*subscriber_tilepos, *streamer_tilepos) {
+            let path_to_shore = include_nodes_only_from(path, water_graph.edges());
             *subscriber_path = path_to_shore;
 
             commands
@@ -273,23 +265,16 @@ pub fn leave_from_streamer_from_subscriber(
         &SpawnPoint,
         &mut SubscriberStatus,
     )>,
-    water_graph_info: Query<(&NodeEdges, &GraphType)>,
-    map_info: Query<&TilemapSize>,
+    water_graph_info: Query<&UndirectedGraph>,
     mut commands: Commands,
 ) {
-    if subscriber.is_empty() || water_graph_info.is_empty() || map_info.is_empty() {
+    if subscriber.is_empty() || water_graph_info.is_empty() {
         return;
     }
 
-    let map_size = map_info
+    let water_graph = water_graph_info
         .iter()
-        .last()
-        .expect("leave_from_streamer: Map should be spawned by now.");
-
-    let water_graph_edges = water_graph_info
-        .iter()
-        .filter(|graph_info| *graph_info.1 == GraphType::Water)
-        .map(|graph_info| graph_info.0)
+        .filter(|graph| *graph.get_node_type() == GraphType::Water)
         .next()
         .expect("leave_from_streamer: Exactly one water graph should exist by now.");
 
@@ -307,11 +292,9 @@ pub fn leave_from_streamer_from_subscriber(
             continue;
         }
 
-        if let Some(path) = water_graph_edges.shortest_path(
-            subscriber_start_pos.1,
-            subscriber_spawn_pos.0,
-            map_size.x,
-        ) {
+        if let Some(path) =
+            water_graph.shortest_path(subscriber_start_pos.1, subscriber_spawn_pos.0)
+        {
             *subscriber_path = path;
 
             commands
@@ -350,7 +333,7 @@ pub fn return_subscriber_to_idle(
 pub fn follow_streamer_while_approaching_for_subscriber(
     streamer_info: Query<(&StreamerState, &Path), Without<SubscriberStatus>>,
     mut subscriber_info: Query<(&SubscriberStatus, &TilePos, &mut Path), Without<StreamerState>>,
-    air_graph_info: Query<(&NodeEdges, &GraphType)>,
+    air_graph_info: Query<&UndirectedGraph>,
     map_info: Query<&TilemapSize>,
 ) {
     if streamer_info.is_empty() || subscriber_info.is_empty() || map_info.is_empty() {
@@ -374,17 +357,15 @@ pub fn follow_streamer_while_approaching_for_subscriber(
         return;
     }
 
-    let air_graph_edges = air_graph_info
+    let air_graph = air_graph_info
         .iter()
-        .filter(|graph_info| *graph_info.1 == GraphType::Air)
-        .map(|graph_info| graph_info.0)
+        .filter(|graph| *graph.get_node_type() == GraphType::Air)
         .next()
         .expect("follow_streamer_while_approaching: Exactly one air graph should exist by now.");
 
-    let water_graph_edges = air_graph_info
+    let water_graph = air_graph_info
         .iter()
-        .filter(|graph_info| *graph_info.1 == GraphType::Water)
-        .map(|graph_info| graph_info.0)
+        .filter(|graph| *graph.get_node_type() == GraphType::Water)
         .next()
         .expect("follow_streamer_while_approaching: Exactly one water graph should exist by now.");
 
@@ -403,9 +384,9 @@ pub fn follow_streamer_while_approaching_for_subscriber(
             idx_to_tilepos(*subscriber_path.0.iter().last().unwrap(), map_size.y);
 
         let path_to_shore = if let Some(path) =
-            air_graph_edges.shortest_path(*subscriber_pos, streamer_destination_tilepos, map_size.x)
+            air_graph.shortest_path(*subscriber_pos, streamer_destination_tilepos)
         {
-            include_nodes_only_from(path, water_graph_edges)
+            include_nodes_only_from(path, water_graph.edges())
         } else {
             Path(VecDeque::new())
         };

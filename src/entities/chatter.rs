@@ -134,36 +134,27 @@ pub fn fly_to_streamer_to_speak(
         (Entity, &TilePos, &mut Path, &mut ChatterStatus),
         (With<ChatterLabel>, Without<ChatMsg>),
     >,
-    air_graph: Query<(&NodeEdges, &GraphType)>,
+    air_graph: Query<&UndirectedGraph>,
     streamer: Query<&TilePos, With<StreamerLabel>>,
-    map_info: Query<&TilemapSize>,
     mut commands: Commands,
 ) {
-    if air_graph.is_empty() || streamer.is_empty() || map_info.is_empty() {
+    if air_graph.is_empty() || streamer.is_empty() {
         return;
     }
 
-    let air_graph_edges = air_graph
+    let air_graph = air_graph
         .iter()
-        .find(|graph_elements| graph_elements.1 == &GraphType::Air)
+        .find(|graph| *graph.get_node_type() == GraphType::Air)
         .expect("fly_to_streamer_to_speak: There should only be one air graph.");
     let streamer_tilepos = streamer
         .get_single()
         .expect("fly_to_streamer_to_speak: There should only be one streamer.");
-    let map_size = map_info
-        .iter()
-        .next()
-        .expect("fly_to_streamer_to_speak: There should be only one map.");
     for (chatter_entity, chatter_tilepos, mut chatter_path, mut chatter_status) in &mut chatter {
         if chatter_msg.is_empty() || *chatter_status != ChatterStatus::Idle {
             break;
         }
 
-        if let Some(mut path) =
-            air_graph_edges
-                .0
-                .shortest_path(*chatter_tilepos, *streamer_tilepos, map_size.x)
-        {
+        if let Some(mut path) = air_graph.shortest_path(*chatter_tilepos, *streamer_tilepos) {
             // The chatter should not be directly on top of the
             // streamer, so we provide some distance by adjusting
             // the path to not go straight to the streamer.
@@ -259,23 +250,16 @@ pub fn leave_from_streamer_from_chatter(
         &SpawnPoint,
         &mut ChatterStatus,
     )>,
-    air_graph_info: Query<(&NodeEdges, &GraphType)>,
-    map_info: Query<&TilemapSize>,
+    air_graph_info: Query<&UndirectedGraph>,
     mut commands: Commands,
 ) {
-    if chatter.is_empty() || air_graph_info.is_empty() || map_info.is_empty() {
+    if chatter.is_empty() || air_graph_info.is_empty() {
         return;
     }
 
-    let map_size = map_info
+    let air_graph = air_graph_info
         .iter()
-        .last()
-        .expect("leave_from_streamer: Map should be spawned by now.");
-
-    let air_graph_edges = air_graph_info
-        .iter()
-        .filter(|graph_info| *graph_info.1 == GraphType::Air)
-        .map(|graph_info| graph_info.0)
+        .filter(|graph| *graph.get_node_type() == GraphType::Air)
         .next()
         .expect("leave_from_streamer: Exactly one air graph should exist by now.");
 
@@ -293,9 +277,7 @@ pub fn leave_from_streamer_from_chatter(
             continue;
         }
 
-        if let Some(path) =
-            air_graph_edges.shortest_path(chatter_start_pos.1, chatter_spawn_pos.0, map_size.x)
-        {
+        if let Some(path) = air_graph.shortest_path(chatter_start_pos.1, chatter_spawn_pos.0) {
             *chatter_path = path;
             commands
                 .entity(chatter_entity)
@@ -377,7 +359,7 @@ pub fn follow_streamer_while_speaking(
 pub fn follow_streamer_while_approaching_for_chatter(
     streamer_info: Query<(&StreamerState, &Path), Without<ChatterStatus>>,
     mut chatter_info: Query<(&ChatterStatus, &TilePos, &mut Path), Without<StreamerState>>,
-    air_graph_info: Query<(&NodeEdges, &GraphType)>,
+    air_graph_info: Query<&UndirectedGraph>,
     map_info: Query<&TilemapSize>,
 ) {
     if streamer_info.is_empty() || chatter_info.is_empty() || map_info.is_empty() {
@@ -401,10 +383,9 @@ pub fn follow_streamer_while_approaching_for_chatter(
         return;
     }
 
-    let air_graph_edges = air_graph_info
+    let air_graph = air_graph_info
         .iter()
-        .filter(|graph_info| *graph_info.1 == GraphType::Air)
-        .map(|graph_info| graph_info.0)
+        .filter(|graph| *graph.get_node_type() == GraphType::Air)
         .next()
         .expect("follow_streamer_while_approaching: Exactly one air graph should exist by now.");
 
@@ -440,9 +421,7 @@ pub fn follow_streamer_while_approaching_for_chatter(
             continue;
         }
 
-        if let Some(path) =
-            air_graph_edges.shortest_path(*chatter_pos, chatter_destination_distanced, map_size.x)
-        {
+        if let Some(path) = air_graph.shortest_path(*chatter_pos, chatter_destination_distanced) {
             *chatter_path = path;
         }
     }
