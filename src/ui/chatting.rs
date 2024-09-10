@@ -128,6 +128,12 @@ impl TypingMsg {
         self.msg_idx = new_idx;
     }
 
+    /// Returns the speaker's name from the current message
+    /// being typed.
+    pub fn speaker_name(&self) -> &str {
+        &self.msg.speaker_name
+    }
+
     /// Returns a reference to the contents of the current
     /// message being typed.
     pub fn contents(&self) -> &str {
@@ -176,7 +182,7 @@ pub fn load_msg_into_queue(
 /// into the Message UI Field.
 pub fn load_queued_msg_into_textfield(
     mut msg_visibility_entry: Query<&mut Visibility, With<SpeakerUI>>,
-    message_queue_entry: Query<&MessageQueue>,
+    mut message_queue_entry: Query<&mut MessageQueue>,
     mut msg_fields: Query<
         (Entity, &mut Text, &mut ChattingStatus),
         (With<SpeakerChatBox>, Without<TypingMsg>),
@@ -188,13 +194,13 @@ pub fn load_queued_msg_into_textfield(
     }
 
     let (msg_entities, mut msg_textfield, mut chatting_status) = msg_fields.single_mut();
-    let pending_msgs = message_queue_entry.single();
+    let mut pending_msgs = message_queue_entry.single_mut();
 
     if pending_msgs.is_empty() {
         return;
     }
 
-    let recent_msg = pending_msgs.peek().unwrap();
+    let recent_msg = pending_msgs.pop().unwrap();
 
     msg_textfield.sections.drain(1..);
 
@@ -401,7 +407,6 @@ pub fn activate_waiting_timer(
 
 /// Removes the most recent message, and hides the Chat UI.
 pub fn unload_msg_on_timeup(
-    mut message_queue_entry: Query<&mut MessageQueue>,
     mut msg_visibility_entry: Query<&mut Visibility, With<SpeakerUI>>,
     mut msg_fields: Query<
         (Entity, &mut MsgWaitingTimer, &mut ChattingStatus),
@@ -410,7 +415,7 @@ pub fn unload_msg_on_timeup(
     time: Res<Time>,
     mut commands: Commands,
 ) {
-    if msg_fields.is_empty() || msg_visibility_entry.is_empty() || message_queue_entry.is_empty() {
+    if msg_fields.is_empty() || msg_visibility_entry.is_empty() {
         return;
     }
 
@@ -425,9 +430,6 @@ pub fn unload_msg_on_timeup(
 
     let mut msg_ui_visibility = msg_visibility_entry.single_mut();
     *msg_ui_visibility = Visibility::Hidden;
-
-    let mut pending_msgs = message_queue_entry.single_mut();
-    pending_msgs.pop();
 
     commands
         .entity(chatting_ui_entities)

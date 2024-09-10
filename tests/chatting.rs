@@ -246,55 +246,51 @@ fn wait_until_wait_time_is_up(world: &mut GameWithChatUI) {
     }
 }
 
-#[then(
-    regex = r"^the Chatting Queue should contain the (Streamer|Chatter|Subscriber)'s chat message."
-)]
-fn chatting_queue_has_streamer_msg(world: &mut GameWithChatUI) {
+#[then(regex = r"the (Streamer|Chatter|Subscriber) should be speaking currently.")]
+fn entity_should_be_speaking(world: &mut GameWithChatUI, speaker_role: String) {
     world.update(1);
 
-    let expected_msg_contents = world.sent_msgs.get(0).unwrap().clone();
+    let expected_speaker = match speaker_role.as_str() {
+        "Streamer" => "Caveman",
+        "Chatter" => "Chatter",
+        "Subscriber" => "Subscriber",
+        _ => unreachable!(),
+    };
 
-    let pending_chat_messages = world
-        .find::<MessageQueue>()
-        .expect("chatting_queue_has_streamer_msg: Could not find Message Queue.");
-    let next_chat_msg = pending_chat_messages.peek();
-    assert!(next_chat_msg.is_some());
+    let expected_msg = world
+        .sent_msgs
+        .iter()
+        .last()
+        .expect("entity_should_be_speaking: No expected messages were populated.")
+        .clone();
+    assert_eq!(expected_msg.speaker_name, expected_speaker);
+    let actual_msg = world
+        .find::<TypingMsg>()
+        .expect("entity_should_be_speaking: Could not find a message being currently typed.");
 
-    let actual_chat_msg_contents = next_chat_msg.unwrap();
-    assert_eq!(expected_msg_contents, *actual_chat_msg_contents);
+    assert_eq!(expected_speaker, actual_msg.speaker_name());
+    assert_eq!(expected_msg.msg, actual_msg.contents());
 }
 
-#[then("the Chatting Queue should have the Streamer's chat message as the top priority.")]
-fn chatting_queue_has_streamer_msg_top_priority(world: &mut GameWithChatUI) {
+#[then("the Streamer should be speaking next.")]
+fn entity_should_speak_next(world: &mut GameWithChatUI) {
     world.update(1);
 
-    // For testing purposes, the Streamer's message is the second one we've recorded
-    // from earlier steps defined in this file.
-    let expected_msg_contents = world.sent_msgs.get(1).unwrap().clone();
+    let expected_msg = world
+        .sent_msgs
+        .iter()
+        .last()
+        .expect("entity_should_speak_next: No expected messages were populated.")
+        .clone();
 
-    let pending_chat_messages = world
+    let message_queue = world
         .find::<MessageQueue>()
-        .expect("chatting_queue_has_streamer_msg: Could not find Message Queue.");
-    let next_chat_msg = pending_chat_messages.peek();
-    assert!(next_chat_msg.is_some());
+        .expect("entity_should_speak_next: Message queue could not be found.");
+    let actual_next_msg = message_queue
+        .peek()
+        .expect("entity_should_speak_next: Message queue is empty.");
 
-    let actual_chat_msg_contents = next_chat_msg.unwrap();
-    assert_eq!(expected_msg_contents, *actual_chat_msg_contents);
-}
-
-#[then(regex = r"there should be ([0-9]+) messages? in the Message Queue,")]
-fn chatting_queue_has_n_messages(world: &mut GameWithChatUI, num_messages: String) {
-    world.update(1);
-
-    let chatting_queue = world
-        .find::<MessageQueue>()
-        .expect("chatting_queue_has_n_messages: Message Queue was not found.");
-
-    let expected_num_messages = num_messages
-        .parse::<usize>()
-        .expect("chatting_queue_has_n_messages: Cannot convert number from then step.");
-    let actual_num_messages = chatting_queue.len();
-    assert_eq!(expected_num_messages, actual_num_messages);
+    assert_eq!(expected_msg, *actual_next_msg);
 }
 
 #[then("the Chat UI should contain the first five characters typed from the Chat Message.")]

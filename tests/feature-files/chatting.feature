@@ -3,31 +3,28 @@ Feature: Chat Messages mapped for Streamer, Subscriber, and Chatter.
         Given a Streamer is spawned on the map,
         And the Chatting interface exists,
         When the Streamer sends a chat message,
-        Then there should be 1 messages in the Message Queue,
-        Then the Chatting Queue should contain the Streamer's chat message.
+        Then the Streamer should be speaking currently.
 
     Scenario: The Chatter posts a chat message.
         Given a Chatter is spawned on the map,
         And the Chatting interface exists,
         When the Chatter sends a chat message,
-        Then there should be 1 message in the Message Queue,
-        Then the Chatting Queue should contain the Chatter's chat message.
+        Then the Chatter should be speaking currently.
 
     Scenario: The Subscriber posts a chat message.
         Given a Subscriber is spawned on the map,
         And the Chatting interface exists,
         When the Subscriber sends a chat message,
-        Then there should be 1 message in the Message Queue,
-        Then the Chatting Queue should contain the Subscriber's chat message.
+        Then the Subscriber should be speaking currently.
 
     Scenario: The Chatter posts a chat message, and the Streamer does at the same time.
         Given a Streamer is spawned on the map,
         And a Chatter is spawned on the map,
         And the Chatting interface exists,
-        When the Chatter sends a chat message,
+        When the Subscriber sends a chat message,
+        And the Chatter sends a chat message,
         And the Streamer sends a chat message,
-        Then there should be 2 messages in the Message Queue,
-        And the Chatting Queue should have the Streamer's chat message as the top priority.
+        Then the Streamer should be speaking next.
 
     Scenario: A Chat Message is read one character at a time.
         Given a Streamer is spawned on the map,

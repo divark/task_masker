@@ -6,7 +6,7 @@ use crate::entities::streamer::{StreamerLabel, StreamerState};
 use crate::entities::WaitToLeaveTimer;
 use crate::map::path_finding::*;
 use crate::map::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
-use crate::ui::chatting::{Msg, TypingMsg};
+use crate::ui::chatting::{MessageQueue, Msg, TypingMsg};
 
 use super::GameEntityType;
 
@@ -214,24 +214,39 @@ pub fn speak_to_streamer_from_chatter(
 /// Starts to wait to leave when the Chatter is finished speaking.
 pub fn chatter_waits_to_leave_from_streamer(
     typed_messages: Query<&TypingMsg>,
-    chatters: Query<(Entity, &ChatterStatus), Without<WaitToLeaveTimer>>,
+    message_queues: Query<&MessageQueue>,
+    chatters: Query<(Entity, &ChatterStatus, &mut ChatMsg), Without<WaitToLeaveTimer>>,
     mut commands: Commands,
 ) {
-    if typed_messages.is_empty() || chatters.is_empty() {
+    if typed_messages.is_empty() || chatters.is_empty() || message_queues.is_empty() {
         return;
     }
 
-    let (chatter_entity, chatter_status) = chatters.single();
+    let (chatter_entity, chatter_status, mut chatter_msg) = chatters.single();
     if *chatter_status != ChatterStatus::Speaking {
         return;
     }
 
     let typing_msg = typed_messages.single();
-    if typing_msg.at_end() {
+    if !typing_msg.at_end() {
+        return;
+    }
+
+    let message_queue = message_queues.single();
+    let next_message = message_queue.peek();
+    if next_message.is_none() || next_message.unwrap().speaker_name != chatter_msg.name {
         commands
             .entity(chatter_entity)
             .insert(WaitToLeaveTimer(Timer::from_seconds(10.0, TimerMode::Once)));
+        return;
     }
+    // Peek at next message in queue.
+    //
+    // If there is not a next message, or the next message does not
+    // have the chatter's name, start waiting.
+    //
+    // Otherwise, the Chatter's message is now the next message,
+    // and should start speaking it right away.
 }
 
 pub fn leave_from_streamer_from_chatter(
