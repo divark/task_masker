@@ -109,10 +109,10 @@ fn streamer_should_be_heading_towards_crop(world: &mut GameWorld) {
     let streamer_destination_transform = world
         .app
         .world_mut()
-        .query::<(&NodeData, &GraphType)>()
+        .query::<&UndirectedGraph>()
         .iter(&world.app.world())
-        .filter(|graph_info| *graph_info.1 == GraphType::Ground)
-        .map(|graph_info| graph_info.0.0[streamer_path_destination])
+        .filter(|graph| *graph.get_node_type() == GraphType::Ground)
+        .map(|graph| *graph.get_node(streamer_path_destination).unwrap())
         .map(Transform::from_translation)
         .next()
         .expect("streamer_should_be_heading_towards_crop: The destination Transform could not be derived from the Streamer's Path.");

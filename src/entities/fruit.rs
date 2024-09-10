@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use crate::entities::TriggerQueue;
 use crate::map::{
     path_finding::{
-        tilepos_to_idx, GraphType, MovementTimer, NodeData, StartingPoint, Target, UndirectedGraph,
+        tilepos_to_idx, GraphType, MovementTimer, StartingPoint, Target, UndirectedGraph,
     },
     plugins::TilePosEvent,
     tiled::*,

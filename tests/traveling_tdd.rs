@@ -12,8 +12,8 @@ use bevy::state::app::StatesPlugin;
 use bevy_ecs_tilemap::prelude::*;
 use task_masker::entities::{chatter::*, streamer::*, subscriber::*};
 use task_masker::map::path_finding::{
-    tilepos_to_idx, unique_tiles_from, GraphType, HeightedTilePos, MovementTimer, NodeData,
-    NodeEdges, Path, Target, TileLayerPosition,
+    tilepos_to_idx, unique_tiles_from, GraphType, HeightedTilePos, MovementTimer, NodeData, Path,
+    Target, TileLayerPosition, UndirectedGraph,
 };
 use task_masker::map::plugins::{PathFindingPlugin, TilePosEvent};
 use task_masker::map::tiled::{
@@ -255,20 +255,19 @@ impl GameWorld {
     fn next_to_land(&mut self, source_pos: TilePos) -> bool {
         let neighbors = self.get_tile_neighbors(&source_pos);
 
-        let ground_nodes = self
+        let ground_graph = self
             .app
             .world_mut()
-            .query::<(&NodeEdges, &GraphType)>()
+            .query::<&UndirectedGraph>()
             .iter(&self.app.world())
-            .find(|entry| *entry.1 == GraphType::Ground)
-            .map(|entry| entry.0)
+            .find(|graph| *graph.get_node_type() == GraphType::Ground)
             .expect(
                 "next_to_land: Ground Nodes were expected to be loaded, but they were not found",
             );
 
         let mut next_to_land = false;
         for neighbor in neighbors {
-            next_to_land = !ground_nodes.0[neighbor].is_empty();
+            next_to_land = !ground_graph.edges()[neighbor].is_empty();
             if next_to_land {
                 break;
             }
@@ -375,10 +374,10 @@ impl GameWorld {
         let node_edges = self
             .app
             .world_mut()
-            .query::<(&NodeEdges, &GraphType)>()
+            .query::<&UndirectedGraph>()
             .iter(&self.app.world())
-            .filter(|graph_entry| *graph_entry.1 == graph_type)
-            .map(|graph_entry| graph_entry.0)
+            .filter(|graph| *graph.get_node_type() == graph_type)
+            .map(|graph_entry| graph_entry.edges())
             .next()
             .unwrap();
 

@@ -246,7 +246,7 @@ impl NodeData {
     }
 }
 
-#[derive(Component, Clone, PartialEq, Debug)]
+#[derive(Component, Clone, Deref, PartialEq, Debug)]
 pub struct NodeEdges(pub Vec<Vec<usize>>);
 
 /// Returns the Length, Width, and Height derived from
@@ -551,20 +551,11 @@ pub fn create_ground_graph(
         .map(|layer_entry| TileLayerPosition::new(*layer_entry.0, *layer_entry.1, *layer_entry.2))
         .collect::<Vec<TileLayerPosition>>();
 
-    let node_data = NodeData::from_ground_tiles(&heighted_tiles, layer_map_information.clone());
-    let node_edges = NodeEdges::from_ground_tiles(heighted_tiles.clone());
-
     spawner.spawn(UndirectedGraph::from_tiles(
         GraphType::Ground,
         heighted_tiles,
         layer_map_information,
     ));
-
-    spawner.spawn(Graph {
-        graph_type: GraphType::Ground,
-        node_data,
-        node_edges,
-    });
 }
 
 /// Spawns an Undirected Graph representing all water titles
@@ -595,20 +586,11 @@ pub fn create_water_graph(
         .map(|layer_entry| TileLayerPosition::new(*layer_entry.0, *layer_entry.1, *layer_entry.2))
         .collect::<Vec<TileLayerPosition>>();
 
-    let node_data = NodeData::from_water_tiles(&heighted_tiles, layer_map_information.clone());
-    let node_edges = NodeEdges::from_water_tiles(heighted_tiles.clone());
-
     spawner.spawn(UndirectedGraph::from_tiles(
         GraphType::Water,
         heighted_tiles,
         layer_map_information,
     ));
-
-    spawner.spawn(Graph {
-        graph_type: GraphType::Water,
-        node_data,
-        node_edges,
-    });
 }
 
 /// Spawns an Undirected Graph representing all air titles

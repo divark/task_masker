@@ -150,18 +150,17 @@ fn subscriber_should_be_near_coast_closest_to_streamer(world: &mut GameWorld) {
         .map(|tilepos| tilepos_to_idx(tilepos.x, tilepos.y, 100))
         .collect::<Vec<usize>>();
 
-    let ground_node_neighbors = world
+    let ground_nodes = world
         .app
         .world_mut()
-        .query::<(&NodeEdges, &GraphType)>()
+        .query::<&UndirectedGraph>()
         .iter(&world.app.world())
-        .find(|graph_data| *graph_data.1 == GraphType::Ground)
-        .map(|graph_data| graph_data.0)
+        .find(|graph| *graph.get_node_type() == GraphType::Ground)
         .expect("subscriber_should_be_near_coast_closest_to_streamer: Ground Graph does not have Node Edges. Does the Graph not exist?");
 
     let subscriber_next_to_coast = subscriber_tilepos_neighbor_indexes
         .iter()
-        .any(|index| !ground_node_neighbors.0[*index].is_empty());
+        .any(|index| !ground_nodes.edges()[*index].is_empty());
 
     assert!(subscriber_next_to_coast);
 }

@@ -126,34 +126,16 @@ pub fn move_streamer(
         ),
         With<StreamerLabel>,
     >,
-    ground_graph_query: Query<(&NodeEdges, &GraphType)>,
-    map_information: Query<(&TilemapSize, &Transform)>,
+    ground_graph_query: Query<&UndirectedGraph>,
 ) {
-    if streamer_entity.is_empty() {
+    if streamer_entity.is_empty() || ground_graph_query.is_empty() {
         return;
     }
 
     let ground_graph = ground_graph_query
         .iter()
-        .find(|graph_elements| graph_elements.1 == &GraphType::Ground);
-    if ground_graph.is_none() {
-        return;
-    }
-
-    let edges = ground_graph.expect("Ground graph should be loaded.").0;
-    // Each Tile Layer has its own World and Grid size should someone decide
-    // to change tilesets for the layer. However, I will not do that, so
-    // both the world size and grid size should be the same.
-    let map_size = map_information
-        .iter()
-        .map(|sizes| sizes.0)
-        .max_by(|&x, &y| {
-            let x_world_area = x.x * x.y;
-            let y_world_area = y.x * y.y;
-
-            x_world_area.cmp(&y_world_area)
-        })
-        .expect("Could not find largest world size. Is the map loaded?");
+        .find(|graph| *graph.get_node_type() == GraphType::Ground)
+        .expect("move_streamer: Could not find Ground-based UndirectedGraph.");
 
     let (
         mut streamer_path,
@@ -176,8 +158,7 @@ pub fn move_streamer(
     let streamer_target = streamer_destination_queue.pop_front().expect(
         "move_streamer: Destination queue for streamer should have been filled with something.",
     );
-    if let Some(found_path) = edges.shortest_path(streamer_tile_pos.1, streamer_target, map_size.x)
-    {
+    if let Some(found_path) = ground_graph.shortest_path(streamer_tile_pos.1, streamer_target) {
         *streamer_path = found_path;
         *streamer_status = StreamerState::Moving;
     }
