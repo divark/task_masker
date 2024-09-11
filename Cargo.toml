@@ -58,3 +58,7 @@ harness = false
 [[test]]
 name = "pathfinding"
 harness = false
+
+[[test]]
+name = "tilemap"
+harness = false
