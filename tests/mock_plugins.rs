@@ -55,7 +55,8 @@ impl Plugin for MockChatterPlugin {
             Update,
             (
                 replace_chatter_tile,
-                fly_to_streamer_to_speak.after(replace_chatter_tile),
+                add_chat_msg_to_queue.after(replace_chatter_tile),
+                fly_to_streamer_to_speak.after(add_chat_msg_to_queue),
                 speak_to_streamer_from_chatter.after(fly_to_streamer_to_speak),
                 chatter_waits_to_leave_from_streamer.after(speak_to_streamer_from_chatter),
                 leave_from_streamer_from_chatter.after(chatter_waits_to_leave_from_streamer),
@@ -201,6 +202,16 @@ pub fn intercept_typing_timer(
 ) {
     for mut typing_timer in &mut typing_timers {
         *typing_timer = TypingSpeedTimer(Timer::from_seconds(0.0, TimerMode::Repeating));
+    }
+}
+
+/// Sets each Msg Waiting Timer to zero to make
+/// testing not dependent off of real-world time.
+pub fn intercept_msg_waiting_timer(
+    mut message_waiting_timers: Query<&mut MsgWaitingTimer, Changed<MsgWaitingTimer>>,
+) {
+    for mut message_waiting_timer in &mut message_waiting_timers {
+        *message_waiting_timer = MsgWaitingTimer(Timer::from_seconds(0.0, TimerMode::Once));
     }
 }
 

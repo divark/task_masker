@@ -30,6 +30,9 @@ pub struct ChatMsg {
     pub msg: String,
 }
 
+#[derive(Component, Deref, DerefMut)]
+pub struct ChatMessageQueue(VecDeque<ChatMsg>);
+
 #[derive(Bundle)]
 pub struct ChatterBundle {
     label: ChatterLabel,
@@ -105,6 +108,7 @@ pub fn replace_chatter_tile(
                 tile_transform,
                 GameEntityType::Fly,
                 ChatterStatus::Idle,
+                ChatMessageQueue(VecDeque::new()),
                 *tile_texture_index,
             ),
             *tile_pos,
@@ -128,15 +132,29 @@ pub fn trigger_flying_to_streamer(
     chatter_msg.send(chat_msg);
 }
 
+/// Adds a recently broadcasted Chat Message into a Chatter's
+/// Chat Message Queue.
+pub fn add_chat_msg_to_queue(
+    mut received_chat_msgs: EventReader<ChatMsg>,
+    mut chatter_queues: Query<&mut ChatMessageQueue>,
+) {
+    if chatter_queues.is_empty() {
+        return;
+    }
+
+    let mut chatter_queue = chatter_queues.single_mut();
+    for received_chat_msg in received_chat_msgs.read() {
+        chatter_queue.push_back(received_chat_msg.clone());
+    }
+}
+
 pub fn fly_to_streamer_to_speak(
-    mut chatter_msg: EventReader<ChatMsg>,
     mut chatter: Query<
-        (Entity, &TilePos, &mut Path, &mut ChatterStatus),
-        (With<ChatterLabel>, Without<ChatMsg>),
+        (&TilePos, &mut Path, &mut ChatterStatus, &ChatMessageQueue),
+        With<ChatterLabel>,
     >,
     air_graph: Query<&UndirectedGraph>,
     streamer: Query<&TilePos, With<StreamerLabel>>,
-    mut commands: Commands,
 ) {
     if air_graph.is_empty() || streamer.is_empty() {
         return;
@@ -149,9 +167,11 @@ pub fn fly_to_streamer_to_speak(
     let streamer_tilepos = streamer
         .get_single()
         .expect("fly_to_streamer_to_speak: There should only be one streamer.");
-    for (chatter_entity, chatter_tilepos, mut chatter_path, mut chatter_status) in &mut chatter {
-        if chatter_msg.is_empty() || *chatter_status != ChatterStatus::Idle {
-            break;
+    for (chatter_tilepos, mut chatter_path, mut chatter_status, chatter_message_queue) in
+        &mut chatter
+    {
+        if chatter_message_queue.is_empty() || *chatter_status != ChatterStatus::Idle {
+            continue;
         }
 
         if let Some(mut path) = air_graph.shortest_path(*chatter_tilepos, *streamer_tilepos) {
@@ -163,11 +183,6 @@ pub fn fly_to_streamer_to_speak(
             }
 
             *chatter_path = path;
-
-            commands
-                .entity(chatter_entity)
-                .insert(chatter_msg.read().next().unwrap().clone());
-
             *chatter_status = ChatterStatus::Approaching;
         }
     }
@@ -175,7 +190,7 @@ pub fn fly_to_streamer_to_speak(
 
 pub fn speak_to_streamer_from_chatter(
     mut chatter_query: Query<(
-        &ChatMsg,
+        &mut ChatMessageQueue,
         &Path,
         &Target,
         &mut ChatterStatus,
@@ -183,20 +198,27 @@ pub fn speak_to_streamer_from_chatter(
     )>,
     mut chat_msg_requester: EventWriter<Msg>,
 ) {
-    for (chatter_msg, chatter_path, chatter_target, mut chatter_status, &chatter_type) in
-        &mut chatter_query
+    for (
+        mut chatter_message_queue,
+        chatter_path,
+        chatter_target,
+        mut chatter_status,
+        &chatter_type,
+    ) in &mut chatter_query
     {
         if !chatter_path.0.is_empty()
             || chatter_target.is_some()
+            || chatter_message_queue.is_empty()
             || *chatter_status != ChatterStatus::Approaching
         {
             continue;
         }
 
+        let recent_chat_msg = chatter_message_queue.pop_front().unwrap();
         *chatter_status = ChatterStatus::Speaking;
         chat_msg_requester.send(Msg::new(
-            chatter_msg.name.clone(),
-            chatter_msg.msg.clone(),
+            recent_chat_msg.name,
+            recent_chat_msg.msg,
             chatter_type,
         ));
     }
@@ -205,15 +227,14 @@ pub fn speak_to_streamer_from_chatter(
 /// Starts to wait to leave when the Chatter is finished speaking.
 pub fn chatter_waits_to_leave_from_streamer(
     typed_messages: Query<&TypingMsg>,
-    message_queues: Query<&MessageQueue>,
-    chatters: Query<(Entity, &ChatterStatus, &mut ChatMsg), Without<WaitToLeaveTimer>>,
+    mut chatters: Query<(Entity, &mut ChatterStatus, &ChatMessageQueue), Without<WaitToLeaveTimer>>,
     mut commands: Commands,
 ) {
-    if typed_messages.is_empty() || chatters.is_empty() || message_queues.is_empty() {
+    if typed_messages.is_empty() || chatters.is_empty() {
         return;
     }
 
-    let (chatter_entity, chatter_status, mut chatter_msg) = chatters.single();
+    let (chatter_entity, mut chatter_status, chatter_message_queue) = chatters.single_mut();
     if *chatter_status != ChatterStatus::Speaking {
         return;
     }
@@ -223,21 +244,15 @@ pub fn chatter_waits_to_leave_from_streamer(
         return;
     }
 
-    let message_queue = message_queues.single();
-    let next_message = message_queue.peek();
-    if next_message.is_none() || next_message.unwrap().speaker_name != chatter_msg.name {
+    let next_message = chatter_message_queue.front();
+    if next_message.is_none() || next_message.unwrap().name != typing_msg.speaker_name() {
         commands
             .entity(chatter_entity)
             .insert(WaitToLeaveTimer(Timer::from_seconds(10.0, TimerMode::Once)));
         return;
     }
-    // Peek at next message in queue.
-    //
-    // If there is not a next message, or the next message does not
-    // have the chatter's name, start waiting.
-    //
-    // Otherwise, the Chatter's message is now the next message,
-    // and should start speaking it right away.
+
+    *chatter_status = ChatterStatus::Idle;
 }
 
 pub fn leave_from_streamer_from_chatter(
@@ -279,10 +294,7 @@ pub fn leave_from_streamer_from_chatter(
 
         if let Some(path) = air_graph.shortest_path(chatter_start_pos.1, chatter_spawn_pos.0) {
             *chatter_path = path;
-            commands
-                .entity(chatter_entity)
-                .remove::<WaitToLeaveTimer>()
-                .remove::<ChatMsg>();
+            commands.entity(chatter_entity).remove::<WaitToLeaveTimer>();
 
             *chatter_status = ChatterStatus::Leaving;
         }

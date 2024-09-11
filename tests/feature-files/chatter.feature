@@ -34,7 +34,7 @@ Feature: A Chatter, represented as a Bird, can approach the Streamer to speak, a
         Then the Chatter should still be speaking
 
     Scenario: A Chatter with two back-to-back messages will stick around.
-	Given a Tiled Map
+        Given a Tiled Map
         And a Streamer spawned on the Tiled Map
         And a Chatter spawned on the Tiled Map
         And the Chatting interface exists

@@ -18,6 +18,7 @@ impl Plugin for ChatterPlugin {
                 replace_chatter_tile,
                 replace_chatter_sprite,
                 trigger_flying_to_streamer,
+                add_chat_msg_to_queue,
                 fly_to_streamer_to_speak,
                 chatter_waits_to_leave_from_streamer,
                 leave_from_streamer_from_chatter,
