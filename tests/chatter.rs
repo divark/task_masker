@@ -165,17 +165,19 @@ fn chatter_is_not_leaving(world: &mut GameWorld) {
 #[then("the Chatter should start speaking from the next chat message")]
 fn chatter_starts_speaking_next_msg(world: &mut GameWorld) {
     world.app.add_systems(Update, intercept_msg_waiting_timer);
-    // Why update 3 times? Because
-    // - The current typing message must be removed,
-    // - The new message from the queue must be sent, and
-    // - The new message is turned into a typing message.
-    //
-    // This makes the test fragile, since if this flow gets changed in the future,
-    // such as having more steps, then this test will fail. I'll have to think
-    // of a better way of doing this.
-    world.update(3);
 
-    let currently_typing_msg = world.find::<TypingMsg>().expect("chatter_starts_speaking_next_msg: Chatter should be speaking, but could not find a message being typed currently.");
+    let currently_typing_msg = loop {
+        world.update(1);
+
+        let found_typing_msg = world.find::<TypingMsg>();
+        if found_typing_msg.is_none() {
+            continue;
+        }
+
+        let typing_msg = found_typing_msg.unwrap();
+        break typing_msg;
+    };
+
     assert!(!currently_typing_msg.at_end());
     assert_eq!(
         currently_typing_msg.contents(),
