@@ -17,12 +17,12 @@ impl TileDimensions {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct TileLogicalPosition {
+pub struct TileGridCoordinates {
     x: usize,
     y: usize,
 }
 
-impl TileLogicalPosition {
+impl TileGridCoordinates {
     pub fn new(x: usize, y: usize) -> Self {
         Self { x, y }
     }
@@ -69,7 +69,7 @@ impl TileTexture {
 pub struct Tile {
     dimensions: TileDimensions,
     pixel_pos: TilePixelCoordinates,
-    logical_pos: TileLogicalPosition,
+    grid_pos: TileGridCoordinates,
 
     texture: Option<TileTexture>,
 }
@@ -82,8 +82,8 @@ impl Tile {
     }
 
     /// Returns the position of this tile in a grid.
-    pub fn get_logical_position(&self) -> &TileLogicalPosition {
-        &self.logical_pos
+    pub fn get_grid_coordinates(&self) -> &TileGridCoordinates {
+        &self.grid_pos
     }
 
     /// Returns the pixel coordinates of this tile in a grid.
@@ -153,7 +153,7 @@ fn get_test_asset_path(desired_map_asset: &str) -> PathBuf {
 /// or None otherwise.
 fn get_texture_from_tiled(
     tiled_map: &Map,
-    grid_coordinates: &TileLogicalPosition,
+    grid_coordinates: &TileGridCoordinates,
 ) -> Option<TileTexture> {
     let tile_layer = tiled_map.get_layer(0).unwrap().as_tile_layer().unwrap();
 
@@ -193,8 +193,8 @@ fn load_tiles_from_tiled(tiled_map_path: &PathBuf) -> Vec<Tile> {
 
     for x in 0..map_width {
         for y in 0..map_height {
-            let tile_logical_pos = TileLogicalPosition::new(x as usize, y as usize);
-            let tile_texture = get_texture_from_tiled(&tiled_map, &tile_logical_pos);
+            let tile_grid_pos = TileGridCoordinates::new(x as usize, y as usize);
+            let tile_texture = get_texture_from_tiled(&tiled_map, &tile_grid_pos);
 
             let tile = Tile {
                 dimensions: TileDimensions::new(tile_width, tile_height),
@@ -202,7 +202,7 @@ fn load_tiles_from_tiled(tiled_map_path: &PathBuf) -> Vec<Tile> {
                     tile_width * x as usize,
                     tile_height * y as usize,
                 ),
-                logical_pos: tile_logical_pos,
+                grid_pos: tile_grid_pos,
                 texture: tile_texture,
             };
 
@@ -254,23 +254,23 @@ fn check_tile_has_correct_width_and_height(
     assert_eq!(expected_dimensions, *actual_dimensions);
 }
 
-#[then(regex = r"Tile (\d+) should be in logical position (\d+), (\d+).")]
-fn check_tile_in_correct_logical_position(
+#[then(regex = r"Tile (\d+) should be at grid coordinates (\d+), (\d+).")]
+fn check_tile_in_correct_grid_coordinates(
     tiled_context: &mut TiledContext,
     tile_num: String,
-    logical_pos_x: String,
-    logical_pos_y: String,
+    grid_pos_x: String,
+    grid_pos_y: String,
 ) {
-    let logical_x = logical_pos_x.parse::<usize>().unwrap();
-    let logical_y = logical_pos_y.parse::<usize>().unwrap();
-    let expected_tile_logical_position = TileLogicalPosition::new(logical_x, logical_y);
+    let grid_x = grid_pos_x.parse::<usize>().unwrap();
+    let grid_y = grid_pos_y.parse::<usize>().unwrap();
+    let expected_tile_grid_coordinates = TileGridCoordinates::new(grid_x, grid_y);
 
     let tile_idx = tile_num.parse::<usize>().unwrap() - 1;
-    let actual_tile_logical_position = tiled_context.get_tiles()[tile_idx].get_logical_position();
+    let actual_tile_grid_coordinates = tiled_context.get_tiles()[tile_idx].get_grid_coordinates();
 
     assert_eq!(
-        expected_tile_logical_position,
-        *actual_tile_logical_position
+        expected_tile_grid_coordinates,
+        *actual_tile_grid_coordinates
     );
 }
 
@@ -291,21 +291,25 @@ fn check_tile_in_correct_pixel_coordinates(
     assert_eq!(expected_pixel_coordinates, *actual_pixel_coordinates);
 }
 
-#[then(regex = r"Tile (\d+) should have a Texture pointing to (.+\.png).")]
+#[then(regex = r"Tile (\d+) should have a Texture pointing to entry (\d+) in (.+\.png).")]
 fn check_one_tile_has_correct_texture_file(
     tiled_context: &mut TiledContext,
     tile_num: String,
+    texture_entry: String,
     texture_filename: String,
 ) {
     let spritesheet_relative_path = format!("environment/{}", texture_filename);
     let expected_spritesheet_file = get_test_asset_path(&spritesheet_relative_path);
-    let expected_tile_texture = TileTexture::new(expected_spritesheet_file, 4);
+    let expected_tile_texture_entry = texture_entry.parse::<usize>().unwrap();
+    let expected_tile_texture =
+        TileTexture::new(expected_spritesheet_file, expected_tile_texture_entry);
 
     let tile_idx = tile_num.parse::<usize>().unwrap() - 1;
-    let actual_tile_texture = tiled_context.get_tiles()[tile_idx].get_tile_texture();
+    let actual_tile_texture = tiled_context.get_tiles()[tile_idx]
+        .get_tile_texture()
+        .unwrap();
 
-    assert!(actual_tile_texture.is_some());
-    assert_eq!(expected_tile_texture, *actual_tile_texture.unwrap());
+    assert_eq!(expected_tile_texture, *actual_tile_texture);
 }
 
 fn main() {
