@@ -4,6 +4,7 @@
 *.DS_Store
 
 *.png
+!terrain_0.png
 *.jpg
 
 ._*.tmx
