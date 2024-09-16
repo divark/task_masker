@@ -1,7 +1,7 @@
 use cucumber::{given, then, when, World};
 use futures::executor::block_on;
 
-use std::path::PathBuf;
+use std::path::{PathBuf, MAIN_SEPARATOR};
 use tiled::{Loader, Map};
 
 #[derive(Debug, PartialEq)]
@@ -148,7 +148,8 @@ fn get_test_asset_path(desired_map_asset: &str) -> PathBuf {
         map_path.push(project_root_directory);
     }
 
-    map_path.push("tests/test-assets");
+    map_path.push("tests");
+    map_path.push("test-assets");
     map_path.push(desired_map_asset);
 
     map_path
@@ -327,7 +328,7 @@ fn check_one_tile_has_correct_texture_file(
     texture_entry: String,
     texture_filename: String,
 ) {
-    let spritesheet_relative_path = format!("environment/{}", texture_filename);
+    let spritesheet_relative_path = format!("environment{}{}", MAIN_SEPARATOR, texture_filename);
     let expected_spritesheet_file = get_test_asset_path(&spritesheet_relative_path);
     let expected_tile_texture_entry = texture_entry.parse::<usize>().unwrap();
     let expected_tile_texture =
