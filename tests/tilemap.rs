@@ -6,6 +6,31 @@ use std::path::{PathBuf, MAIN_SEPARATOR};
 use tiled::{Loader, Map};
 
 #[derive(Debug, PartialEq)]
+pub struct MapGridDimensions {
+    width: usize,
+    height: usize,
+}
+
+impl MapGridDimensions {
+    pub fn new(num_tiles_width: usize, num_tiles_height: usize) -> Self {
+        Self {
+            width: num_tiles_width,
+            height: num_tiles_height,
+        }
+    }
+
+    /// Returns the width in tiles.
+    pub fn width(&self) -> usize {
+        self.width
+    }
+
+    /// Returns the height in tiles.
+    pub fn height(&self) -> usize {
+        self.height
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub struct TileDimensions {
     width: usize,
     height: usize,
@@ -14,6 +39,11 @@ pub struct TileDimensions {
 impl TileDimensions {
     pub fn new(width: usize, height: usize) -> Self {
         Self { width, height }
+    }
+
+    /// Returns the height in pixels.
+    pub fn height(&self) -> usize {
+        self.height
     }
 }
 
@@ -48,6 +78,16 @@ pub struct TilePixelCoordinates {
 impl TilePixelCoordinates {
     pub fn new(px_x: usize, px_y: usize) -> Self {
         Self { px_x, px_y }
+    }
+
+    /// Sets the y coordinate.
+    pub fn set_y(&mut self, desired_y: usize) {
+        self.px_y = desired_y;
+    }
+
+    /// Gets the y coordinate.
+    pub fn y(&self) -> usize {
+        self.px_y
     }
 }
 
@@ -90,6 +130,11 @@ impl Tile {
     /// Returns the pixel coordinates of this tile in a grid.
     pub fn get_pixel_coordinates(&self) -> &TilePixelCoordinates {
         &self.pixel_pos
+    }
+
+    /// Returns a mutable reference to the pixel coordinates of this tile.
+    pub fn get_pixel_coordinates_mut(&mut self) -> &mut TilePixelCoordinates {
+        &mut self.pixel_pos
     }
 
     /// Returns the Tile Texture of this tile if found, or None
@@ -187,12 +232,16 @@ fn get_texture_from_tiled(
 
 #[derive(Debug)]
 pub struct Tilemap {
+    map_grid_dimensions: MapGridDimensions,
     tiles: Vec<Tile>,
 }
 
 impl Tilemap {
     pub fn new() -> Self {
-        Self { tiles: Vec::new() }
+        Self {
+            tiles: Vec::new(),
+            map_grid_dimensions: MapGridDimensions::new(0, 0),
+        }
     }
 
     /// Populates tiles found from some tiled map.
@@ -207,20 +256,18 @@ impl Tilemap {
         let tile_width = tiled_map.tile_width as usize;
         let tile_height = tiled_map.tile_height as usize;
 
-        let map_width = tiled_map.width;
-        let map_height = tiled_map.height;
+        let map_width = tiled_map.width as usize;
+        let map_height = tiled_map.height as usize;
+        let map_grid_dimensions = MapGridDimensions::new(map_width, map_height);
 
         for x in 0..map_width {
             for y in 0..map_height {
-                let tile_grid_pos = TileGridCoordinates::new(x as usize, y as usize);
+                let tile_grid_pos = TileGridCoordinates::new(x, y);
                 let tile_texture = get_texture_from_tiled(&tiled_map, &tile_grid_pos);
 
                 let tile = Tile {
                     dimensions: TileDimensions::new(tile_width, tile_height),
-                    pixel_pos: TilePixelCoordinates::new(
-                        tile_width * x as usize,
-                        tile_height * y as usize,
-                    ),
+                    pixel_pos: TilePixelCoordinates::new(tile_width * x, tile_height * y),
                     grid_pos: tile_grid_pos,
                     texture: tile_texture,
                 };
@@ -230,6 +277,7 @@ impl Tilemap {
         }
 
         self.tiles = tiles;
+        self.map_grid_dimensions = map_grid_dimensions;
     }
 
     /// Returns the tiles currently loaded.
@@ -239,7 +287,15 @@ impl Tilemap {
 
     /// "Flips" the y-axis for all loaded tiles.
     pub fn flip_y_axis(&mut self) {
-        // TODO: Fill in logic here to actually do the flipping.
+        for tile in &mut self.tiles {
+            let tile_grid_coords = tile.get_grid_coordinates();
+
+            let recalculated_y = self.map_grid_dimensions.height() - tile_grid_coords.y() - 1;
+            let flipped_y_coordinate = tile.get_tile_dimensions().height() * recalculated_y;
+
+            let tile_pixel_coordinates = tile.get_pixel_coordinates_mut();
+            tile_pixel_coordinates.set_y(flipped_y_coordinate);
+        }
     }
 }
 

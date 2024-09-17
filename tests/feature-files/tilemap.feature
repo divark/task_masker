@@ -17,3 +17,10 @@ Feature: An isometric tilemap should be loaded from some map file.
         When the tiles are loaded from the Tiled map,
         And the y-axis has been inverted for all tiles,
         Then Tile 1 should be at pixel coordinates 0, 0.
+
+    Scenario: Inverting the y-axis with two vertical Tiles should change their y coordinates.
+        Given a Tiled map called two_vertical_tiles_isometric.tmx,
+        When the tiles are loaded from the Tiled map,
+        And the y-axis has been inverted for all tiles,
+        Then Tile 1 should be at pixel coordinates 0, 64.
+        And Tile 2 should be at pixel coordinates 0, 0.
