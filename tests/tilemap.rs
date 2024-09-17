@@ -8,6 +8,7 @@ use tiled::{Loader, Map};
 pub struct MapGridDimensions {
     width: usize,
     height: usize,
+    depth: usize,
 }
 
 impl MapGridDimensions {
@@ -15,6 +16,15 @@ impl MapGridDimensions {
         Self {
             width: num_tiles_width,
             height: num_tiles_height,
+            depth: 1,
+        }
+    }
+
+    pub fn new_3d(width: usize, height: usize, depth: usize) -> Self {
+        Self {
+            width,
+            height,
+            depth,
         }
     }
 
@@ -291,8 +301,8 @@ impl Tilemap {
 
         let map_width = tiled_map.width as usize;
         let map_height = tiled_map.height as usize;
-        let map_depth = tiled_map.layers().count();
-        let map_grid_dimensions = MapGridDimensions::new(map_width, map_height);
+        let map_depth = tiled_map.layers().len();
+        let map_grid_dimensions = MapGridDimensions::new_3d(map_width, map_height, map_depth);
 
         for x in 0..map_width {
             for y in 0..map_height {
