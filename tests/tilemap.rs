@@ -178,6 +178,14 @@ impl TiledContext {
         self.tilemap.get_tiles()
     }
 
+    /// Returns a Tile specified at the Grid Coordinate if found,
+    /// or returns None otherwise.
+    pub fn get_tile(&self, grid_coordinate: &TileGridCoordinates) -> Option<&Tile> {
+        let tile_idx =
+            grid_coordinate.y() * self.tilemap.get_dimensions().width() + grid_coordinate.x();
+        self.tilemap.get_tiles().get(tile_idx)
+    }
+
     /// Returns a mutable reference to the currently loaded Tilemap.
     pub fn tilemap_mut(&mut self) -> &mut Tilemap {
         &mut self.tilemap
@@ -212,25 +220,14 @@ fn get_texture_from_tiled(
     let tile_grid_y = grid_coordinates.y() as i32;
     if let Some(tile) = tile_layer.get_tile(tile_grid_x, tile_grid_y) {
         let sprite_idx = tile.id() as usize;
-        let mut spritesheet_file = tile
-            .get_tileset()
-            .image
-            .clone()
-            .unwrap()
-            .source
-            .canonicalize()
-            .unwrap();
+        let spritesheet_file = tile.get_tileset().image.clone().unwrap().source;
+        // NOTE: Why not fs::canonicalize? Because on Windows only, this adds a weird
+        // prefix at the beginning of the path, making the tests fail. This is called
+        // a UNC path, and we remove these with dunce:
+        // https://docs.rs/dunce/latest/dunce/
+        let spritesheet_file_path = dunce::canonicalize(spritesheet_file).unwrap();
 
-        // NOTE: The canonicalize call from above adds this weird prefix on Windows.
-        // This workaround is needed to make the tests consistent across all of the
-        // OSes supported.
-        if cfg!(windows) {
-            if let Ok(stripped_path) = spritesheet_file.strip_prefix(r"\\\\?\\") {
-                spritesheet_file = stripped_path.to_path_buf();
-            }
-        }
-
-        Some(TileTexture::new(spritesheet_file, sprite_idx))
+        Some(TileTexture::new(spritesheet_file_path, sprite_idx))
     } else {
         None
     }
@@ -286,6 +283,11 @@ impl Tilemap {
         self.map_grid_dimensions = map_grid_dimensions;
     }
 
+    /// Returns the dimensions of the Tile map in Tiles.
+    pub fn get_dimensions(&self) -> &MapGridDimensions {
+        &self.map_grid_dimensions
+    }
+
     /// Returns the tiles currently loaded.
     pub fn get_tiles(&self) -> &Vec<Tile> {
         &self.tiles
@@ -332,10 +334,11 @@ fn check_tile_is_loaded(tiled_context: &mut TiledContext, num_tiles_expected: St
     assert_eq!(expected_num_tiles, actual_tiles.len());
 }
 
-#[then(regex = r"Tile (\d+) should have a width of (\d+), and a height of (\d+).")]
+#[then(regex = r"Tile (\d+), (\d+) should have a width of (\d+), and a height of (\d+).")]
 fn check_tile_has_correct_width_and_height(
     tiled_context: &mut TiledContext,
-    tile_num: String,
+    tile_x: String,
+    tile_y: String,
     width_expected: String,
     height_expected: String,
 ) {
@@ -343,16 +346,22 @@ fn check_tile_has_correct_width_and_height(
     let expected_height = height_expected.parse::<usize>().unwrap();
     let expected_dimensions = TileDimensions::new(expected_width, expected_height);
 
-    let tile_idx = tile_num.parse::<usize>().unwrap() - 1;
-    let actual_dimensions = tiled_context.get_tiles()[tile_idx].get_tile_dimensions();
+    let tile_grid_x = tile_x.parse::<usize>().unwrap();
+    let tile_grid_y = tile_y.parse::<usize>().unwrap();
+    let tile_grid_coordinate = TileGridCoordinates::new(tile_grid_x, tile_grid_y);
+    let actual_dimensions = tiled_context
+        .get_tile(&tile_grid_coordinate)
+        .unwrap()
+        .get_tile_dimensions();
 
     assert_eq!(expected_dimensions, *actual_dimensions);
 }
 
-#[then(regex = r"Tile (\d+) should be at grid coordinates (\d+), (\d+).")]
+#[then(regex = r"Tile (\d+), (\d+) should be at grid coordinates (\d+), (\d+).")]
 fn check_tile_in_correct_grid_coordinates(
     tiled_context: &mut TiledContext,
-    tile_num: String,
+    tile_x: String,
+    tile_y: String,
     grid_pos_x: String,
     grid_pos_y: String,
 ) {
@@ -360,8 +369,13 @@ fn check_tile_in_correct_grid_coordinates(
     let grid_y = grid_pos_y.parse::<usize>().unwrap();
     let expected_tile_grid_coordinates = TileGridCoordinates::new(grid_x, grid_y);
 
-    let tile_idx = tile_num.parse::<usize>().unwrap() - 1;
-    let actual_tile_grid_coordinates = tiled_context.get_tiles()[tile_idx].get_grid_coordinates();
+    let tile_grid_x = tile_x.parse::<usize>().unwrap();
+    let tile_grid_y = tile_y.parse::<usize>().unwrap();
+    let tile_grid_coordinate = TileGridCoordinates::new(tile_grid_x, tile_grid_y);
+    let actual_tile_grid_coordinates = tiled_context
+        .get_tile(&tile_grid_coordinate)
+        .unwrap()
+        .get_grid_coordinates();
 
     assert_eq!(
         expected_tile_grid_coordinates,
@@ -369,10 +383,11 @@ fn check_tile_in_correct_grid_coordinates(
     );
 }
 
-#[then(regex = r"Tile (\d+) should be at pixel coordinates (\d+), (\d+).")]
+#[then(regex = r"Tile (\d+), (\d+) should be at pixel coordinates (\d+), (\d+).")]
 fn check_tile_in_correct_pixel_coordinates(
     tiled_context: &mut TiledContext,
-    tile_num: String,
+    tile_x: String,
+    tile_y: String,
     expected_px_x: String,
     expected_px_y: String,
 ) {
@@ -380,16 +395,22 @@ fn check_tile_in_correct_pixel_coordinates(
     let px_y = expected_px_y.parse::<usize>().unwrap();
     let expected_pixel_coordinates = TilePixelCoordinates::new(px_x, px_y);
 
-    let tile_idx = tile_num.parse::<usize>().unwrap() - 1;
-    let actual_pixel_coordinates = tiled_context.get_tiles()[tile_idx].get_pixel_coordinates();
+    let tile_grid_x = tile_x.parse::<usize>().unwrap();
+    let tile_grid_y = tile_y.parse::<usize>().unwrap();
+    let tile_grid_coordinate = TileGridCoordinates::new(tile_grid_x, tile_grid_y);
+    let actual_pixel_coordinates = tiled_context
+        .get_tile(&tile_grid_coordinate)
+        .unwrap()
+        .get_pixel_coordinates();
 
     assert_eq!(expected_pixel_coordinates, *actual_pixel_coordinates);
 }
 
-#[then(regex = r"Tile (\d+) should have a Texture pointing to entry (\d+) in (.+\.png).")]
+#[then(regex = r"Tile (\d+), (\d+) should have a Texture pointing to entry (\d+) in (.+\.png).")]
 fn check_one_tile_has_correct_texture_file(
     tiled_context: &mut TiledContext,
-    tile_num: String,
+    tile_x: String,
+    tile_y: String,
     texture_entry: String,
     texture_filename: String,
 ) {
@@ -399,8 +420,12 @@ fn check_one_tile_has_correct_texture_file(
     let expected_tile_texture =
         TileTexture::new(expected_spritesheet_file, expected_tile_texture_entry);
 
-    let tile_idx = tile_num.parse::<usize>().unwrap() - 1;
-    let actual_tile_texture = tiled_context.get_tiles()[tile_idx]
+    let tile_grid_x = tile_x.parse::<usize>().unwrap();
+    let tile_grid_y = tile_y.parse::<usize>().unwrap();
+    let tile_grid_coordinate = TileGridCoordinates::new(tile_grid_x, tile_grid_y);
+    let actual_tile_texture = tiled_context
+        .get_tile(&tile_grid_coordinate)
+        .unwrap()
         .get_tile_texture()
         .unwrap();
 
