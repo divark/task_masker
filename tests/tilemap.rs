@@ -1,6 +1,7 @@
 use cucumber::{given, then, when, World};
 use futures::executor::block_on;
 
+use std::path;
 use std::path::{PathBuf, MAIN_SEPARATOR};
 use tiled::{Loader, Map};
 
@@ -175,8 +176,10 @@ fn get_texture_from_tiled(
             .source
             .canonicalize()
             .unwrap();
+        // NOTE: Windows returns a weird path without this.
+        let spritesheet_path_absolute = path::absolute(spritesheet_file.as_path()).unwrap();
 
-        Some(TileTexture::new(spritesheet_file, sprite_idx))
+        Some(TileTexture::new(spritesheet_path_absolute, sprite_idx))
     } else {
         None
     }
