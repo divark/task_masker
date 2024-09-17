@@ -50,11 +50,16 @@ impl TileDimensions {
 pub struct TileGridCoordinates {
     x: usize,
     y: usize,
+    z: usize,
 }
 
 impl TileGridCoordinates {
     pub fn new(x: usize, y: usize) -> Self {
-        Self { x, y }
+        Self { x, y, z: 0 }
+    }
+
+    pub fn new_3d(x: usize, y: usize, z: usize) -> Self {
+        Self { x, y, z }
     }
 
     /// Returns the x grid coordinate.
@@ -66,17 +71,31 @@ impl TileGridCoordinates {
     pub fn y(&self) -> usize {
         self.y
     }
+
+    /// Returns the z grid coordinate.
+    pub fn z(&self) -> usize {
+        self.z
+    }
 }
 
 #[derive(Debug, PartialEq)]
 pub struct TilePixelCoordinates {
     px_x: usize,
     px_y: usize,
+    px_z: usize,
 }
 
 impl TilePixelCoordinates {
     pub fn new(px_x: usize, px_y: usize) -> Self {
-        Self { px_x, px_y }
+        Self {
+            px_x,
+            px_y,
+            px_z: 0,
+        }
+    }
+
+    pub fn new_3d(px_x: usize, px_y: usize, px_z: usize) -> Self {
+        Self { px_x, px_y, px_z }
     }
 
     /// Sets the y coordinate.
@@ -181,8 +200,14 @@ impl TiledContext {
     /// Returns a Tile specified at the Grid Coordinate if found,
     /// or returns None otherwise.
     pub fn get_tile(&self, grid_coordinate: &TileGridCoordinates) -> Option<&Tile> {
-        let tile_idx =
-            grid_coordinate.y() * self.tilemap.get_dimensions().width() + grid_coordinate.x();
+        let tilemap_dimensions = self.tilemap.get_dimensions();
+        let tilemap_width = tilemap_dimensions.width();
+        let tilemap_height = tilemap_dimensions.height();
+        let tilemap_area = tilemap_width * tilemap_height;
+
+        let tile_idx = grid_coordinate.z() * tilemap_area
+            + grid_coordinate.y() * tilemap_width
+            + grid_coordinate.x();
         self.tilemap.get_tiles().get(tile_idx)
     }
 
@@ -214,7 +239,12 @@ fn get_texture_from_tiled(
     tiled_map: &Map,
     grid_coordinates: &TileGridCoordinates,
 ) -> Option<TileTexture> {
-    let tile_layer = tiled_map.get_layer(0).unwrap().as_tile_layer().unwrap();
+    let tile_grid_z = grid_coordinates.z();
+    let tile_layer = tiled_map
+        .get_layer(tile_grid_z)
+        .unwrap()
+        .as_tile_layer()
+        .unwrap();
 
     let tile_grid_x = grid_coordinates.x() as i32;
     let tile_grid_y = grid_coordinates.y() as i32;
@@ -261,21 +291,24 @@ impl Tilemap {
 
         let map_width = tiled_map.width as usize;
         let map_height = tiled_map.height as usize;
+        let map_depth = tiled_map.layers().count();
         let map_grid_dimensions = MapGridDimensions::new(map_width, map_height);
 
         for x in 0..map_width {
             for y in 0..map_height {
-                let tile_grid_pos = TileGridCoordinates::new(x, y);
-                let tile_texture = get_texture_from_tiled(&tiled_map, &tile_grid_pos);
+                for z in 0..map_depth {
+                    let tile_grid_pos = TileGridCoordinates::new_3d(x, y, z);
+                    let tile_texture = get_texture_from_tiled(&tiled_map, &tile_grid_pos);
 
-                let tile = Tile {
-                    dimensions: TileDimensions::new(tile_width, tile_height),
-                    pixel_pos: TilePixelCoordinates::new(tile_width * x, tile_height * y),
-                    grid_pos: tile_grid_pos,
-                    texture: tile_texture,
-                };
+                    let tile = Tile {
+                        dimensions: TileDimensions::new(tile_width, tile_height),
+                        pixel_pos: TilePixelCoordinates::new_3d(tile_width * x, tile_height * y, z),
+                        grid_pos: tile_grid_pos,
+                        texture: tile_texture,
+                    };
 
-                tiles.push(tile);
+                    tiles.push(tile);
+                }
             }
         }
 
@@ -334,11 +367,12 @@ fn check_tile_is_loaded(tiled_context: &mut TiledContext, num_tiles_expected: St
     assert_eq!(expected_num_tiles, actual_tiles.len());
 }
 
-#[then(regex = r"Tile (\d+), (\d+) should have a width of (\d+), and a height of (\d+).")]
+#[then(regex = r"Tile (\d+), (\d+), (\d+) should have a width of (\d+), and a height of (\d+).")]
 fn check_tile_has_correct_width_and_height(
     tiled_context: &mut TiledContext,
     tile_x: String,
     tile_y: String,
+    tile_z: String,
     width_expected: String,
     height_expected: String,
 ) {
@@ -348,7 +382,8 @@ fn check_tile_has_correct_width_and_height(
 
     let tile_grid_x = tile_x.parse::<usize>().unwrap();
     let tile_grid_y = tile_y.parse::<usize>().unwrap();
-    let tile_grid_coordinate = TileGridCoordinates::new(tile_grid_x, tile_grid_y);
+    let tile_grid_z = tile_z.parse::<usize>().unwrap();
+    let tile_grid_coordinate = TileGridCoordinates::new_3d(tile_grid_x, tile_grid_y, tile_grid_z);
     let actual_dimensions = tiled_context
         .get_tile(&tile_grid_coordinate)
         .unwrap()
@@ -357,21 +392,25 @@ fn check_tile_has_correct_width_and_height(
     assert_eq!(expected_dimensions, *actual_dimensions);
 }
 
-#[then(regex = r"Tile (\d+), (\d+) should be at grid coordinates (\d+), (\d+).")]
+#[then(regex = r"Tile (\d+), (\d+), (\d+) should be at grid coordinates (\d+), (\d+), (\d+).")]
 fn check_tile_in_correct_grid_coordinates(
     tiled_context: &mut TiledContext,
     tile_x: String,
     tile_y: String,
+    tile_z: String,
     grid_pos_x: String,
     grid_pos_y: String,
+    grid_pos_z: String,
 ) {
     let grid_x = grid_pos_x.parse::<usize>().unwrap();
     let grid_y = grid_pos_y.parse::<usize>().unwrap();
-    let expected_tile_grid_coordinates = TileGridCoordinates::new(grid_x, grid_y);
+    let grid_z = grid_pos_z.parse::<usize>().unwrap();
+    let expected_tile_grid_coordinates = TileGridCoordinates::new_3d(grid_x, grid_y, grid_z);
 
     let tile_grid_x = tile_x.parse::<usize>().unwrap();
     let tile_grid_y = tile_y.parse::<usize>().unwrap();
-    let tile_grid_coordinate = TileGridCoordinates::new(tile_grid_x, tile_grid_y);
+    let tile_grid_z = tile_z.parse::<usize>().unwrap();
+    let tile_grid_coordinate = TileGridCoordinates::new_3d(tile_grid_x, tile_grid_y, tile_grid_z);
     let actual_tile_grid_coordinates = tiled_context
         .get_tile(&tile_grid_coordinate)
         .unwrap()
@@ -383,21 +422,25 @@ fn check_tile_in_correct_grid_coordinates(
     );
 }
 
-#[then(regex = r"Tile (\d+), (\d+) should be at pixel coordinates (\d+), (\d+).")]
+#[then(regex = r"Tile (\d+), (\d+), (\d+) should be at pixel coordinates (\d+), (\d+), (\d+).")]
 fn check_tile_in_correct_pixel_coordinates(
     tiled_context: &mut TiledContext,
     tile_x: String,
     tile_y: String,
+    tile_z: String,
     expected_px_x: String,
     expected_px_y: String,
+    expected_px_z: String,
 ) {
     let px_x = expected_px_x.parse::<usize>().unwrap();
     let px_y = expected_px_y.parse::<usize>().unwrap();
-    let expected_pixel_coordinates = TilePixelCoordinates::new(px_x, px_y);
+    let px_z = expected_px_z.parse::<usize>().unwrap();
+    let expected_pixel_coordinates = TilePixelCoordinates::new_3d(px_x, px_y, px_z);
 
     let tile_grid_x = tile_x.parse::<usize>().unwrap();
     let tile_grid_y = tile_y.parse::<usize>().unwrap();
-    let tile_grid_coordinate = TileGridCoordinates::new(tile_grid_x, tile_grid_y);
+    let tile_grid_z = tile_z.parse::<usize>().unwrap();
+    let tile_grid_coordinate = TileGridCoordinates::new_3d(tile_grid_x, tile_grid_y, tile_grid_z);
     let actual_pixel_coordinates = tiled_context
         .get_tile(&tile_grid_coordinate)
         .unwrap()
@@ -406,11 +449,14 @@ fn check_tile_in_correct_pixel_coordinates(
     assert_eq!(expected_pixel_coordinates, *actual_pixel_coordinates);
 }
 
-#[then(regex = r"Tile (\d+), (\d+) should have a Texture pointing to entry (\d+) in (.+\.png).")]
+#[then(
+    regex = r"Tile (\d+), (\d+), (\d+) should have a Texture pointing to entry (\d+) in (.+\.png)."
+)]
 fn check_one_tile_has_correct_texture_file(
     tiled_context: &mut TiledContext,
     tile_x: String,
     tile_y: String,
+    tile_z: String,
     texture_entry: String,
     texture_filename: String,
 ) {
@@ -422,7 +468,8 @@ fn check_one_tile_has_correct_texture_file(
 
     let tile_grid_x = tile_x.parse::<usize>().unwrap();
     let tile_grid_y = tile_y.parse::<usize>().unwrap();
-    let tile_grid_coordinate = TileGridCoordinates::new(tile_grid_x, tile_grid_y);
+    let tile_grid_z = tile_z.parse::<usize>().unwrap();
+    let tile_grid_coordinate = TileGridCoordinates::new_3d(tile_grid_x, tile_grid_y, tile_grid_z);
     let actual_tile_texture = tiled_context
         .get_tile(&tile_grid_coordinate)
         .unwrap()
