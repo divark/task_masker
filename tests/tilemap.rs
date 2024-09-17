@@ -1,7 +1,6 @@
 use cucumber::{given, then, when, World};
 use futures::executor::block_on;
 
-use std::path;
 use std::path::{PathBuf, MAIN_SEPARATOR};
 use tiled::{Loader, Map};
 
@@ -213,7 +212,7 @@ fn get_texture_from_tiled(
     let tile_grid_y = grid_coordinates.y() as i32;
     if let Some(tile) = tile_layer.get_tile(tile_grid_x, tile_grid_y) {
         let sprite_idx = tile.id() as usize;
-        let spritesheet_file = tile
+        let mut spritesheet_file = tile
             .get_tileset()
             .image
             .clone()
@@ -221,10 +220,17 @@ fn get_texture_from_tiled(
             .source
             .canonicalize()
             .unwrap();
-        // NOTE: Windows returns a weird path without this.
-        let spritesheet_path_absolute = path::absolute(spritesheet_file.as_path()).unwrap();
 
-        Some(TileTexture::new(spritesheet_path_absolute, sprite_idx))
+        // NOTE: The canonicalize call from above adds this weird prefix on Windows.
+        // This workaround is needed to make the tests consistent across all of the
+        // OSes supported.
+        if cfg!(windows) {
+            if let Ok(stripped_path) = spritesheet_file.strip_prefix(r"\\\\?\\") {
+                spritesheet_file = stripped_path.to_path_buf();
+            }
+        }
+
+        Some(TileTexture::new(spritesheet_file, sprite_idx))
     } else {
         None
     }
