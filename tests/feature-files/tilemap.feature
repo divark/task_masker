@@ -48,3 +48,15 @@ Feature: An isometric tilemap should be loaded from some map file.
         And Tile 0, 0, 1 should have a width of 64, and a height of 64.
         And Tile 0, 0, 1 should be at grid coordinates 0, 0, 1.
         And Tile 0, 0, 1 should be at pixel coordinates 0, 0, 1.
+
+    Scenario: Vertical layer offsets are honored for some isometric Tiled map.
+        Given a Tiled map called two_vertical_tiles_with_offset.tmx,
+        When the tiles are loaded from the Tiled map,
+        Then Tile 0, 0, 0 should be at pixel coordinates 0, 0, 0.
+        And Tile 0, 0, 1 should be at pixel coordinates 0, -32, 1.
+
+    Scenario: Drawing offsets are honored for some isometric Tiled map.
+        Given a Tiled map called two_vertical_tiles_with_drawing_offset.tmx,
+        When the tiles are loaded from the Tiled map,
+        Then Tile 0, 0, 0 should be at pixel coordinates 0, 0, 0.
+        And Tile 0, 0, 1 should be at pixel coordinates 0, -32, 1.

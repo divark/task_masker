@@ -57,6 +57,28 @@ impl TileDimensions {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct TileDrawingOffset {
+    x: isize,
+    y: isize,
+}
+
+impl TileDrawingOffset {
+    pub fn new(x: isize, y: isize) -> Self {
+        Self { x, y }
+    }
+
+    /// Returns the horizontal offset (x) in pixels.
+    pub fn x(&self) -> isize {
+        self.x
+    }
+
+    /// Returns the vertical offset (y) in pixels.
+    pub fn y(&self) -> isize {
+        self.y
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub struct TileGridCoordinates {
     x: usize,
     y: usize,
@@ -225,8 +247,8 @@ impl TiledContext {
         let tilemap_height = tilemap_dimensions.height();
         let tilemap_area = tilemap_width * tilemap_height;
 
-        let tile_idx = grid_coordinate.z() * tilemap_area
-            + grid_coordinate.y() * tilemap_width
+        let tile_idx = (grid_coordinate.z() * tilemap_area)
+            + (grid_coordinate.y() * tilemap_width)
             + grid_coordinate.x();
         self.tilemap.get_tiles().get(tile_idx)
     }
@@ -283,6 +305,33 @@ fn get_texture_from_tiled(
     }
 }
 
+/// Returns Drawing Offsets represented in pixels if found from a Tile's
+/// texture, or defaults to 0, 0 otherwise.
+fn get_drawing_offsets_from_tiled(
+    tiled_map: &Map,
+    grid_coordinates: &TileGridCoordinates,
+) -> TileDrawingOffset {
+    let tile_grid_z = grid_coordinates.z();
+    let tile_layer = tiled_map
+        .get_layer(tile_grid_z)
+        .unwrap()
+        .as_tile_layer()
+        .unwrap();
+
+    let tile_grid_x = grid_coordinates.x() as i32;
+    let tile_grid_y = grid_coordinates.y() as i32;
+
+    if let Some(tile) = tile_layer.get_tile(tile_grid_x, tile_grid_y) {
+        let tileset = tile.get_tileset();
+        let tile_offset_x = tileset.offset_x as isize;
+        let tile_offset_y = tileset.offset_y as isize;
+
+        TileDrawingOffset::new(tile_offset_x, tile_offset_y)
+    } else {
+        TileDrawingOffset::new(0, 0)
+    }
+}
+
 #[derive(Debug)]
 pub struct Tilemap {
     map_grid_dimensions: MapGridDimensions,
@@ -314,14 +363,21 @@ impl Tilemap {
         let map_depth = tiled_map.layers().len();
         let map_grid_dimensions = MapGridDimensions::new_3d(map_width, map_height, map_depth);
 
-        for x in 0..map_width {
-            for y in 0..map_height {
-                for z in 0..map_depth {
+        for z in 0..map_depth {
+            // TODO: Consider horizontal layer offsets as well, and
+            // making this into MapLayerOffset.
+            let vertical_layer_offset = tiled_map.layers().nth(z).unwrap().offset_y;
+            for x in 0..map_width {
+                for y in 0..map_height {
                     let tile_grid_pos = TileGridCoordinates::new_3d(x, y, z);
                     let tile_texture = get_texture_from_tiled(&tiled_map, &tile_grid_pos);
+                    let drawing_offsets =
+                        get_drawing_offsets_from_tiled(&tiled_map, &tile_grid_pos);
 
-                    let tile_px_x = (tile_width * x) as isize;
-                    let tile_px_y = (tile_height * y) as isize;
+                    let tile_px_x = drawing_offsets.x() + (tile_width * x) as isize;
+                    let tile_px_y = drawing_offsets.y()
+                        + vertical_layer_offset as isize
+                        + (tile_height * y) as isize;
                     let tile_px_z = z as isize;
                     let tile = Tile {
                         dimensions: TileDimensions::new(tile_width, tile_height),
