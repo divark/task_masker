@@ -31,6 +31,13 @@ Feature: An isometric tilemap should be loaded from some map file.
         Then Tile 0, 0, 0 should be at pixel coordinates 0, 64, 0.
         And Tile 0, 1, 0 should be at pixel coordinates 0, 0, 0.
 
+    Scenario: Converting two Tile coordinates to isometric should change their x and y values.
+        Given a Tiled map called two_vertical_tiles_isometric.tmx,
+        When the tiles are loaded from the Tiled map,
+        And the tile coordinates have been converted to isometric,
+        Then Tile 0, 0, 0 should be at pixel coordinates 0, 0, 0.
+        And Tile 0, 1, 0 should be at pixel coordinates -64, 32, 0.
+
     Scenario: The highest Tile is found on a two-layer, isometric Tiled map.
         Given a Tiled map called two_tiles_layered.tmx,
         When the tiles are loaded from the Tiled map,

@@ -90,13 +90,13 @@ impl TileGridCoordinates {
 
 #[derive(Debug, PartialEq)]
 pub struct TilePixelCoordinates {
-    px_x: usize,
-    px_y: usize,
-    px_z: usize,
+    px_x: isize,
+    px_y: isize,
+    px_z: isize,
 }
 
 impl TilePixelCoordinates {
-    pub fn new(px_x: usize, px_y: usize) -> Self {
+    pub fn new(px_x: isize, px_y: isize) -> Self {
         Self {
             px_x,
             px_y,
@@ -104,17 +104,27 @@ impl TilePixelCoordinates {
         }
     }
 
-    pub fn new_3d(px_x: usize, px_y: usize, px_z: usize) -> Self {
+    pub fn new_3d(px_x: isize, px_y: isize, px_z: isize) -> Self {
         Self { px_x, px_y, px_z }
     }
 
+    /// Sets the x coordinate.
+    pub fn set_x(&mut self, desired_x: isize) {
+        self.px_x = desired_x;
+    }
+
+    /// Gets the x coordinate.
+    pub fn x(&self) -> isize {
+        self.px_x
+    }
+
     /// Sets the y coordinate.
-    pub fn set_y(&mut self, desired_y: usize) {
+    pub fn set_y(&mut self, desired_y: isize) {
         self.px_y = desired_y;
     }
 
     /// Gets the y coordinate.
-    pub fn y(&self) -> usize {
+    pub fn y(&self) -> isize {
         self.px_y
     }
 }
@@ -310,9 +320,12 @@ impl Tilemap {
                     let tile_grid_pos = TileGridCoordinates::new_3d(x, y, z);
                     let tile_texture = get_texture_from_tiled(&tiled_map, &tile_grid_pos);
 
+                    let tile_px_x = (tile_width * x) as isize;
+                    let tile_px_y = (tile_height * y) as isize;
+                    let tile_px_z = z as isize;
                     let tile = Tile {
                         dimensions: TileDimensions::new(tile_width, tile_height),
-                        pixel_pos: TilePixelCoordinates::new_3d(tile_width * x, tile_height * y, z),
+                        pixel_pos: TilePixelCoordinates::new_3d(tile_px_x, tile_px_y, tile_px_z),
                         grid_pos: tile_grid_pos,
                         texture: tile_texture,
                     };
@@ -345,7 +358,24 @@ impl Tilemap {
             let flipped_y_coordinate = tile.get_tile_dimensions().height() * recalculated_y;
 
             let tile_pixel_coordinates = tile.get_pixel_coordinates_mut();
-            tile_pixel_coordinates.set_y(flipped_y_coordinate);
+            tile_pixel_coordinates.set_y(flipped_y_coordinate as isize);
+        }
+    }
+
+    /// Converts the pixel coordinates of each Tile to the isometric coordinate system.
+    pub fn to_isometric_coordinates(&mut self) {
+        for tile in &mut self.tiles {
+            let tile_px_x = tile.get_pixel_coordinates().x();
+            let tile_px_y = tile.get_pixel_coordinates().y();
+
+            // Used the following as reference:
+            // https://code.tutsplus.com/creating-isometric-worlds-a-primer-for-game-developers--gamedev-6511t
+            let isometric_px_x = tile_px_x - tile_px_y;
+            let isometric_px_y = (tile_px_x + tile_px_y) / 2;
+
+            let tile_pixel_coordinates = tile.get_pixel_coordinates_mut();
+            tile_pixel_coordinates.set_x(isometric_px_x);
+            tile_pixel_coordinates.set_y(isometric_px_y);
         }
     }
 }
@@ -367,6 +397,11 @@ fn load_tiles_from_tiled_map(tiled_context: &mut TiledContext) {
 #[when("the y-axis has been inverted for all tiles,")]
 fn invert_y_axis_for_all_tiles(tiled_context: &mut TiledContext) {
     tiled_context.tilemap_mut().flip_y_axis();
+}
+
+#[when("the tile coordinates have been converted to isometric,")]
+fn convert_tile_coordinates_to_isometric(tiled_context: &mut TiledContext) {
+    tiled_context.tilemap_mut().to_isometric_coordinates();
 }
 
 #[then(regex = r"there should be (\d+) Tiles? loaded from the Tiled map.")]
@@ -432,7 +467,9 @@ fn check_tile_in_correct_grid_coordinates(
     );
 }
 
-#[then(regex = r"Tile (\d+), (\d+), (\d+) should be at pixel coordinates (\d+), (\d+), (\d+).")]
+#[then(
+    regex = r"Tile (\d+), (\d+), (\d+) should be at pixel coordinates (-?\d+), (-?\d+), (-?\d+)."
+)]
 fn check_tile_in_correct_pixel_coordinates(
     tiled_context: &mut TiledContext,
     tile_x: String,
@@ -442,9 +479,9 @@ fn check_tile_in_correct_pixel_coordinates(
     expected_px_y: String,
     expected_px_z: String,
 ) {
-    let px_x = expected_px_x.parse::<usize>().unwrap();
-    let px_y = expected_px_y.parse::<usize>().unwrap();
-    let px_z = expected_px_z.parse::<usize>().unwrap();
+    let px_x = expected_px_x.parse::<isize>().unwrap();
+    let px_y = expected_px_y.parse::<isize>().unwrap();
+    let px_z = expected_px_z.parse::<isize>().unwrap();
     let expected_pixel_coordinates = TilePixelCoordinates::new_3d(px_x, px_y, px_z);
 
     let tile_grid_x = tile_x.parse::<usize>().unwrap();
