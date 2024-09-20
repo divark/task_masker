@@ -60,3 +60,11 @@ Feature: An isometric tilemap should be loaded from some map file.
         When the tiles are loaded from the Tiled map,
         Then Tile 0, 0, 0 should be at pixel coordinates 0, 0, 0.
         And Tile 0, 0, 1 should be at pixel coordinates 0, -32, 1.
+
+    Scenario: Blank Tiles have no texture for a tile.
+        Given a Tiled map called blank_tile_in_corner.tmx,
+        When the tiles are loaded from the Tiled map,
+        Then Tile 0, 0, 0 should have a Texture pointing to entry 1 in terrain_0.png.
+        And Tile 0, 1, 0 should have a Texture pointing to entry 1 in terrain_0.png.
+        And Tile 1, 0, 0 should have a Texture pointing to entry 1 in terrain_0.png.
+        And Tile 1, 1, 0 should not have a Texture.

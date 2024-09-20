@@ -586,6 +586,25 @@ fn check_one_tile_has_correct_texture_file(
     assert_eq!(expected_tile_texture, *actual_tile_texture);
 }
 
+#[then(regex = r"Tile (\d+), (\d+), (\d+) should not have a Texture.")]
+fn check_tile_has_no_texture(
+    tiled_context: &mut TiledContext,
+    tile_x: String,
+    tile_y: String,
+    tile_z: String,
+) {
+    let tile_grid_x = tile_x.parse::<usize>().unwrap();
+    let tile_grid_y = tile_y.parse::<usize>().unwrap();
+    let tile_grid_z = tile_z.parse::<usize>().unwrap();
+    let tile_grid_coordinate = TileGridCoordinates::new_3d(tile_grid_x, tile_grid_y, tile_grid_z);
+    let actual_tile_texture = tiled_context
+        .get_tile(&tile_grid_coordinate)
+        .unwrap()
+        .get_tile_texture();
+
+    assert!(actual_tile_texture.is_none());
+}
+
 fn main() {
     block_on(TiledContext::run("tests/feature-files/tilemap.feature"));
 }
