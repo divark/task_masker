@@ -112,41 +112,45 @@ impl TileGridCoordinates {
 
 #[derive(Debug, PartialEq)]
 pub struct TilePixelCoordinates {
-    px_x: isize,
-    px_y: isize,
-    px_z: isize,
+    px_x: f32,
+    px_y: f32,
+    px_z: f32,
 }
 
 impl TilePixelCoordinates {
     pub fn new(px_x: isize, px_y: isize) -> Self {
         Self {
-            px_x,
-            px_y,
-            px_z: 0,
+            px_x: px_x as f32,
+            px_y: px_y as f32,
+            px_z: 0.0,
         }
     }
 
     pub fn new_3d(px_x: isize, px_y: isize, px_z: isize) -> Self {
-        Self { px_x, px_y, px_z }
+        Self {
+            px_x: px_x as f32,
+            px_y: px_y as f32,
+            px_z: px_z as f32,
+        }
     }
 
     /// Sets the x coordinate.
-    pub fn set_x(&mut self, desired_x: isize) {
+    pub fn set_x(&mut self, desired_x: f32) {
         self.px_x = desired_x;
     }
 
     /// Gets the x coordinate.
-    pub fn x(&self) -> isize {
+    pub fn x(&self) -> f32 {
         self.px_x
     }
 
     /// Sets the y coordinate.
-    pub fn set_y(&mut self, desired_y: isize) {
+    pub fn set_y(&mut self, desired_y: f32) {
         self.px_y = desired_y;
     }
 
     /// Gets the y coordinate.
-    pub fn y(&self) -> isize {
+    pub fn y(&self) -> f32 {
         self.px_y
     }
 }
@@ -414,7 +418,7 @@ impl Tilemap {
             let flipped_y_coordinate = tile.get_tile_dimensions().height() * recalculated_y;
 
             let tile_pixel_coordinates = tile.get_pixel_coordinates_mut();
-            tile_pixel_coordinates.set_y(flipped_y_coordinate as isize);
+            tile_pixel_coordinates.set_y(flipped_y_coordinate as f32);
         }
     }
 
@@ -427,7 +431,7 @@ impl Tilemap {
             // Used the following as reference:
             // https://code.tutsplus.com/creating-isometric-worlds-a-primer-for-game-developers--gamedev-6511t
             let isometric_px_x = tile_px_x - tile_px_y;
-            let isometric_px_y = (tile_px_x + tile_px_y) / 2;
+            let isometric_px_y = (tile_px_x + tile_px_y) / 2.0;
 
             let tile_pixel_coordinates = tile.get_pixel_coordinates_mut();
             tile_pixel_coordinates.set_x(isometric_px_x);
