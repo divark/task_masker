@@ -68,3 +68,8 @@ Feature: An isometric tilemap should be loaded from some map file.
         And Tile 0, 1, 0 should have a Texture pointing to entry 1 in terrain_0.png.
         And Tile 1, 0, 0 should have a Texture pointing to entry 1 in terrain_0.png.
         And Tile 1, 1, 0 should not have a Texture.
+
+    Scenario: Render Tiles are created from Tiles with a texture.
+        Given a Tiled map called blank_tile_in_corner.tmx,
+        When the tiles are loaded from the Tiled map,
+        Then the number of render tiles created should match the number of Tiles with a Texture.
