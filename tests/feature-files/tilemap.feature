@@ -10,13 +10,22 @@ Feature: An isometric tilemap should be loaded from some map file.
     Scenario: One Tile with a texture is found from an isometric Tiled map.
         Given a Tiled map called one_tile_isometric.tmx,
         When the tiles are loaded from the Tiled map,
-        Then Tile 0, 0, 0 should have a Texture pointing to entry 1 in terrain_0.png.
+        Then Tile 0, 0, 0 should have a Texture using the spritesheet file terrain_0.png.
+        And Tile 0, 0, 0 should have a Texture pointing to sprite entry 1.
+
+    Scenario: A Tile with a texture has the number of rows and columns in its spritesheet.
+        Given a Tiled map called one_tile_isometric.tmx,
+        When the tiles are loaded from the Tiled map,
+        Then Tile 0, 0, 0 should have 16 rows in its' Texture.
+        And Tile 0, 0, 0 should have 10 columns in its' Texture.
 
     Scenario: The highest Tile with a texture is found on a two-layer, isometric Tiled map.
         Given a Tiled map called two_tiles_layered.tmx,
         When the tiles are loaded from the Tiled map,
-        Then Tile 0, 0, 0 should have a Texture pointing to entry 1 in terrain_0.png.
-        And Tile 0, 0, 1 should have a Texture pointing to entry 60 in terrain_0.png.
+        Then Tile 0, 0, 0 should have a Texture using the spritesheet file terrain_0.png.
+        And Tile 0, 0, 0 should have a Texture pointing to sprite entry 1.
+        And Tile 0, 0, 1 should have a Texture using the spritesheet file terrain_0.png.
+        And Tile 0, 0, 1 should have a Texture pointing to sprite entry 60.
 
     Scenario: Inverting the y-axis of a Tile on a one Tile map should change nothing. 
         Given a Tiled map called one_tile_isometric.tmx,
@@ -64,9 +73,9 @@ Feature: An isometric tilemap should be loaded from some map file.
     Scenario: Blank Tiles have no texture for a tile.
         Given a Tiled map called blank_tile_in_corner.tmx,
         When the tiles are loaded from the Tiled map,
-        Then Tile 0, 0, 0 should have a Texture pointing to entry 1 in terrain_0.png.
-        And Tile 0, 1, 0 should have a Texture pointing to entry 1 in terrain_0.png.
-        And Tile 1, 0, 0 should have a Texture pointing to entry 1 in terrain_0.png.
+        Then Tile 0, 0, 0 should have a Texture using the spritesheet file terrain_0.png.
+        And Tile 0, 1, 0 should have a Texture using the spritesheet file terrain_0.png.
+        And Tile 1, 0, 0 should have a Texture using the spritesheet file terrain_0.png.
         And Tile 1, 1, 0 should not have a Texture.
 
     Scenario: Render Tiles are created from Tiles with a texture.

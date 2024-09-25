@@ -164,12 +164,27 @@ impl TilePixelCoordinates {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct TileTexture {
+pub struct TileSpriteSheet {
     spritesheet_file: PathBuf,
     spritesheet_entry_idx: usize,
 }
 
-impl TileTexture {
+impl TileSpriteSheet {
+    pub fn new(spritesheet_file: PathBuf, spritesheet_entry_idx: usize) -> Self {
+        Self {
+            spritesheet_file,
+            spritesheet_entry_idx,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct TileSprite {
+    spritesheet_file: PathBuf,
+    spritesheet_entry_idx: usize,
+}
+
+impl TileSprite {
     pub fn new(spritesheet_file: PathBuf, spritesheet_entry_idx: usize) -> Self {
         Self {
             spritesheet_file,
@@ -185,6 +200,56 @@ impl TileTexture {
     /// Returns the index to the spritesheet recorded.
     pub fn get_index(&self) -> usize {
         self.spritesheet_entry_idx
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct SpriteSheetDimensions {
+    num_rows: usize,
+    num_columns: usize,
+}
+
+impl SpriteSheetDimensions {
+    pub fn new(num_rows: usize, num_columns: usize) -> Self {
+        Self {
+            num_rows,
+            num_columns,
+        }
+    }
+
+    /// Returns the number of rows found in the recorded spritesheet.
+    pub fn rows(&self) -> usize {
+        self.num_rows
+    }
+
+    /// Returns the number of columns found in the recorded spritesheet.
+    pub fn columns(&self) -> usize {
+        self.num_columns
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct TileTexture {
+    sprite: TileSprite,
+    spritesheet_dimensions: SpriteSheetDimensions,
+}
+
+impl TileTexture {
+    pub fn new(sprite: TileSprite, spritesheet_dimensions: SpriteSheetDimensions) -> Self {
+        Self {
+            sprite,
+            spritesheet_dimensions,
+        }
+    }
+
+    /// Returns a reference to the sprite recorded.
+    pub fn sprite(&self) -> &TileSprite {
+        &self.sprite
+    }
+
+    /// Returns a reference to the spritesheet dimensions.
+    pub fn dimensions(&self) -> &SpriteSheetDimensions {
+        &self.spritesheet_dimensions
     }
 }
 
@@ -242,15 +307,22 @@ fn get_texture_from_tiled(
     let tile_grid_x = grid_coordinates.x() as i32;
     let tile_grid_y = grid_coordinates.y() as i32;
     if let Some(tile) = tile_layer.get_tile(tile_grid_x, tile_grid_y) {
-        let sprite_idx = tile.id() as usize;
-        let spritesheet_file = tile.get_tileset().image.clone().unwrap().source;
+        let tile_tileset = tile.get_tileset();
+        let spritesheet_image = tile_tileset.image.clone().unwrap();
+        let spritesheet_file = spritesheet_image.source;
         // NOTE: Why not fs::canonicalize? Because on Windows only, this adds a weird
         // prefix at the beginning of the path, making the tests fail. This is called
         // a UNC path, and we remove these with dunce:
         // https://docs.rs/dunce/latest/dunce/
         let spritesheet_file_path = dunce::canonicalize(spritesheet_file).unwrap();
+        let sprite_idx = tile.id() as usize;
+        let tile_sprite = TileSprite::new(spritesheet_file_path, sprite_idx);
 
-        Some(TileTexture::new(spritesheet_file_path, sprite_idx))
+        let num_rows = (spritesheet_image.height as u32 / tile_tileset.tile_height) as usize;
+        let num_columns = (spritesheet_image.width as u32 / tile_tileset.tile_width) as usize;
+        let tile_spritesheet_dimensions = SpriteSheetDimensions::new(num_rows, num_columns);
+
+        Some(TileTexture::new(tile_sprite, tile_spritesheet_dimensions))
     } else {
         None
     }
@@ -450,8 +522,10 @@ pub fn convert_tilemap_to_bevy_render_tiles(
         let tile_texture = tile.get_tile_texture().unwrap();
         let tile_grid_coordinate = tile.get_grid_coordinates().to_owned();
         let tile_pixel_coordinates = tile.get_pixel_coordinates();
+        let tile_sprite = tile_texture.sprite();
+        let tile_spritesheet_dimensions = tile_texture.dimensions();
 
-        let bevy_tile_texture = asset_server.load(to_bevy_path(tile_texture.get_path().clone()));
+        let bevy_tile_texture = asset_server.load(to_bevy_path(tile_sprite.get_path().clone()));
 
         let tile_size = UVec2::new(
             tile_dimensions.width() as u32,
@@ -459,15 +533,14 @@ pub fn convert_tilemap_to_bevy_render_tiles(
         );
         let tile_texture_layout = TextureAtlasLayout::from_grid(
             tile_size,
-            //TODO: Test then implement the commented out functions for tile_texture.
-            unimplemented!(), //tile_texture.columns(),
-            unimplemented!(), //tile_texture.rows(),
+            tile_spritesheet_dimensions.columns() as u32,
+            tile_spritesheet_dimensions.rows() as u32,
             None,
             None,
         );
         let tile_texture_atlas_layout = texture_atlas_assets.add(tile_texture_layout);
 
-        let tile_sprite = SpriteBundle {
+        let bevy_tile_sprite = SpriteBundle {
             transform: Transform::from_xyz(
                 tile_pixel_coordinates.x(),
                 tile_pixel_coordinates.y(),
@@ -479,10 +552,11 @@ pub fn convert_tilemap_to_bevy_render_tiles(
 
         let tile_texture_atlas = TextureAtlas {
             layout: tile_texture_atlas_layout,
-            index: tile_texture.get_index(),
+            index: tile_sprite.get_index(),
         };
 
-        let render_tile = RenderTile::new(tile_grid_coordinate, tile_sprite, tile_texture_atlas);
+        let render_tile =
+            RenderTile::new(tile_grid_coordinate, bevy_tile_sprite, tile_texture_atlas);
         render_tiles.push(render_tile);
     }
 

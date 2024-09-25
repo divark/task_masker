@@ -197,33 +197,56 @@ fn check_tile_in_correct_pixel_coordinates(
 }
 
 #[then(
-    regex = r"Tile (\d+), (\d+), (\d+) should have a Texture pointing to entry (\d+) in (.+\.png)."
+    regex = r"Tile (\d+), (\d+), (\d+) should have a Texture using the spritesheet file (.+\.png)."
 )]
 fn check_one_tile_has_correct_texture_file(
     tiled_context: &mut TiledContext,
     tile_x: String,
     tile_y: String,
     tile_z: String,
-    texture_entry: String,
     texture_filename: String,
 ) {
     let spritesheet_relative_path = format!("environment{}{}", MAIN_SEPARATOR, texture_filename);
-    let expected_spritesheet_file = get_test_asset_path(&spritesheet_relative_path);
-    let expected_tile_texture_entry = texture_entry.parse::<usize>().unwrap();
-    let expected_tile_texture =
-        TileTexture::new(expected_spritesheet_file, expected_tile_texture_entry);
+    let expected_tile_texture_path = get_test_asset_path(&spritesheet_relative_path);
 
     let tile_grid_x = tile_x.parse::<usize>().unwrap();
     let tile_grid_y = tile_y.parse::<usize>().unwrap();
     let tile_grid_z = tile_z.parse::<usize>().unwrap();
     let tile_grid_coordinate = TileGridCoordinates::new_3d(tile_grid_x, tile_grid_y, tile_grid_z);
-    let actual_tile_texture = tiled_context
+
+    let actual_tile_texture_path = tiled_context
         .get_tile(&tile_grid_coordinate)
         .unwrap()
         .get_tile_texture()
-        .unwrap();
+        .unwrap()
+        .sprite()
+        .get_path();
+    assert_eq!(expected_tile_texture_path, *actual_tile_texture_path);
+}
 
-    assert_eq!(expected_tile_texture, *actual_tile_texture);
+#[then(regex = r"Tile (\d+), (\d+), (\d+) should have a Texture pointing to sprite entry (\d+).")]
+fn check_one_tile_has_correct_texture_entry(
+    tiled_context: &mut TiledContext,
+    tile_x: String,
+    tile_y: String,
+    tile_z: String,
+    texture_entry: String,
+) {
+    let expected_tile_texture_entry = texture_entry.parse::<usize>().unwrap();
+
+    let tile_grid_x = tile_x.parse::<usize>().unwrap();
+    let tile_grid_y = tile_y.parse::<usize>().unwrap();
+    let tile_grid_z = tile_z.parse::<usize>().unwrap();
+    let tile_grid_coordinate = TileGridCoordinates::new_3d(tile_grid_x, tile_grid_y, tile_grid_z);
+    let actual_tile_texture_entry = tiled_context
+        .get_tile(&tile_grid_coordinate)
+        .unwrap()
+        .get_tile_texture()
+        .unwrap()
+        .sprite()
+        .get_index();
+
+    assert_eq!(expected_tile_texture_entry, actual_tile_texture_entry);
 }
 
 #[then(regex = r"Tile (\d+), (\d+), (\d+) should not have a Texture.")]
@@ -243,6 +266,54 @@ fn check_tile_has_no_texture(
         .get_tile_texture();
 
     assert!(actual_tile_texture.is_none());
+}
+
+#[then(regex = r"Tile (\d+), (\d+), (\d+) should have (\d+) rows in its' Texture.")]
+fn check_tile_texture_has_n_rows(
+    tiled_context: &mut TiledContext,
+    tile_x: String,
+    tile_y: String,
+    tile_z: String,
+    num_rows_expected: String,
+) {
+    let tile_grid_x = tile_x.parse::<usize>().unwrap();
+    let tile_grid_y = tile_y.parse::<usize>().unwrap();
+    let tile_grid_z = tile_z.parse::<usize>().unwrap();
+    let tile_grid_coordinate = TileGridCoordinates::new_3d(tile_grid_x, tile_grid_y, tile_grid_z);
+    let tile_texture = tiled_context
+        .get_tile(&tile_grid_coordinate)
+        .unwrap()
+        .get_tile_texture()
+        .unwrap();
+    let texture_dimensions = tile_texture.dimensions();
+
+    let expected_num_rows = num_rows_expected.parse::<usize>().unwrap();
+    let actual_num_rows = texture_dimensions.rows();
+    assert_eq!(expected_num_rows, actual_num_rows);
+}
+
+#[then(regex = r"Tile (\d+), (\d+), (\d+) should have (\d+) columns in its' Texture.")]
+fn check_tile_texture_has_n_columns(
+    tiled_context: &mut TiledContext,
+    tile_x: String,
+    tile_y: String,
+    tile_z: String,
+    num_columns_expected: String,
+) {
+    let tile_grid_x = tile_x.parse::<usize>().unwrap();
+    let tile_grid_y = tile_y.parse::<usize>().unwrap();
+    let tile_grid_z = tile_z.parse::<usize>().unwrap();
+    let tile_grid_coordinate = TileGridCoordinates::new_3d(tile_grid_x, tile_grid_y, tile_grid_z);
+    let tile_texture = tiled_context
+        .get_tile(&tile_grid_coordinate)
+        .unwrap()
+        .get_tile_texture()
+        .unwrap();
+    let texture_dimensions = tile_texture.dimensions();
+
+    let expected_num_columns = num_columns_expected.parse::<usize>().unwrap();
+    let actual_num_columns = texture_dimensions.columns();
+    assert_eq!(expected_num_columns, actual_num_columns);
 }
 
 #[then("the number of render tiles created should match the number of Tiles with a Texture.")]
