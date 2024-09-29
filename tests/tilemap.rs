@@ -370,9 +370,9 @@ fn check_tile_texture_has_n_columns(
 fn check_render_tiles_equal_tiles_with_texture(tiled_context: &mut TiledContext) {
     let tilemap = tiled_context.take_tilemap();
     let asset_server = tiled_context.get_asset_server();
-    let texture_atlas_assets = tiled_context.get_texture_atlas_assets_mut();
-    let render_tiles: Vec<RenderTile> =
-        convert_tilemap_to_bevy_render_tiles(&tilemap, asset_server, texture_atlas_assets);
+    let mut texture_atlas_assets = tiled_context.get_texture_atlas_assets_mut();
+    let render_tiles =
+        convert_tilemap_to_bevy_render_tiles(&tilemap, &asset_server, &mut texture_atlas_assets);
 
     let tiles = tilemap.get_tiles();
     let expected_num_render_tiles = tiles

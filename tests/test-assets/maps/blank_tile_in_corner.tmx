@@ -5,8 +5,8 @@
  </tileset>
  <layer id="1" name="Tile Layer 1" width="2" height="2">
   <data encoding="csv">
-2,2,
-2,0
+146,2,
+61,0
 </data>
  </layer>
 </map>
