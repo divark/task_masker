@@ -507,8 +507,8 @@ impl RenderTile {
 /// Precondition: Tilemap was called with a load method.
 pub fn convert_tilemap_to_bevy_render_tiles(
     tilemap: &Tilemap,
-    asset_server: Res<AssetServer>,
-    mut texture_atlas_assets: ResMut<Assets<TextureAtlasLayout>>,
+    asset_server: AssetServer,
+    mut texture_atlas_assets: Mut<Assets<TextureAtlasLayout>>,
 ) -> Vec<RenderTile> {
     let mut render_tiles = Vec::new();
 

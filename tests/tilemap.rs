@@ -1,3 +1,8 @@
+use bevy::prelude::*;
+use bevy::render::settings::{RenderCreation, WgpuSettings};
+use bevy::render::RenderPlugin;
+use bevy::sprite::SpritePlugin;
+
 use cucumber::{given, then, when, World};
 use futures::executor::block_on;
 
@@ -20,18 +25,46 @@ fn get_test_asset_path(desired_map_asset: &str) -> PathBuf {
     map_path
 }
 
+/// Returns a Bevy App(lication) suitable for testing from a game context,
+/// even without the presence of a display.
+fn create_testable_bevy_app() -> App {
+    let mut app = App::new();
+
+    app.add_plugins(MinimalPlugins);
+    app.add_plugins(WindowPlugin::default());
+    app.add_plugins(AssetPlugin::default());
+    app.add_plugins(RenderPlugin {
+        render_creation: RenderCreation::from(WgpuSettings {
+            backends: None,
+            ..default()
+        })
+        .into(),
+        ..default()
+    });
+    app.add_plugins(SpritePlugin::default());
+    app.add_plugins(ImagePlugin::default());
+
+    app.update();
+
+    app
+}
+
 #[derive(Debug, World)]
 #[world(init = Self::new)]
 pub struct TiledContext {
+    testing_app: App,
+
     map_file_path: PathBuf,
-    tilemap: Tilemap,
+    tilemap: Option<Tilemap>,
 }
 
 impl TiledContext {
     pub fn new() -> Self {
         Self {
+            testing_app: create_testable_bevy_app(),
+
             map_file_path: PathBuf::new(),
-            tilemap: Tilemap::new(),
+            tilemap: Some(Tilemap::new()),
         }
     }
 
@@ -47,18 +80,18 @@ impl TiledContext {
 
     /// Loads a Tilemap from some Tiled map file.
     pub fn load_tiled_map(&mut self, tiled_map_path: &PathBuf) {
-        self.tilemap.load_tiles_from_tiled_map(tiled_map_path);
+        self.tilemap_mut().load_tiles_from_tiled_map(tiled_map_path);
     }
 
     /// Returns the tiles currently recorded.
     pub fn get_tiles(&self) -> &Vec<Tile> {
-        self.tilemap.get_tiles()
+        self.tilemap().get_tiles()
     }
 
     /// Returns a Tile specified at the Grid Coordinate if found,
     /// or returns None otherwise.
     pub fn get_tile(&self, grid_coordinate: &TileGridCoordinates) -> Option<&Tile> {
-        let tilemap_dimensions = self.tilemap.get_dimensions();
+        let tilemap_dimensions = self.tilemap().get_dimensions();
         let tilemap_width = tilemap_dimensions.width();
         let tilemap_height = tilemap_dimensions.height();
         let tilemap_area = tilemap_width * tilemap_height;
@@ -66,17 +99,34 @@ impl TiledContext {
         let tile_idx = (grid_coordinate.z() * tilemap_area)
             + (grid_coordinate.y() * tilemap_width)
             + grid_coordinate.x();
-        self.tilemap.get_tiles().get(tile_idx)
+        self.tilemap().get_tiles().get(tile_idx)
     }
 
     /// Returns a mutable reference to the currently loaded Tilemap.
     pub fn tilemap_mut(&mut self) -> &mut Tilemap {
-        &mut self.tilemap
+        self.tilemap.as_mut().unwrap()
     }
 
     /// Returns a reference to the currently loaded Tilemap.
     pub fn tilemap(&self) -> &Tilemap {
-        &self.tilemap
+        &self.tilemap.as_ref().unwrap()
+    }
+
+    /// Consumes the tilemap loaded.
+    pub fn take_tilemap(&mut self) -> Tilemap {
+        self.tilemap.take().unwrap()
+    }
+
+    /// Returns an instance of the Asset Server from the loaded Bevy App.
+    pub fn get_asset_server(&self) -> AssetServer {
+        self.testing_app.world().resource::<AssetServer>().clone()
+    }
+
+    /// Returns the collection of Texture Atlas Assets recorded from the loaded Bevy App.
+    pub fn get_texture_atlas_assets_mut(&mut self) -> Mut<Assets<TextureAtlasLayout>> {
+        self.testing_app
+            .world_mut()
+            .resource_mut::<Assets<TextureAtlasLayout>>()
     }
 }
 
@@ -318,11 +368,13 @@ fn check_tile_texture_has_n_columns(
 
 #[then("the number of render tiles created should match the number of Tiles with a Texture.")]
 fn check_render_tiles_equal_tiles_with_texture(tiled_context: &mut TiledContext) {
-    let tiles = tiled_context.get_tiles();
-    // TODO: Address notes in convert_tilemap_to_bevy_render_tiles before uncommenting this line.
-    // Also, get a way to retrieve the asset_server and texture_atlas_assets from TiledContext.
-    let render_tiles: Vec<RenderTile> = Vec::new(); //convert_tilemap_to_bevy_render_tiles(tiled_context.tilemap(), asset_server, texture_atlas_assets);
+    let tilemap = tiled_context.take_tilemap();
+    let asset_server = tiled_context.get_asset_server();
+    let texture_atlas_assets = tiled_context.get_texture_atlas_assets_mut();
+    let render_tiles: Vec<RenderTile> =
+        convert_tilemap_to_bevy_render_tiles(&tilemap, asset_server, texture_atlas_assets);
 
+    let tiles = tilemap.get_tiles();
     let expected_num_render_tiles = tiles
         .iter()
         .filter(|tile| tile.get_tile_texture().is_some())
