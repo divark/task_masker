@@ -180,16 +180,28 @@ impl TileSpriteSheet {
 
 #[derive(Debug, PartialEq)]
 pub struct TileSprite {
+    sprite_dimensions: TileDimensions,
+
     spritesheet_file: PathBuf,
     spritesheet_entry_idx: usize,
 }
 
 impl TileSprite {
-    pub fn new(spritesheet_file: PathBuf, spritesheet_entry_idx: usize) -> Self {
+    pub fn new(
+        sprite_dimensions: TileDimensions,
+        spritesheet_file: PathBuf,
+        spritesheet_entry_idx: usize,
+    ) -> Self {
         Self {
+            sprite_dimensions,
             spritesheet_file,
             spritesheet_entry_idx,
         }
+    }
+
+    /// Returns the dimensions of the currently loaded sprite.
+    pub fn get_sprite_dimensions(&self) -> &TileDimensions {
+        &self.sprite_dimensions
     }
 
     /// Returns the path to the spritesheet recorded.
@@ -243,12 +255,12 @@ impl TileTexture {
     }
 
     /// Returns a reference to the sprite recorded.
-    pub fn sprite(&self) -> &TileSprite {
+    pub fn get_sprite(&self) -> &TileSprite {
         &self.sprite
     }
 
     /// Returns a reference to the spritesheet dimensions.
-    pub fn dimensions(&self) -> &SpriteSheetDimensions {
+    pub fn get_spritesheet_dimensions(&self) -> &SpriteSheetDimensions {
         &self.spritesheet_dimensions
     }
 }
@@ -316,7 +328,11 @@ fn get_texture_from_tiled(
         // https://docs.rs/dunce/latest/dunce/
         let spritesheet_file_path = dunce::canonicalize(spritesheet_file).unwrap();
         let sprite_idx = tile.id() as usize;
-        let tile_sprite = TileSprite::new(spritesheet_file_path, sprite_idx);
+        let sprite_dimensions = TileDimensions::new(
+            tile_tileset.tile_width as usize,
+            tile_tileset.tile_height as usize,
+        );
+        let tile_sprite = TileSprite::new(sprite_dimensions, spritesheet_file_path, sprite_idx);
 
         let num_rows = (spritesheet_image.height as u32 / tile_tileset.tile_height) as usize;
         let num_columns = (spritesheet_image.width as u32 / tile_tileset.tile_width) as usize;
@@ -518,18 +534,18 @@ pub fn convert_tilemap_to_bevy_render_tiles(
             continue;
         }
 
-        let tile_dimensions = tile.get_tile_dimensions();
         let tile_texture = tile.get_tile_texture().unwrap();
         let tile_grid_coordinate = tile.get_grid_coordinates().to_owned();
         let tile_pixel_coordinates = tile.get_pixel_coordinates();
-        let tile_sprite = tile_texture.sprite();
-        let tile_spritesheet_dimensions = tile_texture.dimensions();
+        let tile_sprite = tile_texture.get_sprite();
+        let tile_sprite_dimensions = tile_sprite.get_sprite_dimensions();
+        let tile_spritesheet_dimensions = tile_texture.get_spritesheet_dimensions();
 
         let bevy_tile_texture = asset_server.load(to_bevy_path(tile_sprite.get_path().clone()));
 
         let tile_size = UVec2::new(
-            tile_dimensions.width() as u32,
-            tile_dimensions.height() as u32,
+            tile_sprite_dimensions.width() as u32,
+            tile_sprite_dimensions.height() as u32,
         );
         let tile_texture_layout = TextureAtlasLayout::from_grid(
             tile_size,

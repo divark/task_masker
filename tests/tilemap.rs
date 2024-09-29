@@ -269,7 +269,7 @@ fn check_one_tile_has_correct_texture_file(
         .unwrap()
         .get_tile_texture()
         .unwrap()
-        .sprite()
+        .get_sprite()
         .get_path();
     assert_eq!(expected_tile_texture_path, *actual_tile_texture_path);
 }
@@ -293,7 +293,7 @@ fn check_one_tile_has_correct_texture_entry(
         .unwrap()
         .get_tile_texture()
         .unwrap()
-        .sprite()
+        .get_sprite()
         .get_index();
 
     assert_eq!(expected_tile_texture_entry, actual_tile_texture_entry);
@@ -335,7 +335,7 @@ fn check_tile_texture_has_n_rows(
         .unwrap()
         .get_tile_texture()
         .unwrap();
-    let texture_dimensions = tile_texture.dimensions();
+    let texture_dimensions = tile_texture.get_spritesheet_dimensions();
 
     let expected_num_rows = num_rows_expected.parse::<usize>().unwrap();
     let actual_num_rows = texture_dimensions.rows();
@@ -359,7 +359,7 @@ fn check_tile_texture_has_n_columns(
         .unwrap()
         .get_tile_texture()
         .unwrap();
-    let texture_dimensions = tile_texture.dimensions();
+    let texture_dimensions = tile_texture.get_spritesheet_dimensions();
 
     let expected_num_columns = num_columns_expected.parse::<usize>().unwrap();
     let actual_num_columns = texture_dimensions.columns();
@@ -381,6 +381,36 @@ fn check_render_tiles_equal_tiles_with_texture(tiled_context: &mut TiledContext)
         .count();
     let actual_num_render_tiles = render_tiles.len();
     assert_eq!(expected_num_render_tiles, actual_num_render_tiles);
+}
+
+#[then(
+    regex = r"Tile (\d+), (\d+), (\d+)'s Texture should have a width of (\d+), and a height of (\d+)."
+)]
+fn check_tile_texture_has_correct_width_and_height(
+    tiled_context: &mut TiledContext,
+    tile_x: String,
+    tile_y: String,
+    tile_z: String,
+    width_expected: String,
+    height_expected: String,
+) {
+    let expected_width = width_expected.parse::<usize>().unwrap();
+    let expected_height = height_expected.parse::<usize>().unwrap();
+    let expected_dimensions = TileDimensions::new(expected_width, expected_height);
+
+    let tile_grid_x = tile_x.parse::<usize>().unwrap();
+    let tile_grid_y = tile_y.parse::<usize>().unwrap();
+    let tile_grid_z = tile_z.parse::<usize>().unwrap();
+    let tile_grid_coordinate = TileGridCoordinates::new_3d(tile_grid_x, tile_grid_y, tile_grid_z);
+    let actual_dimensions = tiled_context
+        .get_tile(&tile_grid_coordinate)
+        .unwrap()
+        .get_tile_texture()
+        .unwrap()
+        .get_sprite()
+        .get_sprite_dimensions();
+
+    assert_eq!(expected_dimensions, *actual_dimensions);
 }
 
 fn main() {

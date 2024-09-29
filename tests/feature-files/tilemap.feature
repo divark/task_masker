@@ -82,3 +82,9 @@ Feature: An isometric tilemap should be loaded from some map file.
         Given a Tiled map called blank_tile_in_corner.tmx,
         When the tiles are loaded from the Tiled map,
         Then the number of render tiles created should match the number of Tiles with a Texture.
+    
+    Scenario: The width and height of a Tile is different than a Tile texture's width and height.
+        Given a Tiled map called two_vertical_tiles_with_offset.tmx,
+        When the tiles are loaded from the Tiled map,
+        Then Tile 0, 0, 0 should have a width of 64, and a height of 32.
+        And Tile 0, 0, 0's Texture should have a width of 64, and a height of 64.
