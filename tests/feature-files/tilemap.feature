@@ -31,14 +31,14 @@ Feature: An isometric tilemap should be loaded from some map file.
         Given a Tiled map called one_tile_isometric.tmx,
         When the tiles are loaded from the Tiled map,
         And the y-axis has been inverted for all tiles,
-        Then Tile 0, 0, 0 should be at pixel coordinates 0, 64, 0.
+        Then Tile 0, 0, 0 should be at pixel coordinates 0, 0, 0.
 
     Scenario: Inverting the y-axis with two vertical Tiles should change their y coordinates.
         Given a Tiled map called two_vertical_tiles_isometric.tmx,
         When the tiles are loaded from the Tiled map,
         And the y-axis has been inverted for all tiles,
-        Then Tile 0, 0, 0 should be at pixel coordinates 0, 128, 0.
-        And Tile 0, 1, 0 should be at pixel coordinates 0, 64, 0.
+        Then Tile 0, 0, 0 should be at pixel coordinates 0, 64, 0.
+        And Tile 0, 1, 0 should be at pixel coordinates 0, 0, 0.
 
     Scenario: Converting two Tile coordinates to isometric should change their x and y values.
         Given a Tiled map called two_vertical_tiles_isometric.tmx,

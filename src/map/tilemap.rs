@@ -470,8 +470,12 @@ impl Tilemap {
     pub fn flip_y_axis(&mut self) {
         for tile in &mut self.tiles {
             let map_height =
-                self.map_grid_dimensions.height() * tile.get_tile_dimensions().height();
-            let flipped_y_coordinate = map_height as f32 - tile.get_pixel_coordinates().y();
+                (self.map_grid_dimensions.height() * tile.get_tile_dimensions().height()) as f32;
+            let tile_width = tile.get_tile_dimensions().width() as f32;
+            // Originally, the grid coordinates used to be flipped, subtracting one since all tiles
+            // start at 0, 0. Now, since we're dealing with width and height directly, subtracting
+            // one now means we subtract the tile_width.
+            let flipped_y_coordinate = (map_height - tile.get_pixel_coordinates().y()) - tile_width;
 
             let tile_pixel_coordinates = tile.get_pixel_coordinates_mut();
             tile_pixel_coordinates.set_y(flipped_y_coordinate as f32);
