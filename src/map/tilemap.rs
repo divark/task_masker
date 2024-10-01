@@ -469,10 +469,9 @@ impl Tilemap {
     /// "Flips" the y-axis for all loaded tiles.
     pub fn flip_y_axis(&mut self) {
         for tile in &mut self.tiles {
-            let tile_grid_coords = tile.get_grid_coordinates();
-
-            let recalculated_y = self.map_grid_dimensions.height() - tile_grid_coords.y() - 1;
-            let flipped_y_coordinate = tile.get_tile_dimensions().height() * recalculated_y;
+            let map_height =
+                self.map_grid_dimensions.height() * tile.get_tile_dimensions().height();
+            let flipped_y_coordinate = map_height as f32 - tile.get_pixel_coordinates().y();
 
             let tile_pixel_coordinates = tile.get_pixel_coordinates_mut();
             tile_pixel_coordinates.set_y(flipped_y_coordinate as f32);
