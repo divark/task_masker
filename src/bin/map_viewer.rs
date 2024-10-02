@@ -13,9 +13,7 @@ pub fn spawn_tiled_tiles(
     texture_atlas_assets: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     let mut tilemap = Tilemap::new();
-    tilemap.load_tiles_from_tiled_map(&PathBuf::from(
-        "tests/test-assets/maps/blank_tile_in_corner.tmx",
-    ));
+    tilemap.load_tiles_from_tiled_map(&PathBuf::from("assets/TM_map.tmx"));
     tilemap.to_isometric_coordinates();
     tilemap.flip_y_axis();
     let render_tiles = convert_tilemap_to_bevy_render_tiles(
@@ -35,6 +33,9 @@ fn main() {
     map_viewer.add_plugins(DefaultPlugins);
     map_viewer.add_plugins(TiledCameraPlugin);
     map_viewer.add_systems(Startup, spawn_tiled_tiles);
+
+    map_viewer.init_state::<GameState>();
+    map_viewer.insert_state::<GameState>(GameState::InGame);
 
     map_viewer.run();
 }
