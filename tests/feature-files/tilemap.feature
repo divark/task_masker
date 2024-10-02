@@ -95,5 +95,5 @@ Feature: An isometric tilemap should be loaded from some map file.
         And the tile coordinates have been converted to isometric, 
         Then Tile 0, 0, 0 should be at pixel coordinates 0, 0, 0.
         And Tile 1, 0, 0 should be at grid coordinates 1, 0, 0.
-        And Tile 1, 0, 0 should be at pixel coordinates 32, 16, 0.
+        And Tile 1, 0, 0 should be at pixel coordinates 32, 16, 1.
         And Tile 0, 1, 0 should be at pixel coordinates -32, 16, 0.

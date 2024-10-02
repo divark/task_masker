@@ -493,6 +493,13 @@ impl Tilemap {
         for tile in &mut self.tiles {
             let tile_px_x = tile.get_pixel_coordinates().x();
             let tile_px_y = tile.get_pixel_coordinates().y();
+            // Rendering "depth" for some isometric tile is not simple, making
+            // certain tiles render behind others, when they should be in front.
+            //
+            // Because of this, we're doing a "y-sort", assuming as if one is looking
+            // at a slanted surface going away from you.
+            let z_with_y_offset =
+                tile.get_grid_coordinates().x() as f32 + tile.get_pixel_coordinates().z();
 
             let isometric_px_x = tile_px_x - tile_px_y;
             let isometric_px_y = (tile_px_x + tile_px_y) / 2.0;
@@ -500,6 +507,7 @@ impl Tilemap {
             let tile_pixel_coordinates = tile.get_pixel_coordinates_mut();
             tile_pixel_coordinates.set_x(isometric_px_x);
             tile_pixel_coordinates.set_y(isometric_px_y);
+            tile_pixel_coordinates.set_z(z_with_y_offset);
         }
     }
 }
