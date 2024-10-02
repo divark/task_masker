@@ -161,6 +161,11 @@ impl TilePixelCoordinates {
     pub fn z(&self) -> f32 {
         self.px_z
     }
+
+    /// Sets the z coordinate.
+    pub fn set_z(&mut self, desired_z: f32) {
+        self.px_z = desired_z;
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -418,6 +423,7 @@ impl Tilemap {
 
         let tile_width = tiled_map.tile_width as usize;
         let tile_height = tiled_map.tile_height as usize;
+        let tile_side_length = tile_width.min(tile_height);
 
         let map_width = tiled_map.width as usize;
         let map_height = tiled_map.height as usize;
@@ -435,10 +441,10 @@ impl Tilemap {
                     let drawing_offsets =
                         get_drawing_offsets_from_tiled(&tiled_map, &tile_grid_pos);
 
-                    let tile_px_x = drawing_offsets.x() + (tile_width * x) as isize;
+                    let tile_px_x = drawing_offsets.x() + (tile_side_length * x) as isize;
                     let tile_px_y = drawing_offsets.y()
                         + vertical_layer_offset as isize
-                        + (tile_height * y) as isize;
+                        + (tile_side_length * y) as isize;
                     let tile_px_z = z as isize;
                     let tile = Tile {
                         dimensions: TileDimensions::new(tile_width, tile_height),
@@ -488,8 +494,6 @@ impl Tilemap {
             let tile_px_x = tile.get_pixel_coordinates().x();
             let tile_px_y = tile.get_pixel_coordinates().y();
 
-            // Used the following as reference:
-            // https://code.tutsplus.com/creating-isometric-worlds-a-primer-for-game-developers--gamedev-6511t
             let isometric_px_x = tile_px_x - tile_px_y;
             let isometric_px_y = (tile_px_x + tile_px_y) / 2.0;
 

@@ -97,8 +97,8 @@ impl TiledContext {
         let tilemap_area = tilemap_width * tilemap_height;
 
         let tile_idx = (grid_coordinate.z() * tilemap_area)
-            + (grid_coordinate.y() * tilemap_width)
-            + grid_coordinate.x();
+            + (grid_coordinate.x() * tilemap_width)
+            + grid_coordinate.y();
         self.tilemap().get_tiles().get(tile_idx)
     }
 

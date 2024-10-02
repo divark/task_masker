@@ -88,3 +88,12 @@ Feature: An isometric tilemap should be loaded from some map file.
         When the tiles are loaded from the Tiled map,
         Then Tile 0, 0, 0 should have a width of 64, and a height of 32.
         And Tile 0, 0, 0's Texture should have a width of 64, and a height of 64.
+
+    Scenario: A Tiled Isometric map is honored with a 2:1 ratio.
+        Given a Tiled map called blank_tile_in_corner.tmx,
+        When the tiles are loaded from the Tiled map,
+        And the tile coordinates have been converted to isometric, 
+        Then Tile 0, 0, 0 should be at pixel coordinates 0, 0, 0.
+        And Tile 1, 0, 0 should be at grid coordinates 1, 0, 0.
+        And Tile 1, 0, 0 should be at pixel coordinates 32, 16, 0.
+        And Tile 0, 1, 0 should be at pixel coordinates -32, 16, 0.
