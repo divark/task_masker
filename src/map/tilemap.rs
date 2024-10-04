@@ -275,6 +275,7 @@ pub struct Tile {
     dimensions: TileDimensions,
     pixel_pos: TilePixelCoordinates,
     grid_pos: TileGridCoordinates,
+    drawing_offsets: TileDrawingOffset,
 
     texture: Option<TileTexture>,
 }
@@ -294,6 +295,11 @@ impl Tile {
     /// Returns the pixel coordinates of this tile in a grid.
     pub fn get_pixel_coordinates(&self) -> &TilePixelCoordinates {
         &self.pixel_pos
+    }
+
+    /// Returns the drawing offset of this tile in pixels.
+    pub fn get_drawing_offsets(&self) -> &TileDrawingOffset {
+        &self.drawing_offsets
     }
 
     /// Returns a mutable reference to the pixel coordinates of this tile.
@@ -356,6 +362,10 @@ fn get_drawing_offsets_from_tiled(
     grid_coordinates: &TileGridCoordinates,
 ) -> TileDrawingOffset {
     let tile_grid_z = grid_coordinates.z();
+
+    // TODO: Consider horizontal layer offsets as well, and
+    // making this into MapLayerOffset.
+    let vertical_layer_offset = tiled_map.layers().nth(tile_grid_z).unwrap().offset_y;
     let tile_layer = tiled_map
         .get_layer(tile_grid_z)
         .unwrap()
@@ -368,7 +378,7 @@ fn get_drawing_offsets_from_tiled(
     if let Some(tile) = tile_layer.get_tile(tile_grid_x, tile_grid_y) {
         let tileset = tile.get_tileset();
         let tile_offset_x = tileset.offset_x as isize;
-        let tile_offset_y = tileset.offset_y as isize;
+        let tile_offset_y = (tileset.offset_y as f32 + vertical_layer_offset) as isize;
 
         TileDrawingOffset::new(tile_offset_x, tile_offset_y)
     } else {
@@ -431,9 +441,6 @@ impl Tilemap {
         let map_grid_dimensions = MapGridDimensions::new_3d(map_width, map_height, map_depth);
 
         for z in 0..map_depth {
-            // TODO: Consider horizontal layer offsets as well, and
-            // making this into MapLayerOffset.
-            let vertical_layer_offset = tiled_map.layers().nth(z).unwrap().offset_y;
             for x in 0..map_width {
                 for y in 0..map_height {
                     let tile_grid_pos = TileGridCoordinates::new_3d(x, y, z);
@@ -441,15 +448,15 @@ impl Tilemap {
                     let drawing_offsets =
                         get_drawing_offsets_from_tiled(&tiled_map, &tile_grid_pos);
 
-                    let tile_px_x = drawing_offsets.x() + (tile_side_length * x) as isize;
-                    let tile_px_y = drawing_offsets.y()
-                        + vertical_layer_offset as isize
-                        + (tile_side_length * y) as isize;
+                    let tile_px_x = (tile_side_length * x) as isize;
+                    let tile_px_y = (tile_side_length * y) as isize;
                     let tile_px_z = z as isize;
                     let tile = Tile {
                         dimensions: TileDimensions::new(tile_width, tile_height),
                         pixel_pos: TilePixelCoordinates::new_3d(tile_px_x, tile_px_y, tile_px_z),
                         grid_pos: tile_grid_pos,
+                        drawing_offsets,
+
                         texture: tile_texture,
                     };
 
@@ -493,6 +500,8 @@ impl Tilemap {
         for tile in &mut self.tiles {
             let tile_px_x = tile.get_pixel_coordinates().x();
             let tile_px_y = tile.get_pixel_coordinates().y();
+            let tile_px_x_offset = tile.get_drawing_offsets().x() as f32;
+            let tile_px_y_offset = tile.get_drawing_offsets().y() as f32;
             // Rendering "depth" for some isometric tile is not simple, making
             // certain tiles render behind others, when they should be in front.
             //
@@ -501,8 +510,8 @@ impl Tilemap {
             let z_with_y_offset =
                 tile.get_grid_coordinates().x() as f32 + tile.get_pixel_coordinates().z();
 
-            let isometric_px_x = tile_px_x - tile_px_y;
-            let isometric_px_y = (tile_px_x + tile_px_y) / 2.0;
+            let isometric_px_x = (tile_px_x - tile_px_y) + tile_px_x_offset;
+            let isometric_px_y = ((tile_px_x + tile_px_y) / 2.0) + tile_px_y_offset;
 
             let tile_pixel_coordinates = tile.get_pixel_coordinates_mut();
             tile_pixel_coordinates.set_x(isometric_px_x);
