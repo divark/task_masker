@@ -29,8 +29,7 @@ pub fn spawn_tiled_tiles(
 
 fn main() {
     let mut map_viewer = App::new();
-
-    map_viewer.add_plugins(DefaultPlugins);
+    map_viewer.add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()));
     map_viewer.add_plugins(TiledCameraPlugin);
     map_viewer.add_systems(Startup, spawn_tiled_tiles);
 
