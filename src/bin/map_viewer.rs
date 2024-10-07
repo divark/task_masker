@@ -15,6 +15,7 @@ pub fn spawn_tiled_tiles(
     let mut tilemap = Tilemap::new();
     tilemap.load_tiles_from_tiled_map(&PathBuf::from("assets/TM_map.tmx"));
     tilemap.to_isometric_coordinates();
+    tilemap.y_sort_tiles();
     tilemap.flip_y_axis();
     let render_tiles = convert_tilemap_to_bevy_render_tiles(
         &tilemap,

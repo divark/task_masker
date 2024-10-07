@@ -99,3 +99,13 @@ Feature: An isometric tilemap should be loaded from some map file.
         And Tile 1, 0, 0 should be at grid coordinates 1, 0, 0.
         And Tile 1, 0, 0 should be at pixel coordinates 32, 16, 1.
         And Tile 0, 1, 0 should be at pixel coordinates -32, 16, 0.
+
+    Scenario: A single-layer Tiled isometric map has the correct tile depths.
+        Given a Tiled map called single_layer_isometric.tmx,
+        When the tiles are loaded from the Tiled map,
+        And the tile coordinates have been converted to isometric,
+        And the tile coordinates have been y-sorted,
+        Then Tile 0, 1, 0 should be higher than Tile 0, 0, 0.
+        And Tile 1, 0, 0 should be higher than Tile 0, 0, 0.
+        And Tile 1, 1, 0 should be higher than Tile 0, 1, 0.
+        And Tile 1, 1, 0 should be higher than Tile 1, 0, 0.

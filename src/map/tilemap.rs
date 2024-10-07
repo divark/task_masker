@@ -35,6 +35,11 @@ impl MapGridDimensions {
     pub fn height(&self) -> usize {
         self.height
     }
+
+    /// Returns the depth (number of layers) in tiles.
+    pub fn depth(&self) -> usize {
+        self.depth
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -517,6 +522,25 @@ impl Tilemap {
             tile_pixel_coordinates.set_x(isometric_px_x);
             tile_pixel_coordinates.set_y(isometric_px_y);
             tile_pixel_coordinates.set_z(z_with_y_offset);
+        }
+    }
+
+    /// Adjusts depth (via z coordinate) for all recorded tiles,
+    /// sorted by their y coordinate.
+    pub fn y_sort_tiles(&mut self) {
+        // Fun fact: Tiles are loaded first and foremost based on their
+        // y value. See load_tiles_from_tiled_map for more details.
+        let map_width = self.get_dimensions().width();
+        let map_height = self.get_dimensions().height();
+        let map_depth = self.get_dimensions().depth();
+        let map_area = map_width * map_height * map_depth;
+
+        for (depth, tile) in self.tiles.iter_mut().enumerate() {
+            // The tile height would be too high without this,
+            // making the rendering look funny, with seemingly "invisible"
+            // tiles if out of bounds.
+            let new_depth = depth as f32 / map_area as f32;
+            tile.get_pixel_coordinates_mut().set_z(new_depth);
         }
     }
 }

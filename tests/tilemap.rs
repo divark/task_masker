@@ -154,6 +154,11 @@ fn convert_tile_coordinates_to_isometric(tiled_context: &mut TiledContext) {
     tiled_context.tilemap_mut().to_isometric_coordinates();
 }
 
+#[when("the tile coordinates have been y-sorted,")]
+fn y_sort_tile_coordinates(tiled_context: &mut TiledContext) {
+    tiled_context.tilemap_mut().y_sort_tiles();
+}
+
 #[then(regex = r"there should be (\d+) Tiles? loaded from the Tiled map.")]
 fn check_tile_is_loaded(tiled_context: &mut TiledContext, num_tiles_expected: String) {
     let expected_num_tiles = num_tiles_expected.parse::<usize>().unwrap();
@@ -411,6 +416,43 @@ fn check_tile_texture_has_correct_width_and_height(
         .get_sprite_dimensions();
 
     assert_eq!(expected_dimensions, *actual_dimensions);
+}
+
+#[then(regex = r"Tile (\d+), (\d+), (\d+) should be higher than Tile (\d+), (\d+), (\d+).")]
+fn check_tile_heights(
+    tiled_context: &mut TiledContext,
+    first_tile_x: String,
+    first_tile_y: String,
+    first_tile_z: String,
+    second_tile_x: String,
+    second_tile_y: String,
+    second_tile_z: String,
+) {
+    let first_tile_x_coord = first_tile_x.parse::<usize>().unwrap();
+    let first_tile_y_coord = first_tile_y.parse::<usize>().unwrap();
+    let first_tile_z_coord = first_tile_z.parse::<usize>().unwrap();
+    let first_tile_grid_coordinates =
+        TileGridCoordinates::new_3d(first_tile_x_coord, first_tile_y_coord, first_tile_z_coord);
+
+    let second_tile_x_coord = second_tile_x.parse::<usize>().unwrap();
+    let second_tile_y_coord = second_tile_y.parse::<usize>().unwrap();
+    let second_tile_z_coord = second_tile_z.parse::<usize>().unwrap();
+    let second_tile_grid_coordinates = TileGridCoordinates::new_3d(
+        second_tile_x_coord,
+        second_tile_y_coord,
+        second_tile_z_coord,
+    );
+
+    let first_tile = tiled_context
+        .get_tile(&first_tile_grid_coordinates)
+        .expect("check_tile_height: Could not find first tile.");
+    let second_tile = tiled_context
+        .get_tile(&second_tile_grid_coordinates)
+        .expect("check_tile_height: Could not find second tile.");
+
+    let first_tile_height = first_tile.get_pixel_coordinates().z();
+    let second_tile_height = second_tile.get_pixel_coordinates().z();
+    assert!(first_tile_height > second_tile_height);
 }
 
 fn main() {
