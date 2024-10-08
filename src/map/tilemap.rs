@@ -527,12 +527,16 @@ impl Tilemap {
             let tile_px_y_offset = tile.get_drawing_offsets().y() as f32;
 
             let mut isometric_px_x = (tile_px_x - tile_px_y) / tile_ratio + tile_px_x_offset;
+            // A sprite whose smaller than a tile's size should be centered. This is
+            // what's happening here, but on the x-axis.
             if tile_sprite_width != tile_width {
                 isometric_px_x += (tile_sprite_width as f32 - tile_width as f32) / 2.0;
             }
 
             let mut isometric_px_y =
                 ((tile_px_x + tile_px_y) / (2.0 * tile_ratio)) + tile_px_y_offset;
+            // A sprite whose smaller than a tile's size should be centered. This is
+            // what's happening here, but on the y-axis.
             if tile_sprite_height != tile_height * tile_ratio as usize {
                 isometric_px_y +=
                     -(tile_sprite_height as f32 - (tile_height * tile_ratio as usize) as f32) / 2.0;
