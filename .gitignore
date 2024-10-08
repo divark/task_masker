@@ -5,6 +5,7 @@
 
 *.png
 !terrain_0.png
+!terrain_0_32x.png
 *.jpg
 
 ._*.tmx
