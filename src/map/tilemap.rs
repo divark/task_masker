@@ -438,7 +438,6 @@ impl Tilemap {
 
         let tile_width = tiled_map.tile_width as usize;
         let tile_height = tiled_map.tile_height as usize;
-        let tile_side_length = tile_width.min(tile_height);
 
         let map_width = tiled_map.width as usize;
         let map_height = tiled_map.height as usize;
@@ -453,8 +452,8 @@ impl Tilemap {
                     let drawing_offsets =
                         get_drawing_offsets_from_tiled(&tiled_map, &tile_grid_pos);
 
-                    let tile_px_x = (tile_side_length * x) as isize;
-                    let tile_px_y = (tile_side_length * y) as isize;
+                    let tile_px_x = (tile_width * x) as isize;
+                    let tile_px_y = (tile_height * y) as isize;
                     let tile_px_z = z as isize;
                     let tile = Tile {
                         dimensions: TileDimensions::new(tile_width, tile_height),
@@ -503,25 +502,45 @@ impl Tilemap {
     /// Converts the pixel coordinates of each Tile to the isometric coordinate system.
     pub fn to_isometric_coordinates(&mut self) {
         for tile in &mut self.tiles {
-            let tile_px_x = tile.get_pixel_coordinates().x();
-            let tile_px_y = tile.get_pixel_coordinates().y();
+            if tile.get_tile_texture().is_none() {
+                continue;
+            }
+            let tile_texture = tile.get_tile_texture().unwrap();
+            let tile_sprite = tile_texture.get_sprite();
+            let tile_sprite_width = tile_sprite.get_sprite_dimensions().width();
+            let tile_sprite_height = tile_sprite.get_sprite_dimensions().height();
+
+            let tile_width = tile.get_tile_dimensions().width();
+            let tile_height = tile.get_tile_dimensions().height();
+            // Isometric tiles in games are typically 2:1, like 32 width:16 height,
+            // but just in case this is different, it's captured here.
+            let tile_ratio = (tile_width / tile_height) as f32;
+
+            let tile_px_x = (tile.get_grid_coordinates().x() * tile_width) as f32;
+
+            // On a tilemap whose tiles are 32x16, it's assumed that 32x32 sprites are
+            // being used. Because of that, tile_height is "restored" to what the sprite
+            // size should be by multiplying it by the tile ratio, which is typically 2.
+            let tile_px_y =
+                tile.get_grid_coordinates().y() as f32 * (tile_height as f32 * tile_ratio);
             let tile_px_x_offset = tile.get_drawing_offsets().x() as f32;
             let tile_px_y_offset = tile.get_drawing_offsets().y() as f32;
-            // Rendering "depth" for some isometric tile is not simple, making
-            // certain tiles render behind others, when they should be in front.
-            //
-            // Because of this, we're doing a "y-sort", assuming as if one is looking
-            // at a slanted surface going away from you.
-            let z_with_y_offset =
-                tile.get_grid_coordinates().x() as f32 + tile.get_pixel_coordinates().z();
 
-            let isometric_px_x = (tile_px_x - tile_px_y) + tile_px_x_offset;
-            let isometric_px_y = ((tile_px_x + tile_px_y) / 2.0) + tile_px_y_offset;
+            let mut isometric_px_x = (tile_px_x - tile_px_y) / tile_ratio + tile_px_x_offset;
+            if tile_sprite_width != tile_width {
+                isometric_px_x += (tile_sprite_width as f32 - tile_width as f32) / 2.0;
+            }
+
+            let mut isometric_px_y =
+                ((tile_px_x + tile_px_y) / (2.0 * tile_ratio)) + tile_px_y_offset;
+            if tile_sprite_height != tile_height * tile_ratio as usize {
+                isometric_px_y +=
+                    -(tile_sprite_height as f32 - (tile_height * tile_ratio as usize) as f32) / 2.0;
+            }
 
             let tile_pixel_coordinates = tile.get_pixel_coordinates_mut();
             tile_pixel_coordinates.set_x(isometric_px_x);
             tile_pixel_coordinates.set_y(isometric_px_y);
-            tile_pixel_coordinates.set_z(z_with_y_offset);
         }
     }
 
