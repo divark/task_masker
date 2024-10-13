@@ -5,7 +5,7 @@ use std::collections::VecDeque;
 use crate::entities::streamer::{StreamerLabel, StreamerState};
 use crate::entities::WaitToLeaveTimer;
 use crate::map::path_finding::*;
-use crate::map::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
+use crate::map::tilemap::{MapGridDimensions, TileGridCoordinates};
 use crate::ui::chatting::{Msg, TypingMsg};
 
 use super::GameEntityType;
@@ -75,43 +75,25 @@ pub fn replace_chatter_sprite(
 
 /// Respawns Chatter without rendering components
 pub fn replace_chatter_tile(
-    tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,
-    map_info_query: Query<
-        (&Transform, &TilemapGridSize, &TilemapSize, &TilemapType),
-        Added<TilemapGridSize>,
-    >,
+    tiles_query: Query<(Entity, &TileGridCoordinates, &Transform, &TileTextureIndex)>,
     mut commands: Commands,
 ) {
-    let map_information = map_info_query
-        .iter()
-        .find(|map_info| map_info.0.translation.z == CHATTER_LAYER_NUM as f32);
-
-    if map_information.is_none() {
-        return;
-    }
-
-    let (map_transform, grid_size, map_size, map_type) =
-        map_information.expect("mock_replace_chatter: Map information should exist by now.");
-
-    for (chatter_entity, layer_number, tile_pos, tile_texture_index) in &tiles_query {
-        if layer_number.0 != CHATTER_LAYER_NUM {
+    for (chatter_entity, tile_pos, tile_transform, tile_texture_index) in &tiles_query {
+        if tile_pos.z() != CHATTER_LAYER_NUM {
             continue;
         }
-
-        let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
-        let tile_transform = to_bevy_transform(tile_pos, map_info);
 
         commands.entity(chatter_entity).despawn_recursive();
         commands.spawn((
             (
                 ChatterLabel,
-                tile_transform,
+                *tile_transform,
                 GameEntityType::Fly,
                 ChatterStatus::Idle,
                 ChatMessageQueue(VecDeque::new()),
                 *tile_texture_index,
             ),
-            *tile_pos,
+            tile_pos.clone(),
         ));
     }
 }
@@ -150,11 +132,16 @@ pub fn add_chat_msg_to_queue(
 
 pub fn fly_to_streamer_to_speak(
     mut chatter: Query<
-        (&TilePos, &mut Path, &mut ChatterStatus, &ChatMessageQueue),
+        (
+            &TileGridCoordinates,
+            &mut Path,
+            &mut ChatterStatus,
+            &ChatMessageQueue,
+        ),
         With<ChatterLabel>,
     >,
     air_graph: Query<&UndirectedGraph>,
-    streamer: Query<&TilePos, With<StreamerLabel>>,
+    streamer: Query<&TileGridCoordinates, With<StreamerLabel>>,
 ) {
     if air_graph.is_empty() || streamer.is_empty() {
         return;
@@ -174,7 +161,9 @@ pub fn fly_to_streamer_to_speak(
             continue;
         }
 
-        if let Some(mut path) = air_graph.shortest_path(*chatter_tilepos, *streamer_tilepos) {
+        if let Some(mut path) =
+            air_graph.shortest_path(chatter_tilepos.clone(), streamer_tilepos.clone())
+        {
             // The chatter should not be directly on top of the
             // streamer, so we provide some distance by adjusting
             // the path to not go straight to the streamer.
@@ -292,7 +281,9 @@ pub fn leave_from_streamer_from_chatter(
             continue;
         }
 
-        if let Some(path) = air_graph.shortest_path(chatter_start_pos.1, chatter_spawn_pos.0) {
+        if let Some(path) =
+            air_graph.shortest_path(chatter_start_pos.1.clone(), chatter_spawn_pos.0.clone())
+        {
             *chatter_path = path;
             commands.entity(chatter_entity).remove::<WaitToLeaveTimer>();
 
@@ -327,7 +318,7 @@ pub fn return_chatter_to_idle(
 pub fn follow_streamer_while_speaking(
     streamer_info: Query<(&StreamerState, &Path), Changed<StreamerState>>,
     mut chatter_info: Query<(&ChatterStatus, &mut Path), Without<StreamerState>>,
-    map_info: Query<&TilemapSize>,
+    map_info: Query<&MapGridDimensions>,
 ) {
     if streamer_info.is_empty() || chatter_info.is_empty() || map_info.is_empty() {
         return;
@@ -354,15 +345,19 @@ pub fn follow_streamer_while_speaking(
         chatter_path.0 = streamer_path
             .0
             .iter()
-            .map(|target| idx_to_tilepos(*target, map_size.y))
+            .map(|target| idx_to_tilepos(*target, map_size.width() as u32))
             .map(|tilepos| {
-                TilePos::new(
-                    tilepos.x + DIST_AWAY_FROM_STREAMER as u32,
-                    tilepos.y + DIST_AWAY_FROM_STREAMER as u32,
+                TileGridCoordinates::new(
+                    tilepos.x() + DIST_AWAY_FROM_STREAMER,
+                    tilepos.y() + DIST_AWAY_FROM_STREAMER,
                 )
             })
             .map(|tilepos_adjusted| {
-                tilepos_to_idx(tilepos_adjusted.x, tilepos_adjusted.y, map_size.y)
+                tilepos_to_idx(
+                    tilepos_adjusted.x() as u32,
+                    tilepos_adjusted.y() as u32,
+                    map_size.width() as u32,
+                )
             })
             .collect::<VecDeque<usize>>();
     }
@@ -370,9 +365,12 @@ pub fn follow_streamer_while_speaking(
 
 pub fn follow_streamer_while_approaching_for_chatter(
     streamer_info: Query<(&StreamerState, &Path), Without<ChatterStatus>>,
-    mut chatter_info: Query<(&ChatterStatus, &TilePos, &mut Path), Without<StreamerState>>,
+    mut chatter_info: Query<
+        (&ChatterStatus, &TileGridCoordinates, &mut Path),
+        Without<StreamerState>,
+    >,
     air_graph_info: Query<&UndirectedGraph>,
-    map_info: Query<&TilemapSize>,
+    map_info: Query<&MapGridDimensions>,
 ) {
     if streamer_info.is_empty() || chatter_info.is_empty() || map_info.is_empty() {
         return;
@@ -411,14 +409,17 @@ pub fn follow_streamer_while_approaching_for_chatter(
             .iter()
             .last()
             .expect("follow_streamer_while_approaching: Streamer Path should be populated.");
-        let streamer_destination_tilepos = idx_to_tilepos(*streamer_destination, map_size.y);
-        let chatter_destination_distanced = TilePos::new(
-            streamer_destination_tilepos.x + DIST_AWAY_FROM_STREAMER as u32,
-            streamer_destination_tilepos.y + DIST_AWAY_FROM_STREAMER as u32,
+        let streamer_destination_tilepos =
+            idx_to_tilepos(*streamer_destination, map_size.width() as u32);
+        let chatter_destination_distanced = TileGridCoordinates::new(
+            streamer_destination_tilepos.x() + DIST_AWAY_FROM_STREAMER,
+            streamer_destination_tilepos.y() + DIST_AWAY_FROM_STREAMER,
         );
 
-        let current_chatter_destination =
-            idx_to_tilepos(*chatter_path.0.iter().last().unwrap(), map_size.y);
+        let current_chatter_destination = idx_to_tilepos(
+            *chatter_path.0.iter().last().unwrap(),
+            map_size.width() as u32,
+        );
 
         // We do not want to re-populate the path if the Chatter is already
         // going to the desired destination.
@@ -433,7 +434,9 @@ pub fn follow_streamer_while_approaching_for_chatter(
             continue;
         }
 
-        if let Some(path) = air_graph.shortest_path(*chatter_pos, chatter_destination_distanced) {
+        if let Some(path) =
+            air_graph.shortest_path(chatter_pos.clone(), chatter_destination_distanced)
+        {
             *chatter_path = path;
         }
     }

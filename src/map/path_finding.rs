@@ -1,115 +1,16 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::VecDeque;
 
 use bevy::prelude::*;
-use bevy_ecs_tilemap::prelude::*;
 
 use crate::entities::{subscriber::SUBSCRIBER_LAYER_NUM, GameEntityType};
 
-use super::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
+use super::tilemap::{MapGridDimensions, TileGridCoordinates};
 
 #[derive(Component, PartialEq, Debug)]
 pub enum GraphType {
     Ground,
     Air,
     Water,
-}
-
-pub struct TranslationGatherer {
-    map_information: Vec<TileLayerPosition>,
-}
-
-impl TranslationGatherer {
-    pub fn new(map_information: Vec<TileLayerPosition>) -> Self {
-        Self { map_information }
-    }
-
-    /// Returns a Transform (Position) for each Heighted Tile.
-    pub fn translations_from(&self, heighted_tiles: &Vec<HeightedTilePos>) -> Vec<Vec3> {
-        let mut heighted_tile_translations = Vec::new();
-
-        let tile_height_map = height_map_from(heighted_tiles);
-        let unique_tiles = unique_tiles_from(heighted_tiles);
-        let (length, _width, _height) = dimensions_from(heighted_tiles);
-
-        for tile in unique_tiles {
-            let tile_idx = tilepos_to_idx(tile.x, tile.y, length);
-            let tile_height = tile_height_map[tile_idx];
-
-            let tile_layer_position = self
-                .map_information
-                .get(tile_height)
-                .expect("translations_from: Could not find map information at given tile height.");
-
-            let grid_size = tile_layer_position.get_grid_size();
-            let map_type = tile_layer_position.get_map_type();
-            let map_position = tile_layer_position.get_position();
-
-            let tile_translation = tile
-                .center_in_world(grid_size, map_type)
-                .extend(map_position.translation.z);
-            let tile_transform = *map_position * Transform::from_translation(tile_translation);
-
-            heighted_tile_translations.push(tile_transform.translation);
-        }
-
-        heighted_tile_translations
-    }
-
-    /// Returns the Highest Transform (Position) found for each Heighted Tile.
-    pub fn highest_translations_from(&self, heighted_tiles: &Vec<HeightedTilePos>) -> Vec<Vec3> {
-        let mut heighted_tile_translations = Vec::new();
-
-        let unique_tiles = unique_tiles_from(heighted_tiles);
-        for tile in unique_tiles {
-            let tile_layer_position = self.map_information.iter().last().expect(
-                "highest_translations_from: Could not find map information at the highest
-                tile height.",
-            );
-
-            let grid_size = tile_layer_position.get_grid_size();
-            let map_type = tile_layer_position.get_map_type();
-            let map_position = tile_layer_position.get_position();
-
-            let tile_translation = tile
-                .center_in_world(grid_size, map_type)
-                .extend(map_position.translation.z);
-            let tile_transform = *map_position * Transform::from_translation(tile_translation);
-
-            heighted_tile_translations.push(tile_transform.translation);
-        }
-
-        heighted_tile_translations
-    }
-
-    /// Returns the Lowest Transform (Position) found for each Heighted Tile.
-    pub fn translations_at_height(
-        &self,
-        heighted_tiles: &Vec<HeightedTilePos>,
-        height: usize,
-    ) -> Vec<Vec3> {
-        let mut heighted_tile_translations = Vec::new();
-
-        let unique_tiles = unique_tiles_from(heighted_tiles);
-        for tile in unique_tiles {
-            let tile_layer_position = self.map_information.get(height).expect(
-                "lowest_translations_from: Could not find map information at the specified
-                tile height.",
-            );
-
-            let grid_size = tile_layer_position.get_grid_size();
-            let map_type = tile_layer_position.get_map_type();
-            let map_position = tile_layer_position.get_position();
-
-            let tile_translation = tile
-                .center_in_world(grid_size, map_type)
-                .extend(map_position.translation.z);
-            let tile_transform = *map_position * Transform::from_translation(tile_translation);
-
-            heighted_tile_translations.push(tile_transform.translation);
-        }
-
-        heighted_tile_translations
-    }
 }
 
 #[derive(Component)]
@@ -126,7 +27,7 @@ impl UndirectedGraph {
     /// of Tiles being considered.
     pub fn from_tiles(
         tile_type: GraphType,
-        tiles: Vec<HeightedTilePos>,
+        tiles: Vec<TileGridCoordinates>,
         tile_layers: Vec<TileLayerPosition>,
     ) -> Self {
         let (length, _width, _height) = dimensions_from(&tiles);
@@ -155,7 +56,11 @@ impl UndirectedGraph {
 
     /// Returns a Shortest Path for some start and destination
     /// Tile Positions.
-    pub fn shortest_path(&self, start: TilePos, end: TilePos) -> Option<Path> {
+    pub fn shortest_path(
+        &self,
+        start: TileGridCoordinates,
+        end: TileGridCoordinates,
+    ) -> Option<Path> {
         self.edges.shortest_path(start, end, self.length)
     }
 
@@ -181,38 +86,9 @@ impl UndirectedGraph {
 #[derive(Component, Clone)]
 pub struct NodeData(pub Vec<Vec3>);
 
-#[derive(Clone)]
-pub struct TileLayerPosition {
-    grid_size: TilemapGridSize,
-    map_type: TilemapType,
-    position: Transform,
-}
-
-impl TileLayerPosition {
-    pub fn new(grid_size: TilemapGridSize, map_type: TilemapType, position: Transform) -> Self {
-        Self {
-            grid_size,
-            map_type,
-            position,
-        }
-    }
-
-    pub fn get_grid_size(&self) -> &TilemapGridSize {
-        &self.grid_size
-    }
-
-    pub fn get_map_type(&self) -> &TilemapType {
-        &self.map_type
-    }
-
-    pub fn get_position(&self) -> &Transform {
-        &self.position
-    }
-}
-
 impl NodeData {
     pub fn from_ground_tiles(
-        heighted_tiles: &Vec<HeightedTilePos>,
+        heighted_tiles: &Vec<TileGridCoordinates>,
         layer_map_information: Vec<TileLayerPosition>,
     ) -> Self {
         let translation_gatherer = TranslationGatherer::new(layer_map_information);
@@ -223,7 +99,7 @@ impl NodeData {
     }
 
     pub fn from_air_tiles(
-        heighted_tiles: &Vec<HeightedTilePos>,
+        heighted_tiles: &Vec<TileGridCoordinates>,
         layer_map_information: Vec<TileLayerPosition>,
     ) -> Self {
         let translation_gatherer = TranslationGatherer::new(layer_map_information);
@@ -234,7 +110,7 @@ impl NodeData {
     }
 
     pub fn from_water_tiles(
-        heighted_tiles: &Vec<HeightedTilePos>,
+        heighted_tiles: &Vec<TileGridCoordinates>,
         layer_map_information: Vec<TileLayerPosition>,
     ) -> Self {
         let translation_gatherer = TranslationGatherer::new(layer_map_information);
@@ -251,7 +127,7 @@ pub struct NodeEdges(pub Vec<Vec<usize>>);
 
 /// Returns the Length, Width, and Height derived from
 /// some collection of Heighted Tile Positions.
-fn dimensions_from(heighted_tiles: &Vec<HeightedTilePos>) -> (u32, u32, u32) {
+fn dimensions_from(heighted_tiles: &Vec<TileGridCoordinates>) -> (u32, u32, u32) {
     let (mut min_x, mut max_x) = (0, 0);
     let (mut min_y, mut max_y) = (0, 0);
     let (mut min_z, mut max_z) = (0, 0);
@@ -275,13 +151,13 @@ fn dimensions_from(heighted_tiles: &Vec<HeightedTilePos>) -> (u32, u32, u32) {
     let width = max_y - min_y + 1;
     let height = max_z - min_z + 1;
 
-    (length, width, height)
+    (length as u32, width as u32, height as u32)
 }
 
 /// Returns a 1 Dimensional Height Map calculated from some
 /// collection of Heighted Tile Positions with respect to
 /// the desired length and width.
-fn height_map_from(ground_tiles: &Vec<HeightedTilePos>) -> Vec<usize> {
+fn height_map_from(ground_tiles: &Vec<TileGridCoordinates>) -> Vec<usize> {
     let (length, width, _height) = dimensions_from(ground_tiles);
     let mut height_map: Vec<usize> = vec![0; length as usize * width as usize];
 
@@ -292,7 +168,7 @@ fn height_map_from(ground_tiles: &Vec<HeightedTilePos>) -> Vec<usize> {
     ground_tiles_sorted.sort_unstable();
 
     for heighted_tile in ground_tiles_sorted.iter() {
-        let height_idx = tilepos_to_idx(heighted_tile.x(), heighted_tile.y(), length);
+        let height_idx = tilepos_to_idx(heighted_tile.x() as u32, heighted_tile.y() as u32, length);
         let height_entry = height_map[height_idx];
 
         // The difference of 1 here allows for tiles that are not
@@ -310,24 +186,14 @@ fn height_map_from(ground_tiles: &Vec<HeightedTilePos>) -> Vec<usize> {
 
 /// Returns a collection of Tile Positions sorted and extracted
 /// from Heighted Tile Positions.
-pub fn unique_tiles_from(tiles: &Vec<HeightedTilePos>) -> Vec<TilePos> {
-    let mut unique_tiles = HashSet::new();
-
-    for tile in tiles {
-        unique_tiles.insert(tile.xy);
-    }
-
-    let mut unique_tiles_no_dups = Vec::from_iter(unique_tiles);
-    unique_tiles_no_dups
-        .sort_by(|source, other| source.x.cmp(&other.x).then(source.y.cmp(&other.y)));
-
-    unique_tiles_no_dups
+pub fn unique_tiles_from(tiles: &Vec<TileGridCoordinates>) -> Vec<TileGridCoordinates> {
+    tiles.clone()
 }
 
 impl NodeEdges {
     /// Returns a set of Node Edges derived from a collection of Tiles
     /// designated for Ground traversal.
-    pub fn from_ground_tiles(ground_tiles: Vec<HeightedTilePos>) -> NodeEdges {
+    pub fn from_ground_tiles(ground_tiles: Vec<TileGridCoordinates>) -> NodeEdges {
         let mut directed_graph_edges: Vec<Vec<usize>> = Vec::with_capacity(ground_tiles.len());
 
         let height_map: Vec<usize> = height_map_from(&ground_tiles);
@@ -336,13 +202,18 @@ impl NodeEdges {
         let tile_positions_no_layers = unique_tiles_from(&ground_tiles);
 
         for tile_position in tile_positions_no_layers {
-            let tile_idx = tilepos_to_idx(tile_position.x, tile_position.y, length);
+            let tile_idx =
+                tilepos_to_idx(tile_position.x() as u32, tile_position.y() as u32, length);
             let tile_height = height_map[tile_idx];
 
             let mut current_node_edges = Vec::new();
 
-            if tile_position.x > 0 && tile_height > 0 {
-                let top_node_idx = tilepos_to_idx(tile_position.x - 1, tile_position.y, length);
+            if tile_position.x() as u32 > 0 && tile_height > 0 {
+                let top_node_idx = tilepos_to_idx(
+                    tile_position.x() as u32 - 1,
+                    tile_position.y() as u32,
+                    length,
+                );
                 let height_difference: i32 = height_map[top_node_idx] as i32 - tile_height as i32;
                 if height_difference.abs() <= 1 {
                     current_node_edges.push(top_node_idx);
@@ -350,8 +221,12 @@ impl NodeEdges {
                 }
             }
 
-            if tile_position.y > 0 && tile_height > 0 {
-                let left_node_idx = tilepos_to_idx(tile_position.x, tile_position.y - 1, length);
+            if tile_position.y() > 0 && tile_height > 0 {
+                let left_node_idx = tilepos_to_idx(
+                    tile_position.x() as u32,
+                    tile_position.y() as u32 - 1,
+                    length,
+                );
                 let height_difference: i32 = height_map[left_node_idx] as i32 - tile_height as i32;
                 if height_difference.abs() <= 1 {
                     current_node_edges.push(left_node_idx);
@@ -367,25 +242,34 @@ impl NodeEdges {
 
     /// Returns a set of Node Edges derived from a collection of Tiles
     /// designated for Air traversal.
-    pub fn from_air_tiles(air_tiles: Vec<HeightedTilePos>) -> NodeEdges {
+    pub fn from_air_tiles(air_tiles: Vec<TileGridCoordinates>) -> NodeEdges {
         let mut directed_graph_edges: Vec<Vec<usize>> = Vec::with_capacity(air_tiles.len());
 
         let (length, _width, _height) = dimensions_from(&air_tiles);
 
         let tile_positions_no_layers = unique_tiles_from(&air_tiles);
         for tile_position in tile_positions_no_layers {
-            let tile_idx = tilepos_to_idx(tile_position.x, tile_position.y, length);
+            let tile_idx =
+                tilepos_to_idx(tile_position.x() as u32, tile_position.y() as u32, length);
 
             let mut current_node_edges = Vec::new();
-            if tile_position.x > 0 {
-                let top_node_idx = tilepos_to_idx(tile_position.x - 1, tile_position.y, length);
+            if tile_position.x() > 0 {
+                let top_node_idx = tilepos_to_idx(
+                    tile_position.x() as u32 - 1,
+                    tile_position.y() as u32,
+                    length,
+                );
 
                 current_node_edges.push(top_node_idx);
                 directed_graph_edges[top_node_idx].push(tile_idx);
             }
 
-            if tile_position.y > 0 {
-                let left_node_idx = tilepos_to_idx(tile_position.x, tile_position.y - 1, length);
+            if tile_position.y() > 0 {
+                let left_node_idx = tilepos_to_idx(
+                    tile_position.x() as u32,
+                    tile_position.y() as u32 - 1,
+                    length,
+                );
                 current_node_edges.push(left_node_idx);
                 directed_graph_edges[left_node_idx].push(tile_idx);
             }
@@ -398,7 +282,7 @@ impl NodeEdges {
 
     /// Returns a set of Node Edges derived from a collection of Tiles
     /// designated for Water traversal.
-    pub fn from_water_tiles(water_tiles: Vec<HeightedTilePos>) -> NodeEdges {
+    pub fn from_water_tiles(water_tiles: Vec<TileGridCoordinates>) -> NodeEdges {
         let mut directed_graph_edges: Vec<Vec<usize>> = Vec::with_capacity(water_tiles.len());
 
         let height_map: Vec<usize> = height_map_from(&water_tiles);
@@ -407,13 +291,18 @@ impl NodeEdges {
         let tile_positions_no_layers = unique_tiles_from(&water_tiles);
 
         for tile_position in tile_positions_no_layers {
-            let tile_idx = tilepos_to_idx(tile_position.x, tile_position.y, length);
+            let tile_idx =
+                tilepos_to_idx(tile_position.x() as u32, tile_position.y() as u32, length);
             let tile_height = height_map[tile_idx];
 
             let mut current_node_edges = Vec::new();
 
-            if tile_position.x > 0 && tile_height == 0 {
-                let top_node_idx = tilepos_to_idx(tile_position.x - 1, tile_position.y, length);
+            if tile_position.x() > 0 && tile_height == 0 {
+                let top_node_idx = tilepos_to_idx(
+                    tile_position.x() as u32 - 1,
+                    tile_position.y() as u32,
+                    length,
+                );
                 let height_difference: i32 = height_map[top_node_idx] as i32 - tile_height as i32;
                 if height_difference.abs() == 0 {
                     current_node_edges.push(top_node_idx);
@@ -421,8 +310,12 @@ impl NodeEdges {
                 }
             }
 
-            if tile_position.y > 0 && tile_height == 0 {
-                let left_node_idx = tilepos_to_idx(tile_position.x, tile_position.y - 1, length);
+            if tile_position.y() > 0 && tile_height == 0 {
+                let left_node_idx = tilepos_to_idx(
+                    tile_position.x() as u32,
+                    tile_position.y() as u32 - 1,
+                    length,
+                );
                 let height_difference: i32 = height_map[left_node_idx] as i32 - tile_height as i32;
                 if height_difference.abs() == 0 {
                     current_node_edges.push(left_node_idx);
@@ -438,7 +331,12 @@ impl NodeEdges {
 
     /// Returns a Single Shortest Path between a source and target Tile
     /// Position, or nothing if none were found.
-    pub fn shortest_path(&self, source: TilePos, target: TilePos, length: u32) -> Option<Path> {
+    pub fn shortest_path(
+        &self,
+        source: TileGridCoordinates,
+        target: TileGridCoordinates,
+        length: u32,
+    ) -> Option<Path> {
         let source_tilepos = source; //convert_tiled_to_bevy_pos(source, length);
         let target_tilepos = target; //convert_tiled_to_bevy_pos(target, length);
 
@@ -448,8 +346,10 @@ impl NodeEdges {
         let mut node_parents = vec![-1; graph_node_edges.len()];
         let mut node_visited = vec![false; graph_node_edges.len()];
 
-        let mapped_source_idx = tilepos_to_idx(source_tilepos.x, source_tilepos.y, length);
-        let mut mapped_target_idx = tilepos_to_idx(target_tilepos.x, target_tilepos.y, length);
+        let mapped_source_idx =
+            tilepos_to_idx(source_tilepos.x() as u32, source_tilepos.y() as u32, length);
+        let mut mapped_target_idx =
+            tilepos_to_idx(target_tilepos.x() as u32, target_tilepos.y() as u32, length);
 
         let mut bfs_queue = VecDeque::from([mapped_source_idx]);
         while !bfs_queue.is_empty() {
@@ -512,21 +412,18 @@ pub fn tilepos_to_idx(x: u32, y: u32, world_size: u32) -> usize {
 }
 
 /// Transforms a 1D array index into its associated 2-dimensional Tilepos index.
-pub fn idx_to_tilepos(mapped_idx: usize, world_size: u32) -> TilePos {
+pub fn idx_to_tilepos(mapped_idx: usize, world_size: u32) -> TileGridCoordinates {
     let x = mapped_idx / world_size as usize;
     let y = mapped_idx - (world_size as usize * x);
 
-    TilePos {
-        x: x as u32,
-        y: y as u32,
-    }
+    TileGridCoordinates::new(x, y)
 }
 
 /// Spawns an Undirected Graph representing all land titles where the edges
 /// indicate an at most 1 tile offset between two tiles.
 pub fn create_ground_graph(
-    tile_positions: Query<(&TilePos, &LayerNumber)>,
-    map_information: Query<(&TilemapGridSize, &TilemapType, &Transform)>,
+    tile_positions: Query<&TileGridCoordinates>,
+    map_information: Query<&MapGridDimensions>,
     ground_graph_query: Query<&UndirectedGraph>,
     mut spawner: Commands,
 ) {
@@ -541,16 +438,6 @@ pub fn create_ground_graph(
         return;
     }
 
-    let heighted_tiles = tile_positions
-        .iter()
-        .map(|tile| HeightedTilePos::new(*tile.0, tile.1 .0 as u32))
-        .collect::<Vec<HeightedTilePos>>();
-
-    let layer_map_information = map_information
-        .iter()
-        .map(|layer_entry| TileLayerPosition::new(*layer_entry.0, *layer_entry.1, *layer_entry.2))
-        .collect::<Vec<TileLayerPosition>>();
-
     spawner.spawn(UndirectedGraph::from_tiles(
         GraphType::Ground,
         heighted_tiles,
@@ -560,8 +447,8 @@ pub fn create_ground_graph(
 
 /// Spawns an Undirected Graph representing all water titles
 pub fn create_water_graph(
-    tile_positions: Query<(&TilePos, &LayerNumber)>,
-    map_information: Query<(&TilemapGridSize, &TilemapType, &Transform)>,
+    tile_positions: Query<&TileGridCoordinates>,
+    map_information: Query<&MapGridDimensions>,
     water_graph_query: Query<&UndirectedGraph>,
     mut spawner: Commands,
 ) {
@@ -576,16 +463,6 @@ pub fn create_water_graph(
         return;
     }
 
-    let heighted_tiles = tile_positions
-        .iter()
-        .map(|tile| HeightedTilePos::new(*tile.0, tile.1 .0 as u32))
-        .collect::<Vec<HeightedTilePos>>();
-
-    let layer_map_information = map_information
-        .iter()
-        .map(|layer_entry| TileLayerPosition::new(*layer_entry.0, *layer_entry.1, *layer_entry.2))
-        .collect::<Vec<TileLayerPosition>>();
-
     spawner.spawn(UndirectedGraph::from_tiles(
         GraphType::Water,
         heighted_tiles,
@@ -595,8 +472,8 @@ pub fn create_water_graph(
 
 /// Spawns an Undirected Graph representing all air titles
 pub fn create_air_graph(
-    tile_positions: Query<(&TilePos, &LayerNumber)>,
-    map_information: Query<(&TilemapGridSize, &TilemapType, &Transform)>,
+    tile_positions: Query<&TileGridCoordinates>,
+    map_information: Query<&MapGridDimensions>,
     air_graph_query: Query<&UndirectedGraph>,
     mut spawner: Commands,
 ) {
@@ -611,16 +488,6 @@ pub fn create_air_graph(
         return;
     }
 
-    let heighted_tiles = tile_positions
-        .iter()
-        .map(|tile| HeightedTilePos::new(*tile.0, tile.1 .0 as u32))
-        .collect::<Vec<HeightedTilePos>>();
-
-    let layer_map_information = map_information
-        .iter()
-        .map(|layer_entry| TileLayerPosition::new(*layer_entry.0, *layer_entry.1, *layer_entry.2))
-        .collect::<Vec<TileLayerPosition>>();
-
     spawner.spawn(UndirectedGraph::from_tiles(
         GraphType::Air,
         heighted_tiles,
@@ -629,10 +496,10 @@ pub fn create_air_graph(
 }
 
 #[derive(Component, Deref, DerefMut)]
-pub struct Target(pub Option<(Vec3, TilePos)>);
+pub struct Target(pub Option<(Vec3, TileGridCoordinates)>);
 
 #[derive(Component)]
-pub struct StartingPoint(pub Vec3, pub TilePos);
+pub struct StartingPoint(pub Vec3, pub TileGridCoordinates);
 
 #[derive(Component, Deref, DerefMut)]
 pub struct Path(pub VecDeque<usize>);
@@ -649,10 +516,10 @@ pub enum Direction {
 pub struct MovementTimer(pub Timer);
 
 #[derive(Component, Deref, DerefMut)]
-pub struct DestinationQueue(VecDeque<TilePos>);
+pub struct DestinationQueue(VecDeque<TileGridCoordinates>);
 
 #[derive(Component)]
-pub struct SpawnPoint(pub TilePos);
+pub struct SpawnPoint(pub TileGridCoordinates);
 
 #[derive(Bundle)]
 pub struct PathInfo {
@@ -666,15 +533,18 @@ pub struct PathInfo {
 }
 
 pub fn insert_pathing_information(
-    moving_entities: Query<(Entity, &Transform, &TilePos), (With<GameEntityType>, Without<Path>)>,
+    moving_entities: Query<
+        (Entity, &Transform, &TileGridCoordinates),
+        (With<GameEntityType>, Without<Path>),
+    >,
     mut spawner: Commands,
 ) {
     for (moving_entity, entity_transform, entity_tilepos) in &moving_entities {
         spawner.entity(moving_entity).insert(PathInfo {
-            spawn_pos: SpawnPoint(*entity_tilepos),
+            spawn_pos: SpawnPoint(entity_tilepos.clone()),
             path: Path(VecDeque::new()),
             requested_targets: DestinationQueue(VecDeque::new()),
-            start_pos: StartingPoint(entity_transform.translation, *entity_tilepos),
+            start_pos: StartingPoint(entity_transform.translation, entity_tilepos.clone()),
             target_pos: Target(None),
             direction: Direction::TopRight,
             movement_timer: MovementTimer(Timer::from_seconds(0.05, TimerMode::Repeating)),
@@ -690,7 +560,7 @@ pub fn update_movement_target(
         &mut Direction,
         &GameEntityType,
     )>,
-    map_information: Query<&TilemapSize>,
+    map_information: Query<&MapGridDimensions>,
     graph_query: Query<&UndirectedGraph>,
 ) {
     if graph_query.is_empty() {
@@ -705,13 +575,7 @@ pub fn update_movement_target(
     // to change tilesets for the layer. However, I will not do that, so
     // both the world size and grid size should be the same.
     let world_size = map_information
-        .iter()
-        .max_by(|&x, &y| {
-            let x_world_area = x.x * x.y;
-            let y_world_area = y.x * y.y;
-
-            x_world_area.cmp(&y_world_area)
-        })
+        .get_single()
         .expect("Could not find largest world size. Is the map loaded?");
 
     for (mut target, mut path, current_pos, mut direction, movement_type) in
@@ -742,7 +606,7 @@ pub fn update_movement_target(
             .0
             .pop_front()
             .expect("The path was not supposed to be empty by here.");
-        let target_tile_pos = idx_to_tilepos(new_target, world_size.y);
+        let target_tile_pos = idx_to_tilepos(new_target, world_size.width() as u32);
         let target_pos = tile_graph.get_node(new_target).unwrap();
 
         if let Some(new_direction) =
@@ -785,7 +649,7 @@ pub fn move_entities(
         &mut Target,
         &mut MovementTimer,
         &mut StartingPoint,
-        &mut TilePos,
+        &mut TileGridCoordinates,
     )>,
     time: Res<Time>,
 ) {
@@ -801,12 +665,16 @@ pub fn move_entities(
             continue;
         }
 
-        let (target_vec, target_tile_pos) = target.0.expect("Target should be populated by now.");
+        let (target_vec, target_tile_pos) = target
+            .0
+            .as_ref()
+            .expect("Target should be populated by now.")
+            .clone();
         let target_pos = Transform::from_translation(target_vec);
 
         if *current_pos == target_pos {
-            *starting_point = StartingPoint(target_vec, target_tile_pos);
-            *tile_pos = target_tile_pos;
+            *starting_point = StartingPoint(target_vec, target_tile_pos.clone());
+            *tile_pos = target_tile_pos.clone();
             target.0 = None;
             continue;
         }
@@ -827,72 +695,9 @@ pub fn move_entities(
 }
 
 pub fn update_current_tilepos(
-    mut moving_entity: Query<(&mut TilePos, &StartingPoint), Changed<StartingPoint>>,
+    mut moving_entity: Query<(&mut TileGridCoordinates, &StartingPoint), Changed<StartingPoint>>,
 ) {
     for (mut entity_tilepos, entity_starting_point) in &mut moving_entity {
-        *entity_tilepos = entity_starting_point.1;
-    }
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct HeightedTilePos {
-    xy: TilePos,
-    z: u32,
-}
-
-impl PartialOrd for HeightedTilePos {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for HeightedTilePos {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.x()
-            .cmp(&other.x())
-            .then(self.y().cmp(&other.y()))
-            .then(self.z().cmp(&other.z()))
-    }
-}
-
-impl HeightedTilePos {
-    pub fn new(tile_pos: TilePos, height: u32) -> Self {
-        Self {
-            xy: tile_pos,
-            z: height,
-        }
-    }
-
-    /// Returns a Tile Pos excluding the z value.
-    pub fn truncate(&self) -> TilePos {
-        self.xy
-    }
-
-    pub fn x(&self) -> u32 {
-        self.xy.x
-    }
-
-    pub fn y(&self) -> u32 {
-        self.xy.y
-    }
-
-    pub fn z(&self) -> u32 {
-        self.z
-    }
-
-    /// Returns the position in Pixels (Using a Transform) of the Heighted
-    /// Tile Position with respect to the size of the grid in pixels holding
-    /// this tile.
-    pub fn transform(&self, map_info: TiledMapInformation) -> Transform {
-        let tile_pos = self.xy;
-
-        to_bevy_transform(&tile_pos, map_info)
-    }
-
-    /// Returns a new instance of a HeightedTilePos with its y axis flipped.
-    pub fn flip(&self, width: u32) -> HeightedTilePos {
-        let mapped_y = width - 1 - self.y();
-
-        HeightedTilePos::new(TilePos::new(self.x(), mapped_y), self.z())
+        *entity_tilepos = entity_starting_point.1.clone();
     }
 }

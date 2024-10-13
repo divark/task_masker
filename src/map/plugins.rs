@@ -1,20 +1,20 @@
 use bevy::prelude::*;
-use bevy_ecs_tilemap::tiles::TilePos;
 
 use super::{
     path_finding::*,
     tiled::{process_loaded_maps, spawn_map, TiledLoader, TiledMap},
 };
 use crate::map::camera::*;
+use crate::map::tilemap::*;
 use crate::GameState;
 
 #[derive(Event)]
 pub struct TilePosEvent {
-    pub destination: TilePos,
+    pub destination: TileGridCoordinates,
 }
 
 impl TilePosEvent {
-    pub fn new(destination: TilePos) -> Self {
+    pub fn new(destination: TileGridCoordinates) -> Self {
         TilePosEvent { destination }
     }
 }
@@ -45,6 +45,7 @@ pub struct TiledMapPlugin;
 
 impl Plugin for TiledMapPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
+        //app.add_systems(Startup, spawn_tiled_tiles);
         app.init_asset::<TiledMap>()
             .register_asset_loader(TiledLoader)
             .add_systems(Startup, spawn_map)

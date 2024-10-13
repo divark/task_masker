@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use std::path::PathBuf;
 use tiled::{Loader, Map};
 
-#[derive(Debug, PartialEq)]
+#[derive(Component, Debug, PartialEq)]
 pub struct MapGridDimensions {
     width: usize,
     height: usize,
@@ -86,7 +86,7 @@ impl TileDrawingOffset {
     }
 }
 
-#[derive(Debug, PartialEq, Component, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Component, Clone)]
 pub struct TileGridCoordinates {
     x: usize,
     y: usize,
@@ -648,4 +648,26 @@ pub fn convert_tilemap_to_bevy_render_tiles(
     }
 
     render_tiles
+}
+
+/// Renders all Tiles into Bevy from some Tiled map.
+pub fn spawn_tiled_tiles(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    texture_atlas_assets: ResMut<Assets<TextureAtlasLayout>>,
+) {
+    let mut tilemap = Tilemap::new();
+    tilemap.load_tiles_from_tiled_map(&PathBuf::from("assets/TM_map.tmx"));
+    tilemap.to_isometric_coordinates();
+    tilemap.y_sort_tiles();
+    tilemap.flip_y_axis();
+    let render_tiles = convert_tilemap_to_bevy_render_tiles(
+        &tilemap,
+        &asset_server.into_inner(),
+        texture_atlas_assets.into_inner(),
+    );
+
+    for render_tile in render_tiles {
+        commands.spawn(render_tile);
+    }
 }

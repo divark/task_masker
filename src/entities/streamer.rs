@@ -4,9 +4,9 @@ use bevy_ecs_tilemap::{
     tiles::TilePos,
 };
 
-use crate::map::path_finding::*;
 use crate::map::plugins::TilePosEvent;
 use crate::map::tiled::{to_bevy_transform, TiledMapInformation};
+use crate::map::{path_finding::*, tilemap::TileGridCoordinates};
 use crate::ui::chatting::ChattingStatus;
 
 use super::GameEntityType;
@@ -158,7 +158,9 @@ pub fn move_streamer(
     let streamer_target = streamer_destination_queue.pop_front().expect(
         "move_streamer: Destination queue for streamer should have been filled with something.",
     );
-    if let Some(found_path) = ground_graph.shortest_path(streamer_tile_pos.1, streamer_target) {
+    if let Some(found_path) =
+        ground_graph.shortest_path(streamer_tile_pos.1.clone(), streamer_target)
+    {
         *streamer_path = found_path;
         *streamer_status = StreamerState::Moving;
     }
@@ -190,7 +192,7 @@ pub fn queue_destination_for_streamer(
 
     let mut streamer_destination_queue = streamer_entity.single_mut();
     for destination_info in &mut destination_request_listener.read() {
-        streamer_destination_queue.push_back(destination_info.destination);
+        streamer_destination_queue.push_back(destination_info.destination.clone());
     }
 }
 
@@ -218,8 +220,8 @@ pub fn move_streamer_on_status_change(
 ) {
     for new_online_status in &mut online_status_listener.read() {
         let new_destination = match new_online_status {
-            OnlineStatus::Online => TilePos::new(41, 49),
-            OnlineStatus::Away => TilePos::new(39, 40),
+            OnlineStatus::Online => TileGridCoordinates::new(41, 49),
+            OnlineStatus::Away => TileGridCoordinates::new(39, 40),
         };
 
         destination_request_writer.send(TilePosEvent::new(new_destination));

@@ -6,7 +6,7 @@ use crate::map::{
         tilepos_to_idx, GraphType, MovementTimer, StartingPoint, Target, UndirectedGraph,
     },
     plugins::TilePosEvent,
-    tiled::*,
+    tilemap::*,
 };
 use bevy::{audio::PlaybackMode, prelude::*};
 use bevy_ecs_tilemap::prelude::*;
@@ -29,40 +29,22 @@ const FRUIT_LAYER_NUM: usize = 17;
 const FALLEN_FRUIT_LAYER_NUM: usize = FRUIT_LAYER_NUM - 4;
 
 pub fn replace_fruit_tiles(
-    mut tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,
-    map_info_query: Query<
-        (&Transform, &TilemapGridSize, &TilemapSize, &TilemapType),
-        Added<TilemapGridSize>,
-    >,
+    mut tiles_query: Query<(Entity, &TileGridCoordinates, &Transform, &TileTextureIndex)>,
     mut commands: Commands,
 ) {
-    let map_information = map_info_query
-        .iter()
-        .find(|map_info| map_info.0.translation.z == FRUIT_LAYER_NUM as f32);
-
-    if map_information.is_none() {
-        return;
-    }
-
-    let (map_transform, grid_size, map_size, map_type) =
-        map_information.expect("replace_fruit_tiles: Map information should exist by now.");
-
-    for (_entity, layer_number, tile_pos, tile_texture_index) in &mut tiles_query {
-        if layer_number.0 != FRUIT_LAYER_NUM {
+    for (_entity, tile_pos, tile_transform, tile_texture_index) in &mut tiles_query {
+        if tile_pos.z() != FRUIT_LAYER_NUM {
             continue;
         }
 
-        let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
-        let tile_transform = to_bevy_transform(tile_pos, map_info);
-
         commands.entity(_entity).despawn_recursive();
         commands.spawn((
-            *tile_pos,
+            tile_pos.clone(),
             *tile_texture_index,
-            tile_transform,
+            *tile_transform,
             FruitState::Spawned,
-            StartingPoint(tile_transform.translation, *tile_pos),
-            RespawnPoint(StartingPoint(tile_transform.translation, *tile_pos)),
+            StartingPoint(tile_transform.translation, tile_pos.clone()),
+            RespawnPoint(StartingPoint(tile_transform.translation, tile_pos.clone())),
             Target(None),
             MovementTimer(Timer::from_seconds(0.05, TimerMode::Repeating)),
             TriggerQueue(VecDeque::new()),
@@ -102,7 +84,12 @@ pub fn replace_fruit_sprites(
 }
 
 pub fn make_fruit_fall(
-    mut fruit_query: Query<(&TilePos, &mut FruitState, &mut Target, &TriggerQueue)>,
+    mut fruit_query: Query<(
+        &TileGridCoordinates,
+        &mut FruitState,
+        &mut Target,
+        &TriggerQueue,
+    )>,
     ground_graph_query: Query<&UndirectedGraph>,
     map_info_query: Query<(&Transform, &TilemapSize)>,
 ) {
@@ -137,11 +124,12 @@ pub fn make_fruit_fall(
             continue;
         }
 
-        let tile_target_pos = TilePos::new(fruit_tile_pos.x + 3, fruit_tile_pos.y - 3);
+        let tile_target_pos =
+            TileGridCoordinates::new(fruit_tile_pos.x() + 3, fruit_tile_pos.y() - 3);
         let tile_translation = ground_graph
             .get_node(tilepos_to_idx(
-                tile_target_pos.x,
-                tile_target_pos.y,
+                tile_target_pos.x() as u32,
+                tile_target_pos.y() as u32,
                 world_size.x,
             ))
             .unwrap();
@@ -167,7 +155,7 @@ pub fn make_fruit_dropped(mut fruit_query: Query<(&mut FruitState, &Target)>) {
 }
 
 pub fn pathfind_streamer_to_fruit(
-    fruit_query: Query<(&FruitState, &TilePos), Changed<FruitState>>,
+    fruit_query: Query<(&FruitState, &TileGridCoordinates), Changed<FruitState>>,
     mut streamer_destination_request_writer: EventWriter<TilePosEvent>,
 ) {
     for (fruit_state, fruit_tile_pos) in fruit_query.iter() {
@@ -175,20 +163,20 @@ pub fn pathfind_streamer_to_fruit(
             continue;
         }
 
-        streamer_destination_request_writer.send(TilePosEvent::new(*fruit_tile_pos));
+        streamer_destination_request_writer.send(TilePosEvent::new(fruit_tile_pos.clone()));
     }
 }
 
 pub fn respawn_fruit(
     mut fruit_query: Query<(
         &mut Transform,
-        &mut TilePos,
+        &mut TileGridCoordinates,
         &mut StartingPoint,
         &RespawnPoint,
         &mut FruitState,
         &mut TriggerQueue,
     )>,
-    streamer_query: Query<&TilePos, (With<StreamerLabel>, Without<FruitState>)>,
+    streamer_query: Query<&TileGridCoordinates, (With<StreamerLabel>, Without<FruitState>)>,
 ) {
     if streamer_query.is_empty() {
         return;
@@ -213,8 +201,9 @@ pub fn respawn_fruit(
         }
 
         fruit_trigger_queue.0.pop_front();
-        *fruit_tilepos = fruit_respawn_point.0 .1;
-        *fruit_starting_point = StartingPoint(fruit_respawn_point.0 .0, fruit_respawn_point.0 .1);
+        *fruit_tilepos = fruit_respawn_point.0 .1.clone();
+        *fruit_starting_point =
+            StartingPoint(fruit_respawn_point.0 .0, fruit_respawn_point.0 .1.clone());
         *fruit_transform = Transform::from_translation(fruit_respawn_point.0 .0);
         *fruit_state = FruitState::Hanging;
     }

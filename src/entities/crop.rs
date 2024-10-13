@@ -2,12 +2,11 @@ use std::collections::VecDeque;
 
 use bevy::audio::PlaybackMode;
 use bevy::prelude::*;
-use bevy_ecs_tilemap::prelude::*;
-use bevy_ecs_tilemap::tiles::{TilePos, TileTextureIndex};
+use bevy_ecs_tilemap::tiles::TileTextureIndex;
 use rand::seq::IteratorRandom;
 
 use crate::map::plugins::TilePosEvent;
-use crate::map::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
+use crate::map::tilemap::TileGridCoordinates;
 
 use super::streamer::StreamerLabel;
 use crate::entities::TriggerQueue;
@@ -31,37 +30,19 @@ const CROP_LAYER_NUM: usize = 13;
 const IDEAL_CROP_LAYER_NUM: usize = 3;
 
 pub fn replace_crop_tiles(
-    tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,
-    map_info_query: Query<
-        (&Transform, &TilemapGridSize, &TilemapSize, &TilemapType),
-        Added<TilemapGridSize>,
-    >,
+    tiles_query: Query<(Entity, &TileGridCoordinates, &Transform, &TileTextureIndex)>,
     mut commands: Commands,
 ) {
-    let map_information = map_info_query
-        .iter()
-        .find(|map_info| map_info.0.translation.z == IDEAL_CROP_LAYER_NUM as f32);
-
-    if map_information.is_none() {
-        return;
-    }
-
-    let (map_transform, grid_size, world_size, map_type) =
-        map_information.expect("replace_crop_tiles: Map information should exist by now.");
-
-    for (_entity, layer_number, tile_pos, tile_texture_index) in &tiles_query {
-        if layer_number.0 != CROP_LAYER_NUM {
+    for (_entity, tile_pos, tile_transform, tile_texture_index) in &tiles_query {
+        if tile_pos.z() != CROP_LAYER_NUM {
             continue;
         }
 
-        let map_info = TiledMapInformation::new(grid_size, world_size, map_type, map_transform);
-        let tile_transform = to_bevy_transform(tile_pos, map_info);
-
         commands.entity(_entity).despawn_recursive();
         commands.spawn((
-            tile_transform,
+            *tile_transform,
             *tile_texture_index,
-            *tile_pos,
+            tile_pos.clone(),
             CropState::Spawned,
             CropEndIdx(tile_texture_index.0 as usize + CROP_NUM_STAGES - 1),
             TriggerQueue(VecDeque::new()),
@@ -137,7 +118,7 @@ pub fn grow_crops(mut crop_query: Query<(&mut TriggerQueue, &mut CropState)>) {
 }
 
 pub fn pathfind_streamer_to_crops(
-    crop_query: Query<(&CropState, &TilePos), Changed<CropState>>,
+    crop_query: Query<(&CropState, &TileGridCoordinates), Changed<CropState>>,
     mut streamer_destination_broadcast: EventWriter<TilePosEvent>,
 ) {
     for (crop_state, crop_tile_pos) in &crop_query {
@@ -145,13 +126,16 @@ pub fn pathfind_streamer_to_crops(
             continue;
         }
 
-        streamer_destination_broadcast.send(TilePosEvent::new(*crop_tile_pos));
+        streamer_destination_broadcast.send(TilePosEvent::new(crop_tile_pos.clone()));
     }
 }
 
 pub fn pick_up_crops(
-    mut crop_query: Query<(&mut CropState, &TilePos)>,
-    streamer_query: Query<&TilePos, (With<StreamerLabel>, Changed<TilePos>)>,
+    mut crop_query: Query<(&mut CropState, &TileGridCoordinates)>,
+    streamer_query: Query<
+        &TileGridCoordinates,
+        (With<StreamerLabel>, Changed<TileGridCoordinates>),
+    >,
 ) {
     if streamer_query.is_empty() {
         return;

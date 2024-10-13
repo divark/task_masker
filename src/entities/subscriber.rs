@@ -5,7 +5,7 @@ use std::collections::VecDeque;
 use crate::entities::streamer::{StreamerLabel, StreamerState};
 use crate::entities::WaitToLeaveTimer;
 use crate::map::path_finding::*;
-use crate::map::tiled::{to_bevy_transform, LayerNumber, TiledMapInformation};
+use crate::map::tilemap::{MapGridDimensions, TileGridCoordinates};
 use crate::ui::chatting::{Msg, TypingMsg};
 
 use super::GameEntityType;
@@ -72,42 +72,24 @@ pub fn replace_subscriber_sprite(
 
 /// Respawns Subscriber without rendering components
 pub fn replace_subscriber_tile(
-    mut tiles_query: Query<(Entity, &LayerNumber, &TilePos, &TileTextureIndex)>,
-    map_info_query: Query<
-        (&Transform, &TilemapGridSize, &TilemapSize, &TilemapType),
-        Added<TilemapGridSize>,
-    >,
+    mut tiles_query: Query<(Entity, &TileGridCoordinates, &Transform, &TileTextureIndex)>,
     mut commands: Commands,
 ) {
-    let map_information = map_info_query
-        .iter()
-        .find(|map_info| map_info.0.translation.z == DESIRED_SUBSCRIBER_LAYER_NUM as f32);
-
-    if map_information.is_none() {
-        return;
-    }
-
-    let (map_transform, grid_size, map_size, map_type) =
-        map_information.expect("replace_subscriber_tile: Map information should exist by now.");
-
-    for (subscriber_entity, layer_number, tile_pos, tile_texture_index) in &mut tiles_query {
-        if layer_number.0 != SUBSCRIBER_LAYER_NUM {
+    for (subscriber_entity, tile_pos, tile_transform, tile_texture_index) in &mut tiles_query {
+        if tile_pos.z() != SUBSCRIBER_LAYER_NUM {
             continue;
         }
-
-        let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
-        let tile_transform = to_bevy_transform(tile_pos, map_info);
 
         commands.entity(subscriber_entity).despawn_recursive();
         commands.spawn((
             (
                 SubscriberLabel,
                 GameEntityType::Swim,
-                tile_transform,
+                *tile_transform,
                 SubscriberStatus::Idle,
                 *tile_texture_index,
             ),
-            *tile_pos,
+            tile_pos.clone(),
         ));
     }
 }
@@ -147,12 +129,17 @@ fn include_nodes_only_from(path_to_streamer: Path, water_graph_edges: &NodeEdges
 pub fn swim_to_streamer_to_speak(
     mut subscriber_msg: EventReader<SubscriberMsg>,
     mut subscriber: Query<
-        (Entity, &TilePos, &mut Path, &mut SubscriberStatus),
+        (
+            Entity,
+            &TileGridCoordinates,
+            &mut Path,
+            &mut SubscriberStatus,
+        ),
         (With<SubscriberLabel>, Without<SubscriberMsg>),
     >,
     water_graph: Query<&UndirectedGraph>,
-    streamer: Query<&TilePos, With<StreamerLabel>>,
-    map_info: Query<&TilemapSize>,
+    streamer: Query<&TileGridCoordinates, With<StreamerLabel>>,
+    map_info: Query<&MapGridDimensions>,
     mut commands: Commands,
 ) {
     if water_graph.is_empty() || streamer.is_empty() || map_info.is_empty() {
@@ -182,7 +169,9 @@ pub fn swim_to_streamer_to_speak(
             break;
         }
 
-        if let Some(path) = air_graph.shortest_path(*subscriber_tilepos, *streamer_tilepos) {
+        if let Some(path) =
+            air_graph.shortest_path(subscriber_tilepos.clone(), streamer_tilepos.clone())
+        {
             let path_to_shore = include_nodes_only_from(path, water_graph.edges());
             *subscriber_path = path_to_shore;
 
@@ -292,9 +281,10 @@ pub fn leave_from_streamer_from_subscriber(
             continue;
         }
 
-        if let Some(path) =
-            water_graph.shortest_path(subscriber_start_pos.1, subscriber_spawn_pos.0)
-        {
+        if let Some(path) = water_graph.shortest_path(
+            subscriber_start_pos.1.clone(),
+            subscriber_spawn_pos.0.clone(),
+        ) {
             *subscriber_path = path;
 
             commands
@@ -332,9 +322,12 @@ pub fn return_subscriber_to_idle(
 
 pub fn follow_streamer_while_approaching_for_subscriber(
     streamer_info: Query<(&StreamerState, &Path), Without<SubscriberStatus>>,
-    mut subscriber_info: Query<(&SubscriberStatus, &TilePos, &mut Path), Without<StreamerState>>,
+    mut subscriber_info: Query<
+        (&SubscriberStatus, &TileGridCoordinates, &mut Path),
+        Without<StreamerState>,
+    >,
     air_graph_info: Query<&UndirectedGraph>,
-    map_info: Query<&TilemapSize>,
+    map_info: Query<&MapGridDimensions>,
 ) {
     if streamer_info.is_empty() || subscriber_info.is_empty() || map_info.is_empty() {
         return;
@@ -379,12 +372,15 @@ pub fn follow_streamer_while_approaching_for_subscriber(
             .iter()
             .last()
             .expect("follow_streamer_while_approaching: Streamer Path should be populated.");
-        let streamer_destination_tilepos = idx_to_tilepos(*streamer_destination, map_size.y);
-        let current_subscriber_destination =
-            idx_to_tilepos(*subscriber_path.0.iter().last().unwrap(), map_size.y);
+        let streamer_destination_tilepos =
+            idx_to_tilepos(*streamer_destination, map_size.width() as u32);
+        let current_subscriber_destination = idx_to_tilepos(
+            *subscriber_path.0.iter().last().unwrap(),
+            map_size.width() as u32,
+        );
 
         let path_to_shore = if let Some(path) =
-            air_graph.shortest_path(*subscriber_pos, streamer_destination_tilepos)
+            air_graph.shortest_path(subscriber_pos.clone(), streamer_destination_tilepos)
         {
             include_nodes_only_from(path, water_graph.edges())
         } else {
@@ -402,7 +398,7 @@ pub fn follow_streamer_while_approaching_for_subscriber(
         }
 
         let next_subscriber_destination =
-            idx_to_tilepos(*next_subscriber_destination_idx, map_size.y);
+            idx_to_tilepos(*next_subscriber_destination_idx, map_size.width() as u32);
 
         // We do not want to re-populate the path if the Subscriber is already
         // going to the desired destination.
