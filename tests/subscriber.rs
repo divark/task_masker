@@ -6,13 +6,13 @@ use crate::mock_plugins::{
 };
 
 use bevy::prelude::*;
-use bevy_ecs_tilemap::prelude::*;
 use cucumber::{given, then, when, World};
 
 use task_masker::entities::subscriber::*;
 use task_masker::entities::WaitToLeaveTimer;
 use task_masker::map::path_finding::*;
 use task_masker::map::plugins::PathFindingPlugin;
+use task_masker::map::tilemap::*;
 use task_masker::ui::chatting::TypingMsg;
 
 #[given("a Tiled Map")]
@@ -134,15 +134,15 @@ fn subscriber_should_be_near_coast_closest_to_streamer(world: &mut GameWorld) {
     let subscriber_tilepos = world
         .app
         .world_mut()
-        .query_filtered::<&TilePos, With<SubscriberLabel>>()
+        .query_filtered::<&TileGridCoordinates, With<SubscriberLabel>>()
         .get_single(&world.app.world())
-        .expect("subscriber_should_be_near_coast_closest_to_streamer: Subscriber does not have a TilePos.");
+        .expect("subscriber_should_be_near_coast_closest_to_streamer: Subscriber does not have a TileGridCoordinates.");
 
     let subscriber_tilepos_neighbors = [
-        TilePos::new(subscriber_tilepos.x, subscriber_tilepos.y - 1),
-        TilePos::new(subscriber_tilepos.x, subscriber_tilepos.y + 1),
-        TilePos::new(subscriber_tilepos.x - 1, subscriber_tilepos.y),
-        TilePos::new(subscriber_tilepos.x + 1, subscriber_tilepos.y),
+        TileGridCoordinates::new(subscriber_tilepos.x, subscriber_tilepos.y - 1),
+        TileGridCoordinates::new(subscriber_tilepos.x, subscriber_tilepos.y + 1),
+        TileGridCoordinates::new(subscriber_tilepos.x - 1, subscriber_tilepos.y),
+        TileGridCoordinates::new(subscriber_tilepos.x + 1, subscriber_tilepos.y),
     ];
 
     let subscriber_tilepos_neighbor_indexes = subscriber_tilepos_neighbors
@@ -245,7 +245,7 @@ fn subscriber_should_be_leaving_back_to_spawn(world: &mut GameWorld) {
     let (subscriber_tilepos, subscriber_spawn) = world
         .app
         .world_mut()
-        .query_filtered::<(&TilePos, &SpawnPoint), With<SubscriberStatus>>()
+        .query_filtered::<(&TileGridCoordinates, &SpawnPoint), With<SubscriberStatus>>()
         .get_single(&world.app.world())
         .expect("subscriber_should_be_leaving_back_to_spawn: Subscriber is missing pathfinding-based information and/or Status.");
 

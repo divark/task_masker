@@ -9,7 +9,6 @@ use crate::map::{
     tilemap::*,
 };
 use bevy::{audio::PlaybackMode, prelude::*};
-use bevy_ecs_tilemap::prelude::*;
 use rand::seq::IteratorRandom;
 
 use super::streamer::StreamerLabel;

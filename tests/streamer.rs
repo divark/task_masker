@@ -5,11 +5,12 @@ use crate::mock_plugins::{
 };
 
 use bevy::prelude::*;
-use bevy_ecs_tilemap::prelude::*;
+
 use cucumber::{given, then, when, World};
 use task_masker::entities::streamer::*;
 use task_masker::map::path_finding::Direction;
 use task_masker::map::plugins::{PathFindingPlugin, TilePosEvent};
+use task_masker::map::tilemap::*;
 
 #[given("a Tiled Map,")]
 fn spawn_tiled_map(world: &mut GameWorld) {
@@ -66,9 +67,9 @@ fn check_streamer_is_done_traveling(world: &mut GameWorld) {
 )]
 fn request_streamer_to_move_to_lower_location(world: &mut GameWorld, option: String) {
     let tile_pos = match option.as_str() {
-        "lower" => TilePos::new(64, 47),
-        "equal in height" => TilePos::new(45, 40),
-        "higher" => TilePos::new(44, 35),
+        "lower" => TileGridCoordinates::new(64, 47),
+        "equal in height" => TileGridCoordinates::new(45, 40),
+        "higher" => TileGridCoordinates::new(44, 35),
         _ => unreachable!(),
     };
 
@@ -114,18 +115,18 @@ fn streamer_should_have_reached_lower_location(world: &mut GameWorld, option: St
     }
 
     let expected_tilepos = match option.as_str() {
-        "lower" => TilePos::new(64, 47),
-        "equal in height" => TilePos::new(45, 40),
-        "higher" => TilePos::new(44, 35),
+        "lower" => TileGridCoordinates::new(64, 47),
+        "equal in height" => TileGridCoordinates::new(45, 40),
+        "higher" => TileGridCoordinates::new(44, 35),
         _ => unreachable!(),
     };
 
     let streamer_tilepos = world
         .app
         .world_mut()
-        .query_filtered::<&TilePos, With<StreamerLabel>>()
+        .query_filtered::<&TileGridCoordinates, With<StreamerLabel>>()
         .get_single(&world.app.world())
-        .expect("streamer_should_have_reached_lower_location: Streamer does not have a TilePos.");
+        .expect("streamer_should_have_reached_lower_location: Streamer does not have a TileGridCoordinates.");
 
     assert_eq!(expected_tilepos, *streamer_tilepos);
 }
@@ -133,13 +134,13 @@ fn streamer_should_have_reached_lower_location(world: &mut GameWorld, option: St
 #[then(regex = r"^the Streamer should be (to the left of the campfire|in the cave).")]
 fn streamer_should_have_reached_specific_location(world: &mut GameWorld, location_option: String) {
     let expected_location = match location_option.as_str() {
-        "to the left of the campfire" => TilePos::new(41, 100 - 50 - 1),
-        "in the cave" => TilePos::new(39, 100 - 59 - 1),
+        "to the left of the campfire" => TileGridCoordinates::new(41, 100 - 50 - 1),
+        "in the cave" => TileGridCoordinates::new(39, 100 - 59 - 1),
         _ => unreachable!(),
     };
 
-    let actual_location = world.find_with::<TilePos, StreamerLabel>().expect(
-        "streamer_should_have_reached_specific_location: Streamer does not have a TilePos.",
+    let actual_location = world.find_with::<TileGridCoordinates, StreamerLabel>().expect(
+        "streamer_should_have_reached_specific_location: Streamer does not have a TileGridCoordinates.",
     );
 
     assert_eq!(expected_location, *actual_location);

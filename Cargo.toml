@@ -19,10 +19,6 @@ cucumber = "^0.21"
 futures = "^0.3"
 
 [[test]]
-name = "traveling"
-harness = false
-
-[[test]]
 name = "chatter"
 harness = false
 

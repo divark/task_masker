@@ -2,7 +2,6 @@ use std::collections::VecDeque;
 
 use bevy::audio::PlaybackMode;
 use bevy::prelude::*;
-use bevy_ecs_tilemap::tiles::TileTextureIndex;
 use rand::seq::IteratorRandom;
 
 use crate::map::plugins::TilePosEvent;

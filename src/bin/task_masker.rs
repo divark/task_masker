@@ -3,7 +3,6 @@ use task_masker::*;
 
 use audio::plugins::BackgroundMusicPlugin;
 use bevy::window::WindowResolution;
-use bevy_ecs_tilemap::prelude::*;
 use chat_interactions::plugins::TwitchChatPlugin;
 use entities::plugins::{ChatterPlugin, CropPlugin, FruitPlugin, StreamerPlugin, SubscriberPlugin};
 use map::plugins::{PathFindingPlugin, TiledCameraPlugin, TiledMapPlugin};

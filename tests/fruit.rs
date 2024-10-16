@@ -2,13 +2,12 @@ mod mock_plugins;
 
 use bevy::prelude::*;
 
-use bevy_ecs_tilemap::prelude::*;
-
 use task_masker::entities::fruit::*;
 use task_masker::entities::streamer::*;
 use task_masker::entities::TriggerQueue;
 use task_masker::map::path_finding::*;
 use task_masker::map::plugins::PathFindingPlugin;
+use task_masker::map::tilemap::*;
 
 use crate::mock_plugins::{GameWorld, MockFruitPlugin, MockStreamerPlugin, MockTiledMapPlugin};
 
@@ -86,10 +85,12 @@ fn wait_for_streamer_to_be_over_fruit(world: &mut GameWorld) {
     let fruit_tilepos = *world
         .app
         .world_mut()
-        .query_filtered::<&TilePos, With<FruitState>>()
+        .query_filtered::<&TileGridCoordinates, With<FruitState>>()
         .iter(&world.app.world())
         .next()
-        .expect("wait_for_streamer_to_be_over_fruit: Fruit was not found with TilePos.");
+        .expect(
+            "wait_for_streamer_to_be_over_fruit: Fruit was not found with TileGridCoordinates.",
+        );
 
     loop {
         world.app.update();
@@ -97,7 +98,7 @@ fn wait_for_streamer_to_be_over_fruit(world: &mut GameWorld) {
         let streamer_tilepos = *world
             .app
             .world_mut()
-            .query_filtered::<&TilePos, With<StreamerLabel>>()
+            .query_filtered::<&TileGridCoordinates, With<StreamerLabel>>()
             .single(&world.app.world());
 
         if streamer_tilepos == fruit_tilepos {

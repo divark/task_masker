@@ -1,13 +1,13 @@
 mod mock_plugins;
 
 use bevy::prelude::*;
-use bevy_ecs_tilemap::prelude::*;
 
 use cucumber::{given, then, when, World};
 
 use crate::mock_plugins::{GameWorld, MockTiledMapPlugin};
 use task_masker::map::path_finding::{GraphType, UndirectedGraph};
 use task_masker::map::plugins::PathFindingPlugin;
+use task_masker::map::tilemap::*;
 
 #[given("the Tiled Loading module is loaded,")]
 fn load_tiled_module(world: &mut GameWorld) {
@@ -25,7 +25,8 @@ fn load_pathfinding_module(world: &mut GameWorld) {
 fn wait_until_tiled_map_loaded(world: &mut GameWorld) {
     loop {
         world.update(1);
-        let still_adding_tiles = world.contains_when::<TilePos, Added<TilePos>>();
+        let still_adding_tiles =
+            world.contains_when::<TileGridCoordinates, Added<TileGridCoordinates>>();
         if !still_adding_tiles {
             break;
         }
@@ -56,7 +57,10 @@ fn simple_tile_path_exists(world: &mut GameWorld) {
             "simple_tile_path_exists: Could not find Undirected Graph representing Ground tiles.",
         );
 
-    let tile_path = ground_graph.shortest_path(TilePos::new(44, 40), TilePos::new(44, 41));
+    let tile_path = ground_graph.shortest_path(
+        TileGridCoordinates::new(44, 40),
+        TileGridCoordinates::new(44, 41),
+    );
 
     assert!(tile_path.is_some());
 }

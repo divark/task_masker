@@ -10,22 +10,22 @@ use crate::mock_plugins::{
 };
 
 use bevy::prelude::*;
-use bevy_ecs_tilemap::prelude::*;
 use cucumber::{given, then, when, World};
 
 use task_masker::entities::chatter::*;
 use task_masker::entities::streamer::*;
 use task_masker::map::path_finding::*;
 use task_masker::map::plugins::PathFindingPlugin;
+use task_masker::map::tilemap::*;
 
 /// Returns the approximate number of Tiles away the target_pos
 /// is from source_pos
-fn distance_of(source_pos: TilePos, target_pos: TilePos) -> usize {
-    let x1 = source_pos.x as f32;
-    let x2 = target_pos.x as f32;
+fn distance_of(source_pos: TileGridCoordinates, target_pos: TileGridCoordinates) -> usize {
+    let x1 = source_pos.x() as f32;
+    let x2 = target_pos.x() as f32;
 
-    let y1 = source_pos.y as f32;
-    let y2 = target_pos.y as f32;
+    let y1 = source_pos.y() as f32;
+    let y2 = target_pos.y() as f32;
 
     ((x2 - x1).powi(2) + (y2 - y1).powi(2)).sqrt().floor() as usize
 }
@@ -234,11 +234,11 @@ fn chatter_should_be_two_tiles_away_from_streamer(world: &mut GameWorld) {
     assert_eq!(*chatter_status, ChatterStatus::Speaking);
 
     let chatter_tilepos = *world
-        .find_with::<TilePos, ChatterLabel>()
-        .expect("chatter_should_be_two_tiles_away_from_streamer: Chatter does not have a TilePos.");
+        .find_with::<TileGridCoordinates, ChatterLabel>()
+        .expect("chatter_should_be_two_tiles_away_from_streamer: Chatter does not have a TileGridCoordinates.");
 
-    let streamer_tilepos = *world.find_with::<TilePos, StreamerLabel>().expect(
-        "chatter_should_be_two_tiles_away_from_streamer: Streamer does not have a TilePos.",
+    let streamer_tilepos = *world.find_with::<TileGridCoordinates, StreamerLabel>().expect(
+        "chatter_should_be_two_tiles_away_from_streamer: Streamer does not have a TileGridCoordinates.",
     );
 
     let tile_distance = distance_of(chatter_tilepos, streamer_tilepos);
@@ -273,7 +273,7 @@ fn chatter_should_be_leaving_back_to_spawn(world: &mut GameWorld) {
     let (chatter_tilepos, chatter_spawn) = world
         .app
         .world_mut()
-        .query_filtered::<(&TilePos, &SpawnPoint), With<ChatterStatus>>()
+        .query_filtered::<(&TileGridCoordinates, &SpawnPoint), With<ChatterStatus>>()
         .get_single(&world.app.world())
         .expect("chatter_should_be_leaving_back_to_spawn: Chatter is missing pathfinding-based information and/or Status.");
 

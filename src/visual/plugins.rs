@@ -26,13 +26,6 @@ pub struct EnvironmentAnimationsPlugin;
 
 impl Plugin for EnvironmentAnimationsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            (
-                replace_campfire_tile,
-                replace_campfire_sprite,
-                make_streamer_face_campfire,
-            ),
-        );
+        app.add_systems(Update, (replace_campfire_tile, make_streamer_face_campfire));
     }
 }

@@ -1,11 +1,6 @@
 use bevy::prelude::*;
-use bevy_ecs_tilemap::{
-    prelude::{TilemapGridSize, TilemapSize, TilemapType},
-    tiles::TilePos,
-};
 
 use crate::map::plugins::TilePosEvent;
-use crate::map::tiled::{to_bevy_transform, TiledMapInformation};
 use crate::map::{path_finding::*, tilemap::TileGridCoordinates};
 use crate::ui::chatting::ChattingStatus;
 
@@ -42,76 +37,25 @@ pub struct Streamer {
 
 pub const STREAMER_LAYER_NUM: usize = 6;
 
-pub fn spawn_player_sprite(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
-    streamer_query: Query<(Entity, &Transform), (With<StreamerLabel>, Without<TextureAtlas>)>,
-) {
-    if streamer_query.is_empty() {
-        return;
-    }
-
-    let (streamer_entity, streamer_transform) = streamer_query
-        .get_single()
-        .expect("spawn_player: Could not find Streamer.");
-
-    let texture_handle = asset_server.load("caveman/caveman-sheet.png");
-    let texture_atlas = TextureAtlasLayout::from_grid(UVec2::new(16, 16), 4, 9, None, None);
-    let texture_atlas_handle = texture_atlases.add(texture_atlas);
-
-    let streamer_texture_atlas = TextureAtlas {
-        layout: texture_atlas_handle,
-        index: 0,
-    };
-
-    let streamer_sprite = SpriteBundle {
-        sprite: Sprite::default(),
-        transform: *streamer_transform,
-        texture: texture_handle,
-        ..default()
-    };
-
-    commands.entity(streamer_entity).remove::<Transform>();
-    commands
-        .entity(streamer_entity)
-        .insert((streamer_sprite, streamer_texture_atlas));
-}
-
 /// Spawns Player without any component related to rendering
 pub fn spawn_player_tile(
     mut commands: Commands,
-    map_information: Query<
-        (&Transform, &TilemapType, &TilemapGridSize, &TilemapSize),
-        Added<TilemapType>,
-    >,
-    streamer_query: Query<(), With<StreamerLabel>>,
+    streamer_query: Query<(&TileGridCoordinates, &Transform), With<StreamerLabel>>,
 ) {
     if !streamer_query.is_empty() {
         return;
     }
 
-    if map_information.is_empty() {
-        return;
-    }
-
-    let (map_transform, map_type, grid_size, map_size) = map_information
-        .iter()
-        .nth(STREAMER_LAYER_NUM)
-        .expect("Could not load map information. Is world loaded?");
-    let map_info = TiledMapInformation::new(grid_size, map_size, map_type, map_transform);
-
-    let streamer_bevy_tilepos = TilePos::new(39, 40);
-    let streamer_transform = to_bevy_transform(&streamer_bevy_tilepos, map_info);
+    let (streamer_tilepos, streamer_transform) = streamer_query.single();
 
     commands.spawn((
         (
             StreamerLabel,
             GameEntityType::Walk,
             StreamerState::Idle,
-            streamer_transform,
+            *streamer_transform,
         ),
-        streamer_bevy_tilepos,
+        streamer_tilepos.clone(),
     ));
 }
 
