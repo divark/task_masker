@@ -38,43 +38,12 @@ pub struct SubscriberBundle {
     status: SubscriberStatus,
 }
 
-pub fn replace_subscriber_sprite(
-    subscriber: Query<(Entity, &Transform, &TileTextureIndex), Added<SubscriberLabel>>,
-    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-) {
-    for (subscriber_entity, subscriber_transform, tile_texture_index) in &subscriber {
-        let texture_handle = asset_server.load("subscriber/Fish(32x32).png");
-        let subscriber_texture_atlas =
-            TextureAtlasLayout::from_grid(UVec2::new(32, 32), 16, 16, None, None);
-        let subscriber_texture_atlas_handle = texture_atlases.add(subscriber_texture_atlas);
-
-        let subscriber_texture_atlas = TextureAtlas {
-            layout: subscriber_texture_atlas_handle.clone(),
-            index: tile_texture_index.0 as usize,
-        };
-
-        let subscriber_sprite = SpriteBundle {
-            sprite: Sprite::default(),
-            texture: texture_handle.clone(),
-            transform: *subscriber_transform,
-            ..default()
-        };
-
-        commands.entity(subscriber_entity).remove::<Transform>();
-        commands
-            .entity(subscriber_entity)
-            .insert((subscriber_sprite, subscriber_texture_atlas));
-    }
-}
-
 /// Respawns Subscriber without rendering components
 pub fn replace_subscriber_tile(
-    mut tiles_query: Query<(Entity, &TileGridCoordinates, &Transform, &TileTextureIndex)>,
+    mut tiles_query: Query<(Entity, &TileGridCoordinates, &Transform)>,
     mut commands: Commands,
 ) {
-    for (subscriber_entity, tile_pos, tile_transform, tile_texture_index) in &mut tiles_query {
+    for (subscriber_entity, tile_pos, tile_transform) in &mut tiles_query {
         if tile_pos.z() != SUBSCRIBER_LAYER_NUM {
             continue;
         }
@@ -86,7 +55,6 @@ pub fn replace_subscriber_tile(
                 GameEntityType::Swim,
                 *tile_transform,
                 SubscriberStatus::Idle,
-                *tile_texture_index,
             ),
             tile_pos.clone(),
         ));

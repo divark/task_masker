@@ -7,6 +7,7 @@ use cucumber::{given, then, when, World};
 use futures::executor::block_on;
 
 use std::path::{PathBuf, MAIN_SEPARATOR};
+use task_masker::map::path_finding::*;
 use task_masker::map::tilemap::*;
 
 /// Returns a path to some asset requested from the test-assets
@@ -56,6 +57,7 @@ pub struct TiledContext {
 
     map_file_path: PathBuf,
     tilemap: Option<Tilemap>,
+    tile_heightmap: Vec<usize>,
 }
 
 impl TiledContext {
@@ -65,6 +67,7 @@ impl TiledContext {
 
             map_file_path: PathBuf::new(),
             tilemap: Some(Tilemap::new()),
+            tile_heightmap: Vec::new(),
         }
     }
 
@@ -157,6 +160,16 @@ fn convert_tile_coordinates_to_isometric(tiled_context: &mut TiledContext) {
 #[when("the tile coordinates have been y-sorted,")]
 fn y_sort_tile_coordinates(tiled_context: &mut TiledContext) {
     tiled_context.tilemap_mut().y_sort_tiles();
+}
+
+#[when("the tiles have been converted into a height map,")]
+fn convert_tiles_into_heightmap(tiled_context: &mut TiledContext) {
+    let tile_grid_coordinates = tiled_context
+        .get_tiles()
+        .into_iter()
+        .map(|tile| tile.get_grid_coordinates())
+        .collect::<Vec<&TileGridCoordinates>>();
+    tiled_context.tile_heightmap = height_map_from(&tile_grid_coordinates);
 }
 
 #[then(regex = r"there should be (\d+) Tiles? loaded from the Tiled map.")]

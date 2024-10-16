@@ -28,7 +28,6 @@ fn main() {
                 }),
         )
         .init_state::<GameState>()
-        .add_plugins(TilemapPlugin)
         .add_plugins(TiledMapPlugin)
         .add_plugins(PathFindingPlugin)
         .add_plugins(StartupScreenPlugin)

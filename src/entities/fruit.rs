@@ -28,10 +28,10 @@ const FRUIT_LAYER_NUM: usize = 17;
 const FALLEN_FRUIT_LAYER_NUM: usize = FRUIT_LAYER_NUM - 4;
 
 pub fn replace_fruit_tiles(
-    mut tiles_query: Query<(Entity, &TileGridCoordinates, &Transform, &TileTextureIndex)>,
+    mut tiles_query: Query<(Entity, &TileGridCoordinates, &Transform)>,
     mut commands: Commands,
 ) {
-    for (_entity, tile_pos, tile_transform, tile_texture_index) in &mut tiles_query {
+    for (_entity, tile_pos, tile_transform) in &mut tiles_query {
         if tile_pos.z() != FRUIT_LAYER_NUM {
             continue;
         }
@@ -39,7 +39,6 @@ pub fn replace_fruit_tiles(
         commands.entity(_entity).despawn_recursive();
         commands.spawn((
             tile_pos.clone(),
-            *tile_texture_index,
             *tile_transform,
             FruitState::Spawned,
             StartingPoint(tile_transform.translation, tile_pos.clone()),
@@ -51,37 +50,6 @@ pub fn replace_fruit_tiles(
     }
 }
 
-pub fn replace_fruit_sprites(
-    fruit: Query<(Entity, &Transform, &TileTextureIndex), Added<FruitState>>,
-    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-) {
-    for (fruit_entity, fruit_transform, tile_texture_index) in &fruit {
-        let texture_handle = asset_server.load("environment/Fruit(16x16).png");
-        let fruit_texture_atlas =
-            TextureAtlasLayout::from_grid(UVec2::new(16, 16), 38, 6, None, None);
-        let fruit_texture_atlas_handle = texture_atlases.add(fruit_texture_atlas);
-
-        let fruit_texture_atlas = TextureAtlas {
-            layout: fruit_texture_atlas_handle.clone(),
-            index: tile_texture_index.0 as usize,
-        };
-
-        let fruit_sprite = SpriteBundle {
-            sprite: Sprite::default(),
-            texture: texture_handle.clone(),
-            transform: *fruit_transform,
-            ..default()
-        };
-
-        commands.entity(fruit_entity).remove::<Transform>();
-        commands
-            .entity(fruit_entity)
-            .insert((fruit_sprite, fruit_texture_atlas));
-    }
-}
-
 pub fn make_fruit_fall(
     mut fruit_query: Query<(
         &TileGridCoordinates,
@@ -90,7 +58,7 @@ pub fn make_fruit_fall(
         &TriggerQueue,
     )>,
     ground_graph_query: Query<&UndirectedGraph>,
-    map_info_query: Query<(&Transform, &TilemapSize)>,
+    map_info_query: Query<&MapGridDimensions>,
 ) {
     if ground_graph_query.is_empty() {
         return;
@@ -101,16 +69,11 @@ pub fn make_fruit_fall(
         .find(|graph| *graph.get_node_type() == GraphType::Ground)
         .expect("make_fruit_fall: Could not find Undirected Graph representing Ground tiles.");
 
-    let map_information = map_info_query
-        .iter()
-        .find(|map_info| map_info.0.translation.z == FALLEN_FRUIT_LAYER_NUM as f32);
-
-    if map_information.is_none() {
+    if map_info_query.is_empty() {
         return;
     }
 
-    let (_map_transform, world_size) =
-        map_information.expect("make_fruit_fall: Map information should exist by now.");
+    let world_size = map_info_query.single();
 
     for (fruit_tile_pos, mut fruit_state, mut fruit_pathing_target, fruit_trigger_queue) in
         fruit_query.iter_mut()
@@ -129,7 +92,7 @@ pub fn make_fruit_fall(
             .get_node(tilepos_to_idx(
                 tile_target_pos.x() as u32,
                 tile_target_pos.y() as u32,
-                world_size.x,
+                world_size.width() as u32,
             ))
             .unwrap();
         let tile_transform = Transform::from_translation(*tile_translation);

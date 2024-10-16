@@ -16,7 +16,6 @@ impl Plugin for ChatterPlugin {
             Update,
             (
                 replace_chatter_tile,
-                replace_chatter_sprite,
                 trigger_flying_to_streamer,
                 add_chat_msg_to_queue,
                 fly_to_streamer_to_speak,
@@ -39,7 +38,6 @@ impl Plugin for SubscriberPlugin {
         app.add_systems(
             Update,
             (
-                replace_subscriber_sprite,
                 replace_subscriber_tile,
                 trigger_swimming_to_streamer,
                 swim_to_streamer_to_speak,
@@ -83,7 +81,6 @@ impl Plugin for FruitPlugin {
             Update,
             (
                 replace_fruit_tiles,
-                replace_fruit_sprites,
                 make_fruit_fall,
                 make_fruit_dropped,
                 pathfind_streamer_to_fruit,
@@ -105,7 +102,6 @@ impl Plugin for CropPlugin {
             Update,
             (
                 replace_crop_tiles,
-                replace_crop_sprites,
                 grow_crop_on_c_key,
                 grow_crops,
                 pathfind_streamer_to_crops,

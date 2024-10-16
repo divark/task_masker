@@ -25,23 +25,19 @@ impl UndirectedGraph {
     /// Converts a Tile map with layers into an
     /// Undirected Graph depending on the type
     /// of Tiles being considered.
-    pub fn from_tiles(
-        tile_type: GraphType,
-        tiles: Vec<TileGridCoordinates>,
-        tile_layers: Vec<TileLayerPosition>,
-    ) -> Self {
+    pub fn from_tiles(tile_type: GraphType, tiles: Vec<&TileGridCoordinates>) -> Self {
         let (length, _width, _height) = dimensions_from(&tiles);
         let (nodes, edges) = match tile_type {
             GraphType::Ground => (
-                NodeData::from_ground_tiles(&tiles, tile_layers),
+                NodeData::from_ground_tiles(&tiles),
                 NodeEdges::from_ground_tiles(tiles),
             ),
             GraphType::Air => (
-                NodeData::from_air_tiles(&tiles, tile_layers),
+                NodeData::from_air_tiles(&tiles),
                 NodeEdges::from_air_tiles(tiles),
             ),
             GraphType::Water => (
-                NodeData::from_water_tiles(&tiles, tile_layers),
+                NodeData::from_water_tiles(&tiles),
                 NodeEdges::from_water_tiles(tiles),
             ),
         };
@@ -87,38 +83,32 @@ impl UndirectedGraph {
 pub struct NodeData(pub Vec<Vec3>);
 
 impl NodeData {
-    pub fn from_ground_tiles(
-        heighted_tiles: &Vec<TileGridCoordinates>,
-        layer_map_information: Vec<TileLayerPosition>,
-    ) -> Self {
-        let translation_gatherer = TranslationGatherer::new(layer_map_information);
+    pub fn from_ground_tiles(heighted_tiles: &Vec<&TileGridCoordinates>) -> Self {
+        //let translation_gatherer = TranslationGatherer::new(layer_map_information);
 
-        let tile_translations = translation_gatherer.translations_from(heighted_tiles);
+        //let tile_translations = translation_gatherer.translations_from(heighted_tiles);
 
-        NodeData(tile_translations)
+        //NodeData(tile_translations)
+        NodeData(Vec::new())
     }
 
-    pub fn from_air_tiles(
-        heighted_tiles: &Vec<TileGridCoordinates>,
-        layer_map_information: Vec<TileLayerPosition>,
-    ) -> Self {
-        let translation_gatherer = TranslationGatherer::new(layer_map_information);
+    pub fn from_air_tiles(heighted_tiles: &Vec<&TileGridCoordinates>) -> Self {
+        //let translation_gatherer = TranslationGatherer::new(layer_map_information);
 
-        let tile_translations = translation_gatherer.highest_translations_from(heighted_tiles);
+        //let tile_translations = translation_gatherer.highest_translations_from(heighted_tiles);
 
-        NodeData(tile_translations)
+        //NodeData(tile_translations)
+        NodeData(Vec::new())
     }
 
-    pub fn from_water_tiles(
-        heighted_tiles: &Vec<TileGridCoordinates>,
-        layer_map_information: Vec<TileLayerPosition>,
-    ) -> Self {
-        let translation_gatherer = TranslationGatherer::new(layer_map_information);
+    pub fn from_water_tiles(heighted_tiles: &Vec<&TileGridCoordinates>) -> Self {
+        //let translation_gatherer = TranslationGatherer::new(layer_map_information);
 
-        let tile_translations =
-            translation_gatherer.translations_at_height(heighted_tiles, SUBSCRIBER_LAYER_NUM);
+        //let tile_translations =
+        //    translation_gatherer.translations_at_height(heighted_tiles, SUBSCRIBER_LAYER_NUM);
 
-        NodeData(tile_translations)
+        //NodeData(tile_translations)
+        NodeData(Vec::new())
     }
 }
 
@@ -127,7 +117,7 @@ pub struct NodeEdges(pub Vec<Vec<usize>>);
 
 /// Returns the Length, Width, and Height derived from
 /// some collection of Heighted Tile Positions.
-fn dimensions_from(heighted_tiles: &Vec<TileGridCoordinates>) -> (u32, u32, u32) {
+fn dimensions_from(heighted_tiles: &Vec<&TileGridCoordinates>) -> (u32, u32, u32) {
     let (mut min_x, mut max_x) = (0, 0);
     let (mut min_y, mut max_y) = (0, 0);
     let (mut min_z, mut max_z) = (0, 0);
@@ -157,7 +147,7 @@ fn dimensions_from(heighted_tiles: &Vec<TileGridCoordinates>) -> (u32, u32, u32)
 /// Returns a 1 Dimensional Height Map calculated from some
 /// collection of Heighted Tile Positions with respect to
 /// the desired length and width.
-fn height_map_from(ground_tiles: &Vec<TileGridCoordinates>) -> Vec<usize> {
+pub fn height_map_from(ground_tiles: &Vec<&TileGridCoordinates>) -> Vec<usize> {
     let (length, width, _height) = dimensions_from(ground_tiles);
     let mut height_map: Vec<usize> = vec![0; length as usize * width as usize];
 
@@ -186,14 +176,14 @@ fn height_map_from(ground_tiles: &Vec<TileGridCoordinates>) -> Vec<usize> {
 
 /// Returns a collection of Tile Positions sorted and extracted
 /// from Heighted Tile Positions.
-pub fn unique_tiles_from(tiles: &Vec<TileGridCoordinates>) -> Vec<TileGridCoordinates> {
-    tiles.clone()
+pub fn unique_tiles_from(tiles: &Vec<&TileGridCoordinates>) -> Vec<TileGridCoordinates> {
+    Vec::new()
 }
 
 impl NodeEdges {
     /// Returns a set of Node Edges derived from a collection of Tiles
     /// designated for Ground traversal.
-    pub fn from_ground_tiles(ground_tiles: Vec<TileGridCoordinates>) -> NodeEdges {
+    pub fn from_ground_tiles(ground_tiles: Vec<&TileGridCoordinates>) -> NodeEdges {
         let mut directed_graph_edges: Vec<Vec<usize>> = Vec::with_capacity(ground_tiles.len());
 
         let height_map: Vec<usize> = height_map_from(&ground_tiles);
@@ -242,7 +232,7 @@ impl NodeEdges {
 
     /// Returns a set of Node Edges derived from a collection of Tiles
     /// designated for Air traversal.
-    pub fn from_air_tiles(air_tiles: Vec<TileGridCoordinates>) -> NodeEdges {
+    pub fn from_air_tiles(air_tiles: Vec<&TileGridCoordinates>) -> NodeEdges {
         let mut directed_graph_edges: Vec<Vec<usize>> = Vec::with_capacity(air_tiles.len());
 
         let (length, _width, _height) = dimensions_from(&air_tiles);
@@ -282,7 +272,7 @@ impl NodeEdges {
 
     /// Returns a set of Node Edges derived from a collection of Tiles
     /// designated for Water traversal.
-    pub fn from_water_tiles(water_tiles: Vec<TileGridCoordinates>) -> NodeEdges {
+    pub fn from_water_tiles(water_tiles: Vec<&TileGridCoordinates>) -> NodeEdges {
         let mut directed_graph_edges: Vec<Vec<usize>> = Vec::with_capacity(water_tiles.len());
 
         let height_map: Vec<usize> = height_map_from(&water_tiles);
@@ -438,10 +428,10 @@ pub fn create_ground_graph(
         return;
     }
 
+    let heighted_tiles = tile_positions.iter().collect::<Vec<&TileGridCoordinates>>();
     spawner.spawn(UndirectedGraph::from_tiles(
         GraphType::Ground,
         heighted_tiles,
-        layer_map_information,
     ));
 }
 
@@ -463,10 +453,10 @@ pub fn create_water_graph(
         return;
     }
 
+    let heighted_tiles = tile_positions.iter().collect::<Vec<&TileGridCoordinates>>();
     spawner.spawn(UndirectedGraph::from_tiles(
         GraphType::Water,
         heighted_tiles,
-        layer_map_information,
     ));
 }
 
@@ -488,11 +478,8 @@ pub fn create_air_graph(
         return;
     }
 
-    spawner.spawn(UndirectedGraph::from_tiles(
-        GraphType::Air,
-        heighted_tiles,
-        layer_map_information,
-    ));
+    let heighted_tiles = tile_positions.iter().collect::<Vec<&TileGridCoordinates>>();
+    spawner.spawn(UndirectedGraph::from_tiles(GraphType::Air, heighted_tiles));
 }
 
 #[derive(Component, Deref, DerefMut)]

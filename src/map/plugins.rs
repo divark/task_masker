@@ -1,9 +1,6 @@
 use bevy::prelude::*;
 
-use super::{
-    path_finding::*,
-    tiled::{process_loaded_maps, spawn_map, TiledLoader, TiledMap},
-};
+use super::path_finding::*;
 use crate::map::camera::*;
 use crate::map::tilemap::*;
 use crate::GameState;
@@ -46,10 +43,10 @@ pub struct TiledMapPlugin;
 impl Plugin for TiledMapPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         //app.add_systems(Startup, spawn_tiled_tiles);
-        app.init_asset::<TiledMap>()
-            .register_asset_loader(TiledLoader)
-            .add_systems(Startup, spawn_map)
-            .add_systems(Update, process_loaded_maps);
+        //app.init_asset::<TiledMap>()
+        //    .register_asset_loader(TiledLoader)
+        //    .add_systems(Startup, spawn_map)
+        //    .add_systems(Update, process_loaded_maps);
     }
 }
 

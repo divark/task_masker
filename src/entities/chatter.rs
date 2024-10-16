@@ -41,43 +41,12 @@ pub struct ChatterBundle {
     status: ChatterStatus,
 }
 
-pub fn replace_chatter_sprite(
-    chatter: Query<(Entity, &Transform, &TileTextureIndex), Added<ChatterLabel>>,
-    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-) {
-    for (chatter_entity, chatter_transform, tile_texture_index) in &chatter {
-        let texture_handle = asset_server.load("chatter/BirdSprite (16x16).png");
-        let chatter_texture_atlas =
-            TextureAtlasLayout::from_grid(UVec2::new(16, 16), 8, 3, None, None);
-        let chatter_texture_atlas_handle = texture_atlases.add(chatter_texture_atlas);
-
-        let chatter_texture_atlas = TextureAtlas {
-            layout: chatter_texture_atlas_handle.clone(),
-            index: tile_texture_index.0 as usize,
-        };
-
-        let chatter_sprite = SpriteBundle {
-            sprite: Sprite::default(),
-            texture: texture_handle.clone(),
-            transform: *chatter_transform,
-            ..default()
-        };
-
-        commands.entity(chatter_entity).remove::<Transform>();
-        commands
-            .entity(chatter_entity)
-            .insert((chatter_sprite, chatter_texture_atlas));
-    }
-}
-
 /// Respawns Chatter without rendering components
 pub fn replace_chatter_tile(
-    tiles_query: Query<(Entity, &TileGridCoordinates, &Transform, &TileTextureIndex)>,
+    tiles_query: Query<(Entity, &TileGridCoordinates, &Transform)>,
     mut commands: Commands,
 ) {
-    for (chatter_entity, tile_pos, tile_transform, tile_texture_index) in &tiles_query {
+    for (chatter_entity, tile_pos, tile_transform) in &tiles_query {
         if tile_pos.z() != CHATTER_LAYER_NUM {
             continue;
         }
@@ -90,7 +59,6 @@ pub fn replace_chatter_tile(
                 GameEntityType::Fly,
                 ChatterStatus::Idle,
                 ChatMessageQueue(VecDeque::new()),
-                *tile_texture_index,
             ),
             tile_pos.clone(),
         ));

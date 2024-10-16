@@ -29,10 +29,10 @@ const CROP_LAYER_NUM: usize = 13;
 const IDEAL_CROP_LAYER_NUM: usize = 3;
 
 pub fn replace_crop_tiles(
-    tiles_query: Query<(Entity, &TileGridCoordinates, &Transform, &TileTextureIndex)>,
+    tiles_query: Query<(Entity, &TileGridCoordinates, &Transform, &TextureAtlas)>,
     mut commands: Commands,
 ) {
-    for (_entity, tile_pos, tile_transform, tile_texture_index) in &tiles_query {
+    for (_entity, tile_pos, tile_transform, tile_texture_atlas) in &tiles_query {
         if tile_pos.z() != CROP_LAYER_NUM {
             continue;
         }
@@ -40,43 +40,11 @@ pub fn replace_crop_tiles(
         commands.entity(_entity).despawn_recursive();
         commands.spawn((
             *tile_transform,
-            *tile_texture_index,
             tile_pos.clone(),
             CropState::Spawned,
-            CropEndIdx(tile_texture_index.0 as usize + CROP_NUM_STAGES - 1),
+            CropEndIdx(tile_texture_atlas.index + CROP_NUM_STAGES - 1),
             TriggerQueue(VecDeque::new()),
         ));
-    }
-}
-
-pub fn replace_crop_sprites(
-    crops: Query<(Entity, &Transform, &TileTextureIndex), Added<CropState>>,
-    mut texture_atlases: ResMut<Assets<TextureAtlasLayout>>,
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-) {
-    for (crop_entity, crop_transform, tile_texture_index) in &crops {
-        let texture_handle = asset_server.load("environment/farming crops 1(16x16).png");
-        let crop_texture_atlas =
-            TextureAtlasLayout::from_grid(UVec2::new(16, 16), 16, 16, None, None);
-        let crop_texture_atlas_handle = texture_atlases.add(crop_texture_atlas);
-
-        let crop_texture_atlas = TextureAtlas {
-            layout: crop_texture_atlas_handle.clone(),
-            index: tile_texture_index.0 as usize,
-        };
-
-        let crop_sprite = SpriteBundle {
-            sprite: Sprite::default(),
-            texture: texture_handle.clone(),
-            transform: *crop_transform,
-            ..default()
-        };
-
-        commands.entity(crop_entity).remove::<Transform>();
-        commands
-            .entity(crop_entity)
-            .insert((crop_sprite, crop_texture_atlas));
     }
 }
 

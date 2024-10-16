@@ -115,3 +115,12 @@ Feature: An isometric tilemap should be loaded from some map file.
         When the tiles are loaded from the Tiled map,
         And the tile coordinates have been converted to isometric,
         Then Tile 0, 0, 1 should be at pixel coordinates 0, -32, 1.
+
+    Scenario: A height map with normal terrain can be calculated.
+        Given a Tiled map called heighted_map.tmx,
+        When the tiles are loaded from the Tiled map,
+        And the tiles have been converted into a height map,
+        Then Tile 0, 0 should have a height of 2.
+        And Tile 0, 1 should have a height of 1.
+        And Tile 1, 0 should have a height of 1.
+        And Tile 1, 1 should have a height of 0.
