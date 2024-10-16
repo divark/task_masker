@@ -14,6 +14,12 @@ pub struct GamePreferencesWorld {
     pub preference_idx: usize,
 }
 
+impl Default for GamePreferencesWorld {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GamePreferencesWorld {
     pub fn new() -> Self {
         let mut app = App::new();

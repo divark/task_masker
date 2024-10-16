@@ -12,7 +12,6 @@ use task_masker::entities::streamer::*;
 use task_masker::entities::subscriber::*;
 use task_masker::entities::WaitToLeaveTimer;
 use task_masker::map::path_finding::*;
-use task_masker::map::tiled::*;
 use task_masker::ui::chatting::*;
 use task_masker::ui::portrait_preferences::*;
 use task_masker::ui::screens::spawn_ingame_screen;
@@ -93,7 +92,7 @@ pub struct MockTiledMapPlugin;
 
 impl Plugin for MockTiledMapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_tiles_from_tiledmap);
+        //app.add_systems(Startup, spawn_tiles_from_tiledmap);
     }
 }
 
@@ -221,6 +220,12 @@ pub struct GameWorld {
     pub app: App,
 }
 
+impl Default for GameWorld {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GameWorld {
     pub fn new() -> Self {
         let mut app = App::new();
@@ -251,7 +256,7 @@ impl GameWorld {
         self.app
             .world_mut()
             .query::<&T>()
-            .get_single(&self.app.world())
+            .get_single(self.app.world())
             .ok()
     }
 
@@ -263,7 +268,7 @@ impl GameWorld {
         self.app
             .world_mut()
             .query::<&T>()
-            .iter(&self.app.world())
+            .iter(self.app.world())
             .collect::<Vec<&T>>()
     }
 
@@ -278,7 +283,7 @@ impl GameWorld {
         self.app
             .world_mut()
             .query_filtered::<&T, With<U>>()
-            .get_single(&self.app.world())
+            .get_single(self.app.world())
             .ok()
     }
 
@@ -293,7 +298,7 @@ impl GameWorld {
         self.app
             .world_mut()
             .query_filtered::<&T, U>()
-            .iter(&self.app.world())
+            .iter(self.app.world())
             .count()
             > 0
     }

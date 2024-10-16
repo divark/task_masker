@@ -23,6 +23,12 @@ pub struct GameWithChatUI {
     pub sent_msgs: Vec<Msg>,
 }
 
+impl Default for GameWithChatUI {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GameWithChatUI {
     pub fn new() -> Self {
         let mut app = App::new();
@@ -67,7 +73,7 @@ impl GameWithChatUI {
         self.app
             .world_mut()
             .query::<&T>()
-            .get_single(&self.app.world())
+            .get_single(self.app.world())
             .ok()
     }
 
@@ -82,7 +88,7 @@ impl GameWithChatUI {
         self.app
             .world_mut()
             .query_filtered::<&T, With<U>>()
-            .get_single(&self.app.world())
+            .get_single(self.app.world())
             .ok()
     }
 
@@ -302,7 +308,7 @@ fn chatting_ui_contains_first_five_chars_from_msg(world: &mut GameWithChatUI) {
     );
 
     let expected_contents = String::from("👍This");
-    let msg_contents = read_first_n(&msg_txtfield, 5);
+    let msg_contents = read_first_n(msg_txtfield, 5);
 
     assert_eq!(expected_contents, msg_contents);
 }

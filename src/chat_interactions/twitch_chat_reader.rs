@@ -110,9 +110,7 @@ impl Notification {
     /// or not.
     pub fn has_bits(&self) -> bool {
         if let Privmsg(current_msg) = &self.msg {
-            let has_bits = current_msg.bits.is_some();
-
-            return has_bits;
+            current_msg.bits.is_some()
         } else {
             false
         }
@@ -122,13 +120,11 @@ impl Notification {
     /// to it or not.
     pub fn has_subscribed(&self) -> bool {
         if let UserNotice(current_msg) = &self.msg {
-            let has_subscribed = match &current_msg.event {
+            match &current_msg.event {
                 UserNoticeEvent::SubOrResub { .. } => true,
                 UserNoticeEvent::SubGift { .. } => true,
                 _ => false,
-            };
-
-            return has_subscribed;
+            }
         } else {
             false
         }
@@ -146,7 +142,7 @@ impl Notification {
                 return Some(NotificationType::Msg(TwitchRole::Streamer));
             }
 
-            let is_subscriber = current_msg.badge_info.len() > 0;
+            let is_subscriber = !current_msg.badge_info.is_empty();
             if is_subscriber {
                 return Some(NotificationType::Msg(TwitchRole::Subscriber));
             }

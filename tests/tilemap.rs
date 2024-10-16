@@ -38,11 +38,10 @@ fn create_testable_bevy_app() -> App {
         render_creation: RenderCreation::from(WgpuSettings {
             backends: None,
             ..default()
-        })
-        .into(),
+        }),
         ..default()
     });
-    app.add_plugins(SpritePlugin::default());
+    app.add_plugins(SpritePlugin);
     app.add_plugins(ImagePlugin::default());
 
     app.update();
@@ -58,6 +57,12 @@ pub struct TiledContext {
     map_file_path: PathBuf,
     tilemap: Option<Tilemap>,
     tile_heightmap: Vec<usize>,
+}
+
+impl Default for TiledContext {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TiledContext {
@@ -112,7 +117,7 @@ impl TiledContext {
 
     /// Returns a reference to the currently loaded Tilemap.
     pub fn tilemap(&self) -> &Tilemap {
-        &self.tilemap.as_ref().unwrap()
+        self.tilemap.as_ref().unwrap()
     }
 
     /// Consumes the tilemap loaded.
@@ -166,7 +171,7 @@ fn y_sort_tile_coordinates(tiled_context: &mut TiledContext) {
 fn convert_tiles_into_heightmap(tiled_context: &mut TiledContext) {
     let tile_grid_coordinates = tiled_context
         .get_tiles()
-        .into_iter()
+        .iter()
         .map(|tile| tile.get_grid_coordinates())
         .collect::<Vec<&TileGridCoordinates>>();
     tiled_context.tile_heightmap = height_map_from(&tile_grid_coordinates);

@@ -82,7 +82,7 @@ fn request_streamer_to_move_to_lower_location(world: &mut GameWorld, option: Str
             .app
             .world_mut()
             .query::<&StreamerState>()
-            .get_single(&world.app.world())
+            .get_single(world.app.world())
             .expect("request_streamer_to_move_to_lower_location: Streamer does not have a status.");
 
         if streamer_status == StreamerState::Moving {
@@ -104,7 +104,7 @@ fn streamer_should_have_reached_lower_location(world: &mut GameWorld, option: St
             .app
             .world_mut()
             .query::<&StreamerState>()
-            .get_single(&world.app.world())
+            .get_single(world.app.world())
             .expect(
                 "streamer_should_have_reached_lower_location: Streamer does not have a Status.",
             );
@@ -125,7 +125,7 @@ fn streamer_should_have_reached_lower_location(world: &mut GameWorld, option: St
         .app
         .world_mut()
         .query_filtered::<&TileGridCoordinates, With<StreamerLabel>>()
-        .get_single(&world.app.world())
+        .get_single(world.app.world())
         .expect("streamer_should_have_reached_lower_location: Streamer does not have a TileGridCoordinates.");
 
     assert_eq!(expected_tilepos, *streamer_tilepos);

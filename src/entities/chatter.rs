@@ -230,8 +230,7 @@ pub fn leave_from_streamer_from_chatter(
 
     let air_graph = air_graph_info
         .iter()
-        .filter(|graph| *graph.get_node_type() == GraphType::Air)
-        .next()
+        .find(|graph| *graph.get_node_type() == GraphType::Air)
         .expect("leave_from_streamer: Exactly one air graph should exist by now.");
 
     for (
@@ -362,8 +361,7 @@ pub fn follow_streamer_while_approaching_for_chatter(
 
     let air_graph = air_graph_info
         .iter()
-        .filter(|graph| *graph.get_node_type() == GraphType::Air)
-        .next()
+        .find(|graph| *graph.get_node_type() == GraphType::Air)
         .expect("follow_streamer_while_approaching: Exactly one air graph should exist by now.");
 
     for (chatter_status, chatter_pos, mut chatter_path) in &mut chatter_info {

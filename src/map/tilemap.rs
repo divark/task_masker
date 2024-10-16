@@ -86,7 +86,7 @@ impl TileDrawingOffset {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Component, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Component, Clone, Copy)]
 pub struct TileGridCoordinates {
     x: usize,
     y: usize,
@@ -419,6 +419,12 @@ pub struct Tilemap {
     tiles: Vec<Tile>,
 }
 
+impl Default for Tilemap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Tilemap {
     pub fn new() -> Self {
         Self {
@@ -495,7 +501,7 @@ impl Tilemap {
             let flipped_y_coordinate = (map_height - tile.get_pixel_coordinates().y()) - tile_width;
 
             let tile_pixel_coordinates = tile.get_pixel_coordinates_mut();
-            tile_pixel_coordinates.set_y(flipped_y_coordinate as f32);
+            tile_pixel_coordinates.set_y(flipped_y_coordinate);
         }
     }
 
@@ -663,7 +669,7 @@ pub fn spawn_tiled_tiles(
     tilemap.flip_y_axis();
     let render_tiles = convert_tilemap_to_bevy_render_tiles(
         &tilemap,
-        &asset_server.into_inner(),
+        asset_server.into_inner(),
         texture_atlas_assets.into_inner(),
     );
 

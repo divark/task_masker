@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use bevy::prelude::*;
 
-use crate::entities::{subscriber::SUBSCRIBER_LAYER_NUM, GameEntityType};
+use crate::entities::GameEntityType;
 
 use super::tilemap::{MapGridDimensions, TileGridCoordinates};
 
@@ -165,7 +165,7 @@ pub fn height_map_from(ground_tiles: &Vec<&TileGridCoordinates>) -> Vec<usize> {
         // connected to the ground to be ignored. Think scenery
         // that obscures the vision from the camera that the
         // player can pass through.
-        let tile_height = heighted_tile.z() as usize;
+        let tile_height = heighted_tile.z();
         if tile_height - height_entry == 1 {
             height_map[height_idx] += 1;
         }

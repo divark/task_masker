@@ -139,15 +139,15 @@ fn subscriber_should_be_near_coast_closest_to_streamer(world: &mut GameWorld) {
         .expect("subscriber_should_be_near_coast_closest_to_streamer: Subscriber does not have a TileGridCoordinates.");
 
     let subscriber_tilepos_neighbors = [
-        TileGridCoordinates::new(subscriber_tilepos.x, subscriber_tilepos.y - 1),
-        TileGridCoordinates::new(subscriber_tilepos.x, subscriber_tilepos.y + 1),
-        TileGridCoordinates::new(subscriber_tilepos.x - 1, subscriber_tilepos.y),
-        TileGridCoordinates::new(subscriber_tilepos.x + 1, subscriber_tilepos.y),
+        TileGridCoordinates::new(subscriber_tilepos.x(), subscriber_tilepos.y() - 1),
+        TileGridCoordinates::new(subscriber_tilepos.x(), subscriber_tilepos.y() + 1),
+        TileGridCoordinates::new(subscriber_tilepos.x() - 1, subscriber_tilepos.y()),
+        TileGridCoordinates::new(subscriber_tilepos.x() + 1, subscriber_tilepos.y()),
     ];
 
     let subscriber_tilepos_neighbor_indexes = subscriber_tilepos_neighbors
         .iter()
-        .map(|tilepos| tilepos_to_idx(tilepos.x, tilepos.y, 100))
+        .map(|tilepos| tilepos_to_idx(tilepos.x() as u32, tilepos.y() as u32, 100))
         .collect::<Vec<usize>>();
 
     let ground_nodes = world
