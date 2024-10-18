@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use std::path::PathBuf;
 use tiled::{Loader, Map};
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, Copy, Clone, Debug, PartialEq)]
 pub struct MapGridDimensions {
     width: usize,
     height: usize,
@@ -676,4 +676,6 @@ pub fn spawn_tiled_tiles(
     for render_tile in render_tiles {
         commands.spawn(render_tile);
     }
+
+    commands.spawn(*tilemap.get_dimensions());
 }

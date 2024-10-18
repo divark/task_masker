@@ -1,5 +1,9 @@
 use bevy::prelude::*;
 
+use bevy::render::settings::{RenderCreation, WgpuSettings};
+use bevy::render::RenderPlugin;
+use bevy::sprite::SpritePlugin;
+
 use bevy::ecs::query::QueryFilter;
 
 use bevy::state::app::StatesPlugin;
@@ -12,6 +16,7 @@ use task_masker::entities::streamer::*;
 use task_masker::entities::subscriber::*;
 use task_masker::entities::WaitToLeaveTimer;
 use task_masker::map::path_finding::*;
+use task_masker::map::tilemap::*;
 use task_masker::ui::chatting::*;
 use task_masker::ui::portrait_preferences::*;
 use task_masker::ui::screens::spawn_ingame_screen;
@@ -92,7 +97,7 @@ pub struct MockTiledMapPlugin;
 
 impl Plugin for MockTiledMapPlugin {
     fn build(&self, app: &mut App) {
-        //app.add_systems(Startup, spawn_tiles_from_tiledmap);
+        app.add_systems(Startup, spawn_tiled_tiles);
     }
 }
 
@@ -230,10 +235,23 @@ impl GameWorld {
     pub fn new() -> Self {
         let mut app = App::new();
 
+        app.add_plugins(MinimalPlugins);
+
+        app.add_plugins(WindowPlugin::default());
+        app.add_plugins(AssetPlugin::default());
+        app.add_plugins(RenderPlugin {
+            render_creation: RenderCreation::from(WgpuSettings {
+                backends: None,
+                ..default()
+            }),
+            ..default()
+        });
+        app.add_plugins(SpritePlugin);
+        app.add_plugins(ImagePlugin::default());
         app.add_plugins(StatesPlugin);
+
         app.init_state::<GameState>();
         app.insert_state(GameState::InGame);
-        app.add_plugins(MinimalPlugins);
 
         app.add_systems(Update, reduce_movement_times_to_zero);
 
