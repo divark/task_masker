@@ -413,6 +413,38 @@ pub fn to_bevy_path(input_path: PathBuf) -> PathBuf {
     new_path
 }
 
+/// Returns a one dimensional index converted from a TileGridCoordinate
+/// relative to some grid.
+pub fn get_1d_grid_idx(
+    grid_coordinate: &TileGridCoordinates,
+    map_grid_dimensions: &MapGridDimensions,
+) -> usize {
+    let tilemap_width = map_grid_dimensions.width();
+    let tilemap_height = map_grid_dimensions.height();
+    let tilemap_area = tilemap_width * tilemap_height;
+
+    let tile_idx = (grid_coordinate.z() * tilemap_area)
+        + (grid_coordinate.x() * tilemap_width)
+        + grid_coordinate.y();
+
+    tile_idx
+}
+
+/// Returns a depth relative to where a Tile is in some grid.
+pub fn calculate_depth(
+    map_grid_dimensions: &MapGridDimensions,
+    tile_grid_coordinates: &TileGridCoordinates,
+) -> f32 {
+    let map_width = map_grid_dimensions.width();
+    let map_height = map_grid_dimensions.height();
+    let map_depth = map_grid_dimensions.depth();
+    let map_area = map_width * map_height * map_depth;
+
+    let tile_1d_idx = get_1d_grid_idx(tile_grid_coordinates, map_grid_dimensions);
+
+    tile_1d_idx as f32 / map_area as f32
+}
+
 #[derive(Debug)]
 pub struct Tilemap {
     map_grid_dimensions: MapGridDimensions,
@@ -559,16 +591,17 @@ impl Tilemap {
     pub fn y_sort_tiles(&mut self) {
         // Fun fact: Tiles are loaded first and foremost based on their
         // y value. See load_tiles_from_tiled_map for more details.
-        let map_width = self.get_dimensions().width();
-        let map_height = self.get_dimensions().height();
-        let map_depth = self.get_dimensions().depth();
-        let map_area = map_width * map_height * map_depth;
-
-        for (depth, tile) in self.tiles.iter_mut().enumerate() {
+        let mut new_tile_heights = Vec::new();
+        for tile in self.tiles.iter() {
             // The tile height would be too high without this,
             // making the rendering look funny, with seemingly "invisible"
             // tiles if out of bounds.
-            let new_depth = depth as f32 / map_area as f32;
+            let new_depth = calculate_depth(self.get_dimensions(), tile.get_grid_coordinates());
+            new_tile_heights.push(new_depth);
+        }
+
+        for (tile_idx, tile) in self.tiles.iter_mut().enumerate() {
+            let new_depth = new_tile_heights[tile_idx];
             tile.get_pixel_coordinates_mut().set_z(new_depth);
         }
     }

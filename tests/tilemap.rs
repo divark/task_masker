@@ -99,14 +99,7 @@ impl TiledContext {
     /// Returns a Tile specified at the Grid Coordinate if found,
     /// or returns None otherwise.
     pub fn get_tile(&self, grid_coordinate: &TileGridCoordinates) -> Option<&Tile> {
-        let tilemap_dimensions = self.tilemap().get_dimensions();
-        let tilemap_width = tilemap_dimensions.width();
-        let tilemap_height = tilemap_dimensions.height();
-        let tilemap_area = tilemap_width * tilemap_height;
-
-        let tile_idx = (grid_coordinate.z() * tilemap_area)
-            + (grid_coordinate.x() * tilemap_width)
-            + grid_coordinate.y();
+        let tile_idx = get_1d_grid_idx(grid_coordinate, self.tilemap().get_dimensions());
         self.tilemap().get_tiles().get(tile_idx)
     }
 
